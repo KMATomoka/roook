@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Connexion — Roque</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-auth">
+  <header class="topbar">
+    <a class="logo" href="/"><span class="logo-mark">♜</span> Roque</a>
+  </header>
+
+  <main class="auth">
+    <div class="card auth-card">
+      <img class="auth-noa" src="/img/noa/content.svg" alt="" width="88" height="88">
+      <div class="auth-tabs" role="tablist">
+        <button role="tab" data-tab="connexion" aria-selected="true">Connexion</button>
+        <button role="tab" data-tab="inscription" aria-selected="false">Créer un compte</button>
+      </div>
+      <form id="auth-form" novalidate>
+        <label class="field">Pseudo
+          <input name="username" autocomplete="username" required minlength="3" maxlength="20" placeholder="Ton pseudo">
+        </label>
+        <label class="field">Mot de passe
+          <input name="password" type="password" autocomplete="current-password" required minlength="6" maxlength="100" placeholder="Au moins 6 caractères">
+        </label>
+        <p class="hint" id="auth-hint" hidden>3 à 20 caractères : lettres, chiffres, « _ » ou « - ». Tes amis t’ajouteront avec ce pseudo.</p>
+        <p class="error" id="auth-error" hidden></p>
+        <button class="btn btn-primary btn-lg" id="auth-submit">Se connecter</button>
+      </form>
+    </div>
+  </main>
+
+  <script type="module">
+    import { api } from '/js/compte.js';
+    const form = document.querySelector('#auth-form');
+    const err = document.querySelector('#auth-error');
+    const params = new URLSearchParams(location.search);
+    // On ne revient que vers une page du site (jamais vers un autre site)
+    const back = (params.get('retour') || '').startsWith('/') && !params.get('retour').startsWith('//') ? params.get('retour') : '/amis';
+    let mode = params.get('mode') === 'inscription' ? 'inscription' : 'connexion';
+
+    function setMode(m) {
+      mode = m;
+      document.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === m)));
+      document.querySelector('#auth-submit').textContent = m === 'connexion' ? 'Se connecter' : 'Créer mon compte';
+      document.querySelector('#auth-hint').hidden = m === 'connexion';
+      form.password.autocomplete = m === 'connexion' ? 'current-password' : 'new-password';
+      err.hidden = true;
+    }
+    document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.tab)));
+    setMode(mode);
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      err.hidden = true;
+      const btn = document.querySelector('#auth-submit');
+      btn.disabled = true;
+      try {
+        await api('/api/' + mode, { method: 'POST', body: { username: form.username.value.trim(), password: form.password.value } });
+        location.href = back;
+      } catch (ex) {
+        err.textContent = ex.message;
+        err.hidden = false;
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

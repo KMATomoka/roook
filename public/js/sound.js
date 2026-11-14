@@ -1,0 +1,163 @@
+// Bruitages synthétisés avec Web Audio (aucun fichier audio à télécharger).
+// Chaque son est fabriqué à partir de petits « tocs » de bruit filtré et de notes courtes.
+
+let ctx = null;
+let master = null;
+let noiseBuf = null;
+let muted = false;
+try {
+  muted = localStorage.getItem('roque:son') === 'off';
+} catch {}
+
+export const isMuted = () => muted;
+export function setMuted(v) {
+  muted = !!v;
+  try {
+    localStorage.setItem('roque:son', muted ? 'off' : 'on');
+  } catch {}
+}
+
+function audio() {
+  if (muted) return null;
+  try {
+    if (!ctx) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      // Un compresseur évite que les sons forts (mat) saturent
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -14;
+      comp.ratio.value = 4;
+      master = ctx.createGain();
+      master.gain.value = 0.9;
+      master.connect(comp).connect(ctx.destination);
+      noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  } catch {
+    return null;
+  }
+}
+
+/** Note : fréquence (glissant éventuellement vers endFreq), enveloppe rapide. */
+function tone({ freq, endFreq, type = 'sine', at = 0, dur = 0.1, vol = 0.2, attack = 0.004 }) {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + at;
+  const o = a.createOscillator();
+  const g = a.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, t);
+  if (endFreq) o.frequency.exponentialRampToValueAtTime(endFreq, t + dur);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(master);
+  o.start(t);
+  o.stop(t + dur + 0.05);
+}
+
+/** Souffle de bruit filtré : le « toc » du bois, l'éclat d'une prise, le fracas du mat. */
+function burst({ at = 0, dur = 0.05, vol = 0.3, type = 'bandpass', freq = 1500, endFreq, q = 1 }) {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + at;
+  const src = a.createBufferSource();
+  src.buffer = noiseBuf;
+  const f = a.createBiquadFilter();
+  f.type = type;
+  f.frequency.setValueAtTime(freq, t);
+  if (endFreq) f.frequency.exponentialRampToValueAtTime(endFreq, t + dur);
+  f.Q.value = q;
+  const g = a.createGain();
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(f).connect(g).connect(master);
+  src.start(t, Math.random() * 0.5);
+  src.stop(t + dur + 0.05);
+}
+
+// --- Sons de base ------------------------------------------------------------
+function tok(at = 0, pitch = 1) {
+  burst({ at, dur: 0.035, vol: 0.55, freq: 2300 * pitch, q: 2.2 });
+  tone({ freq: 200 * pitch, endFreq: 120 * pitch, at, dur: 0.07, vol: 0.32 });
+}
+
+function capture() {
+  // Choc plus lourd + éclats aigus
+  burst({ at: 0, dur: 0.07, vol: 0.7, freq: 1100, q: 1.3 });
+  tone({ freq: 150, endFreq: 55, at: 0, dur: 0.16, vol: 0.5 });
+  burst({ at: 0.025, dur: 0.22, vol: 0.13, type: 'highpass', freq: 4500 });
+  tone({ freq: 2100, endFreq: 1300, type: 'triangle', at: 0.02, dur: 0.09, vol: 0.05 });
+}
+
+function castle() {
+  tok(0, 1);
+  tok(0.1, 0.9);
+}
+
+function promote() {
+  tok(0);
+  [784, 1047, 1319, 1568].forEach((f, i) => tone({ freq: f, type: 'triangle', at: 0.06 + i * 0.05, dur: 0.22, vol: 0.07 }));
+}
+
+function check() {
+  // Alerte métallique en deux temps
+  tone({ freq: 988, type: 'triangle', at: 0.06, dur: 0.16, vol: 0.16 });
+  tone({ freq: 1976, type: 'sine', at: 0.06, dur: 0.12, vol: 0.05 });
+  tone({ freq: 1319, type: 'triangle', at: 0.15, dur: 0.32, vol: 0.15 });
+  tone({ freq: 2637, type: 'sine', at: 0.15, dur: 0.2, vol: 0.04 });
+}
+
+function mate(outcome) {
+  // 1. Impact : grosse basse + fracas
+  tone({ freq: 120, endFreq: 32, at: 0, dur: 1.1, vol: 0.75, attack: 0.002 });
+  tone({ freq: 60, endFreq: 30, type: 'triangle', at: 0, dur: 0.9, vol: 0.35 });
+  burst({ at: 0, dur: 0.6, vol: 0.7, type: 'lowpass', freq: 900, endFreq: 120, q: 0.7 });
+  burst({ at: 0.01, dur: 1.4, vol: 0.18, type: 'highpass', freq: 3500, endFreq: 6000 });
+  // 2. Le roi qui tombe sur l'échiquier (deux rebonds)
+  tok(0.95, 0.75);
+  tok(1.12, 0.7);
+  // 3. Fanfare (victoire) ou descente mineure (défaite)
+  const start = 0.45;
+  if (outcome === 'loss') {
+    [440, 349.2, 293.7, 220].forEach((f, i) => {
+      tone({ freq: f, type: 'triangle', at: start + i * 0.22, dur: i === 3 ? 1.4 : 0.4, vol: 0.16 });
+      tone({ freq: f / 2, type: 'sine', at: start + i * 0.22, dur: i === 3 ? 1.4 : 0.4, vol: 0.12 });
+    });
+  } else {
+    const notes = [523.3, 659.3, 784, 1046.5];
+    notes.forEach((f, i) => {
+      const last = i === notes.length - 1;
+      tone({ freq: f, type: 'triangle', at: start + i * 0.11, dur: last ? 1.6 : 0.3, vol: 0.17 });
+      tone({ freq: f * 2, type: 'sine', at: start + i * 0.11, dur: last ? 1.2 : 0.2, vol: 0.05 });
+    });
+    // accord final scintillant
+    [1046.5, 1318.5, 1568, 2093].forEach((f, i) => tone({ freq: f, type: 'sine', at: start + 0.5 + i * 0.03, dur: 1.5, vol: 0.05 }));
+  }
+}
+
+/**
+ * Son d'un coup (objet « verbose » de chess.js).
+ * outcome : 'win' | 'loss' | 'neutral', utilisé pour l'échec et mat.
+ */
+export function playSound(move, outcome = 'neutral') {
+  if (!move || muted) return;
+  if (move.san.includes('#')) {
+    if (move.captured) capture();
+    else tok();
+    mate(outcome);
+    return;
+  }
+  if (move.captured) capture();
+  else if (move.san.startsWith('O-O')) castle();
+  else if (move.promotion) promote();
+  else tok();
+  if (move.san.includes('+')) check();
+}
+
+/** Petit bip quand il reste peu de temps. */
+export function lowTimeBeep() {
+  tone({ freq: 1760, type: 'square', dur: 0.06, vol: 0.04 });
+}

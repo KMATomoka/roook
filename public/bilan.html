@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bilan de partie — Roque</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/vendor/chessground-assets/chessground.base.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-review">
+  <header class="topbar">
+    <a class="logo" href="/"><span class="logo-mark">♜</span> Roque</a>
+    <span class="mode-label">Bilan de partie</span>
+  </header>
+
+  <!-- Choix d'une partie à analyser -->
+  <main class="pick" id="pick" hidden>
+    <h1>Analyser une partie</h1>
+    <p class="lead">Choisis une de tes dernières parties, ou colle une partie au format PGN.</p>
+    <div class="pick-grid">
+      <div class="card">
+        <h2>Mes dernières parties</h2>
+        <ul class="game-list" id="pick-list"></ul>
+      </div>
+      <form class="card" id="pgn-form">
+        <h2>Coller un PGN</h2>
+        <textarea id="pgn-input" rows="9" placeholder="1. e4 e5 2. Cf3 Cc6 3. Fb5 …  (notation anglaise : 1. e4 e5 2. Nf3 Nc6…)"></textarea>
+        <p class="error" id="pgn-error" hidden></p>
+        <button class="btn btn-primary">Analyser cette partie</button>
+      </form>
+    </div>
+  </main>
+
+  <!-- Analyse en cours -->
+  <main class="progress-screen" id="progress" hidden>
+    <div class="card progress-card">
+      <img class="noa-thinking" src="/img/noa/hmm.svg" alt="Noa réfléchit" width="96" height="96">
+      <h2>Noa analyse ta partie…</h2>
+      <p id="progress-text">Je m’installe devant l’échiquier</p>
+      <div class="bar"><div id="progress-bar"></div></div>
+      <p class="muted">Chaque coup est passé au peigne fin, directement dans ton navigateur.</p>
+    </div>
+  </main>
+
+  <!-- Résultat -->
+  <main class="review" id="review" hidden>
+    <section class="review-head">
+      <div>
+        <h1 id="r-title"></h1>
+        <p class="lead" id="r-sub"></p>
+      </div>
+      <div class="review-head-actions">
+        <a class="btn btn-ghost" id="r-replay" href="/">Rejouer</a>
+        <button class="btn btn-ghost" id="r-copy">Copier le PGN</button>
+      </div>
+    </section>
+
+    <section class="summary">
+      <div class="card coach">
+        <img class="coach-avatar" id="coach-avatar" src="/img/noa/neutre.svg" alt="Noa" width="64" height="64">
+        <div>
+          <h2 id="coach-title"></h2>
+          <div id="coach-text"></div>
+        </div>
+      </div>
+      <div class="card accuracy" id="accuracy"></div>
+    </section>
+
+    <section class="card graph-card">
+      <div class="graph-head"><h2>Évolution de la partie</h2><span class="muted">Clique sur le graphique pour aller à un coup</span></div>
+      <div id="graph"></div>
+    </section>
+
+    <section class="review-main">
+      <div class="review-board">
+        <div class="eval-bar" id="eval-bar"><div class="eval-fill" id="eval-fill"></div><span id="eval-num"></span></div>
+        <div class="board-frame"><div id="board" class="cg-wrap board"></div></div>
+      </div>
+      <aside class="side">
+        <div class="card comment" id="comment"></div>
+        <div class="card moves-card">
+          <div class="moves-head">
+            <h2>Coups</h2>
+            <div class="nav">
+              <button class="icon-btn" data-nav="first" title="Début">⏮</button>
+              <button class="icon-btn" data-nav="prev" title="Précédent (←)">◀</button>
+              <button class="icon-btn" data-nav="next" title="Suivant (→)">▶</button>
+              <button class="icon-btn" data-nav="last" title="Fin">⏭</button>
+              <button class="icon-btn" id="flip" title="Tourner l’échiquier">⇅</button>
+            </div>
+          </div>
+          <ol class="moves" id="moves"></ol>
+        </div>
+        <div class="card key-moments">
+          <h2>Moments clés</h2>
+          <ul id="moments"></ul>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="/js/bilan.js"></script>
+</body>
+</html>

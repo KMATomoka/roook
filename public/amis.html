@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mes amis — Roque</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-friends">
+  <header class="topbar">
+    <a class="logo" href="/"><span class="logo-mark">♜</span> Roque</a>
+    <nav class="topnav">
+      <a href="/#jouer">Jouer</a>
+      <a href="/bilan">Analyser</a>
+    </nav>
+  </header>
+
+  <main class="friends-page" id="friends-page" hidden>
+    <section class="profile">
+      <div class="profile-avatar" id="profile-initial"></div>
+      <div>
+        <h1 id="profile-name"></h1>
+        <p class="lead" id="profile-stats"></p>
+      </div>
+    </section>
+
+    <div class="friends-grid">
+      <div class="friends-main">
+        <section class="card">
+          <h2>Ajouter un ami</h2>
+          <form class="add-friend" id="add-form">
+            <input name="username" placeholder="Pseudo de ton ami" autocomplete="off" maxlength="20" required>
+            <button class="btn btn-primary">Envoyer</button>
+          </form>
+          <p class="form-msg" id="add-msg" hidden></p>
+        </section>
+
+        <section class="card" id="incoming-card" hidden>
+          <h2>Demandes reçues</h2>
+          <ul class="people" id="incoming"></ul>
+        </section>
+
+        <section class="card">
+          <h2>Mes amis <span class="muted" id="friends-count"></span></h2>
+          <ul class="people" id="friends"></ul>
+        </section>
+
+        <section class="card" id="outgoing-card" hidden>
+          <h2>Demandes envoyées</h2>
+          <ul class="people" id="outgoing"></ul>
+        </section>
+      </div>
+
+      <section class="card friends-history">
+        <h2>Mes parties</h2>
+        <ul class="game-list" id="history"></ul>
+      </section>
+    </div>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="/js/amis.js"></script>
+</body>
+</html>

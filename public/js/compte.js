@@ -110,10 +110,11 @@ onAuthStateChanged(auth, async (u) => {
   started = true;
   if (u) {
     let username = null;
+    let avatar = null;
     try {
-      username = (await get(ref(db, `users/${u.uid}/username`))).val();
+      [username, avatar] = await Promise.all([get(ref(db, `users/${u.uid}/username`)).then((x) => x.val()), avatarOf(u.uid)]);
     } catch {}
-    currentUser = { id: u.uid, username: username || u.email.split('@')[0] };
+    currentUser = { id: u.uid, username: username || u.email.split('@')[0], avatar };
     startPresence();
     listenInvitations();
     listenFriendRequests();
@@ -133,7 +134,7 @@ function renderAccount(user) {
   } else {
     el.innerHTML = `
       <a class="account-chip" href="amis.html" title="Mes amis et mes parties">
-        <span class="account-initial">${escapeHtml(user.username[0].toUpperCase())}</span>
+        ${picHtml(user.username, user.avatar, 'account-initial')}
         <span class="account-name">${escapeHtml(user.username)}</span>
         <span class="account-badge" hidden></span>
       </a>
@@ -144,6 +145,67 @@ function renderAccount(user) {
     });
   }
   bar.appendChild(el);
+}
+
+// ---------------------------------------------------------------------------
+// Photos de profil : une petite image carrée (160 px) rangée dans la base, sous avatars/{uid}
+// (le stockage de fichiers de Firebase n'est pas gratuit, et 160 px suffisent largement).
+// ---------------------------------------------------------------------------
+const PIC_RE = /^data:image\/(jpeg|webp|png);base64,[A-Za-z0-9+/=]+$/;
+const PIC_SIZE = 160;
+const picCache = new Map();
+const cleanPic = (v) => (typeof v === 'string' && PIC_RE.test(v) ? v : null);
+
+/** Photo d'un joueur (data URL) ou null. Mise en cache pour la page. */
+export function avatarOf(uid) {
+  if (!uid) return Promise.resolve(null);
+  if (!picCache.has(uid)) picCache.set(uid, get(ref(db, `avatars/${uid}`)).then((s) => cleanPic(s.val())).catch(() => null));
+  return picCache.get(uid);
+}
+
+/** Pastille ronde : la photo si elle existe, sinon l'initiale du pseudo. */
+export function picHtml(name, url, cls = 'person-avatar', extra = '') {
+  const pic = cleanPic(url);
+  const inner = pic ? `<img src="${pic}" alt="" draggable="false">` : escapeHtml((name || '?')[0].toUpperCase());
+  return `<span class="${cls}${pic ? ' has-pic' : ''}">${inner}${extra}</span>`;
+}
+
+/** Recadre l'image choisie au centre, la réduit à 160 px et l'enregistre comme photo de profil. */
+export async function setAvatar(file) {
+  if (!currentUser) throw new Error('Connecte-toi d’abord.');
+  if (!file || !/^image\//.test(file.type)) throw new Error('Choisis une image (JPG, PNG…).');
+  if (file.size > 25e6) throw new Error('Image trop lourde (25 Mo maximum).');
+  let img;
+  try {
+    img = await createImageBitmap(file);
+  } catch {
+    throw new Error('Cette image ne peut pas être lue. Essaie un JPG ou un PNG.');
+  }
+  const side = Math.min(img.width, img.height);
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = PIC_SIZE;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, PIC_SIZE, PIC_SIZE);
+  img.close?.();
+  let url = canvas.toDataURL('image/webp', 0.85);
+  if (!url.startsWith('data:image/webp')) url = canvas.toDataURL('image/jpeg', 0.85);
+  await set(ref(db, `avatars/${currentUser.id}`), url);
+  applyMyPic(url);
+  return url;
+}
+
+export async function removeAvatar() {
+  if (!currentUser) return;
+  await remove(ref(db, `avatars/${currentUser.id}`));
+  applyMyPic(null);
+}
+
+function applyMyPic(url) {
+  currentUser.avatar = url;
+  picCache.set(currentUser.id, Promise.resolve(url));
+  const chip = document.querySelector('.account-chip .account-initial');
+  if (chip) chip.outerHTML = picHtml(currentUser.username, url, 'account-initial');
 }
 
 // ---------------------------------------------------------------------------
@@ -186,16 +248,15 @@ export function watchFriends(cb) {
     const val = snap.val() || {};
     for (const [fid, off] of statusOff) {
       if (!val[fid]) {
-        off();
+        off.forEach((f) => f());
         statusOff.delete(fid);
         friends.delete(fid);
       }
     }
     for (const [fid, f] of Object.entries(val)) {
-      if (!friends.has(fid)) friends.set(fid, { id: fid, username: f.username, online: false, playing: false });
+      if (!friends.has(fid)) friends.set(fid, { id: fid, username: f.username, online: false, playing: false, avatar: null });
       if (!statusOff.has(fid)) {
-        statusOff.set(
-          fid,
+        statusOff.set(fid, [
           onValue(ref(db, `status/${fid}`), (s) => {
             const st = s.val() || {};
             const fr = friends.get(fid);
@@ -204,7 +265,14 @@ export function watchFriends(cb) {
             fr.playing = !!st.playing;
             emit();
           }),
-        );
+          onValue(ref(db, `avatars/${fid}`), (s) => {
+            const fr = friends.get(fid);
+            if (!fr) return;
+            fr.avatar = cleanPic(s.val());
+            picCache.set(fid, Promise.resolve(fr.avatar));
+            emit();
+          }),
+        ]);
       }
     }
     emit();
@@ -297,7 +365,7 @@ function listenInvitations() {
     const theirColor = inv.color === 'w' ? 'les Blancs' : inv.color === 'b' ? 'les Noirs' : 'une couleur au hasard';
     const t = toast(
       `<div class="toast-invite">
-        <div class="toast-title">♟ ${escapeHtml(inv.fromName)} te défie !</div>
+        <div class="toast-title">${picHtml(inv.fromName, null, 'toast-pic')} ${escapeHtml(inv.fromName)} te défie !</div>
         <div class="toast-sub">${cadenceLabel(inv.base, inv.inc)} · il prend ${theirColor}</div>
         <div class="toast-actions">
           <button class="btn btn-primary small" data-a="ok">Accepter</button>
@@ -308,6 +376,10 @@ function listenInvitations() {
       { duration: 0, cls: 'invite' },
     );
     inviteToasts.set(inv.id, t);
+    avatarOf(inv.from).then((url) => {
+      const el = t.querySelector('.toast-pic');
+      if (url && el) el.outerHTML = picHtml(inv.fromName, url, 'toast-pic');
+    });
     const expire = setTimeout(() => closeInvite(inv.id), left);
     t.addEventListener('click', async (e) => {
       const a = e.target.closest('[data-a]')?.dataset.a;

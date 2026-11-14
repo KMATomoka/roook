@@ -21,10 +21,18 @@
 
   <main class="friends-page" id="friends-page" hidden>
     <section class="profile">
-      <div class="profile-avatar" id="profile-initial"></div>
+      <label class="profile-pic" title="Changer ma photo de profil">
+        <span id="profile-initial"></span>
+        <span class="profile-pic-edit" aria-hidden="true">📷</span>
+        <input type="file" id="pic-input" accept="image/*" hidden>
+      </label>
       <div>
         <h1 id="profile-name"></h1>
         <p class="lead" id="profile-stats"></p>
+        <div class="pic-actions">
+          <button class="btn btn-ghost small" id="pic-change" type="button">📷 Changer ma photo</button>
+          <button class="btn btn-ghost small" id="pic-remove" type="button" hidden>Retirer</button>
+        </div>
       </div>
     </section>
 

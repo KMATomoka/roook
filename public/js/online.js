@@ -72,6 +72,7 @@ export function gameSocket(gameId, user) {
       moves: verbose,
       turn: chess.turn(),
       names: game.names,
+      ids: { w: game.white, b: game.black },
       online: { w: !!on[game.white], b: !!on[game.black] },
       seated: { w: true, b: true },
       status: game.status,

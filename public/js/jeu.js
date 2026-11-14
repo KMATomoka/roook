@@ -9,7 +9,7 @@ import { isMuted, setMuted, lowTimeBeep } from './sound.js';
 import { createFx } from './fx.js';
 import { attachArrows } from './arrows.js';
 import { scrollMoveIntoList } from './common.js';
-import { session } from './compte.js';
+import { session, avatarOf } from './compte.js';
 import { gameSocket } from './online.js';
 const account = await session;
 
@@ -25,6 +25,8 @@ let myColor = 'w'; // pour 'local', c'est seulement l'orientation de départ
 let orientation = 'w';
 let viewPly = null; // null = position actuelle ; sinon on revoit un coup passé
 let names = { w: 'Blancs', b: 'Noirs' };
+let pics = { w: null, b: null }; // photos de profil des joueurs (si elles existent)
+let picIds = '';
 let over = null; // { result, reason } quand la partie est finie
 let gameId = mode === 'ami' ? onlineId + '-' + Date.now().toString(36) : mode + '-' + Date.now().toString(36);
 let savedThisGame = false;
@@ -166,13 +168,35 @@ function playerHtml(c) {
   const clock = clocks.base
     ? `<div class="clock ${isTurn && clocks.running ? 'running' : ''} ${liveClock(c) < 20000 ? 'low' : ''}" data-clock="${c}">${formatClock(liveClock(c))}</div>`
     : '';
-  const face = mode === 'ia' && c !== myColor
-    ? `<img class="avatar noa" data-noa src="img/noa/${noaMood}.svg" alt="Noa" width="44" height="44">`
-    : `<div class="avatar ${colorName(c)}"></div>`;
+  const face = playerFace(c);
   return `${face}
     <div class="pinfo"><div class="pname">${dot}${escapeHtml(names[c] || '…')} ${sub}</div>
     <div class="captured cg-wrap">${capHtml}${adv > 0 ? `<span class="adv">+${adv}</span>` : ''}</div></div>
     ${clock}`;
+}
+
+/** Visage du joueur : Noa, la photo de profil, l'initiale du pseudo, ou un simple carré de couleur. */
+function playerFace(c) {
+  if (mode === 'ia' && c !== myColor) return `<img class="avatar noa" data-noa src="img/noa/${noaMood}.svg" alt="Noa" width="44" height="44">`;
+  const known = mode === 'ami' || (mode === 'ia' && account.user);
+  if (!known) return `<div class="avatar ${colorName(c)}"></div>`;
+  const colorTag = `<i class="avatar-color ${colorName(c)}" title="${c === 'w' ? 'Blancs' : 'Noirs'}"></i>`;
+  const inner = pics[c]
+    ? `<img src="${pics[c]}" alt="Photo de ${escapeHtml(names[c] || '')}" draggable="false">`
+    : escapeHtml((names[c] || '?')[0].toUpperCase());
+  return `<div class="avatar who ${pics[c] ? 'has-pic' : ''}">${inner}${colorTag}</div>`;
+}
+
+/** Charge les photos des deux joueurs (une seule fois par paire de joueurs). */
+function loadPics(ids) {
+  const key = `${ids.w}|${ids.b}`;
+  if (key === picIds) return;
+  picIds = key;
+  Promise.all([avatarOf(ids.w), avatarOf(ids.b)]).then(([w, b]) => {
+    if (picIds !== key) return;
+    pics = { w, b };
+    renderPlayers();
+  });
 }
 
 function renderPlayers() {
@@ -500,6 +524,7 @@ function setupAiColor(c) {
   const me = account.user?.username || 'Toi';
   const ai = 'Noa';
   names = c === 'w' ? { w: me, b: ai } : { w: ai, b: me };
+  pics = c === 'w' ? { w: account.user?.avatar || null, b: null } : { w: null, b: account.user?.avatar || null };
 }
 
 async function aiMove() {
@@ -566,6 +591,7 @@ function startOnline() {
     const before = history().length;
     online = s;
     names = s.names;
+    if (s.ids) loadPics(s.ids);
     gameId = `${onlineId}-${s.round}`;
     clocks.base = s.time.base;
     clocks.w = s.clock.w;
@@ -651,7 +677,7 @@ if (mode === 'ami') {
   if (c !== 'w' && c !== 'b') c = Math.random() < 0.5 ? 'w' : 'b';
   $('#mode-label').textContent = `Contre Noa · niveau ${level.n} · ${cadence.label}`;
   resetLocalClock();
-  document.title = `Contre Noa — Roque`;
+  document.title = `Contre Noa — ROOOK`;
   engine = new Engine();
   setupAiColor(c);
   render();

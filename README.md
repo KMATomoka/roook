@@ -3,6 +3,7 @@
 Site : **https://kmatomoka.github.io/roook/**
 
 - **Comptes et amis** : chacun crée son compte (pseudo + mot de passe), ajoute ses amis par leur pseudo, voit qui est en ligne et les défie en un clic. L'ami reçoit le défi en direct, où qu'il soit sur le site.
+- **Photo de profil** : chacun choisit sa photo sur la page « Mes amis » (recadrée et réduite à 160 px). Elle s'affiche en partie à côté du pseudo, dans la liste d'amis et dans les défis.
 - **Parties entre amis** : en temps réel, à la pendule (bullet, blitz, rapide, classique), avec chat, nulle et revanche. Chaque partie terminée va dans l'historique du joueur.
 - **Contre Noa** : l'IA, 8 niveaux, du débutant au grand maître (le moteur tourne dans le navigateur).
 - **Bilan** : Noa, le coach, note et explique chaque coup, avec précision en %, graphique et moments clés.
@@ -13,7 +14,7 @@ Site : **https://kmatomoka.github.io/roook/**
 - **GitHub Pages** sert le site (pages, images, moteur de l'IA) depuis la branche `gh-pages`. Pour publier une nouvelle version : `npm run deploy` (construit le site dans `dist/` puis l'envoie sur `gh-pages`).
 - **Firebase** (projet `roook-echecs`, offre gratuite Spark) gère :
   - les **comptes** (Authentication, « adresse e-mail / mot de passe » : l'adresse est fabriquée à partir du pseudo et ne sert jamais à écrire) ;
-  - la **base temps réel** (Realtime Database, Belgique) : profils, amis, demandes, présence, défis, parties, historique.
+  - la **base temps réel** (Realtime Database, Belgique) : profils, photos de profil, amis, demandes, présence, défis, parties, historique.
 
 La configuration Firebase (`public/js/firebase-config.js`) n'est pas secrète. La sécurité vient des **règles de la base** (`database.rules.json`, à recopier dans la console Firebase → Realtime Database → Règles si on les modifie) :
 seul le joueur dont c'est le tour peut ajouter un coup, personne ne lit l'historique ou les demandes d'un autre, on ne peut défier que ses amis, etc.

@@ -1,6 +1,6 @@
 // Page « Mes amis » : ajouter, accepter, défier, et l'historique des parties (Firebase).
 import { $, escapeHtml, gameRow, saveGame, getGame, serverGameToLocal as toLocal, historyToGame as fromHistory } from './common.js';
-import { session, challenge, toast, watchFriends, addFriend, acceptFriend, declineFriend, cancelRequest, removeFriend, myHistory } from './compte.js';
+import { session, challenge, toast, watchFriends, addFriend, acceptFriend, declineFriend, cancelRequest, removeFriend, myHistory, picHtml, setAvatar, removeAvatar } from './compte.js';
 
 const { user } = await session;
 if (!user) location.href = 'connexion.html?retour=amis.html';
@@ -11,8 +11,33 @@ let incoming = [];
 
 function start() {
   $('#friends-page').hidden = false;
-  $('#profile-initial').textContent = user.username[0].toUpperCase();
   $('#profile-name').textContent = user.username;
+  showMyPic();
+
+  // Photo de profil : on clique sur la pastille ou sur le bouton, on choisit une image
+  $('#pic-change').addEventListener('click', () => $('#pic-input').click());
+  $('#pic-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    $('#pic-change').disabled = true;
+    try {
+      await setAvatar(file);
+      showMyPic();
+      toast('Photo de profil mise à jour ✨', { cls: 'info' });
+    } catch (ex) {
+      toast(escapeHtml(ex.message), { cls: 'error' });
+    }
+    $('#pic-change').disabled = false;
+  });
+  $('#pic-remove').addEventListener('click', async () => {
+    try {
+      await removeAvatar();
+      showMyPic();
+    } catch (ex) {
+      toast(escapeHtml(ex.message), { cls: 'error' });
+    }
+  });
 
   $('#add-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -39,8 +64,13 @@ function start() {
   loadHistory();
 }
 
-function avatar(name, status) {
-  return `<span class="person-avatar">${escapeHtml(name[0].toUpperCase())}${status ? `<i class="presence ${status}"></i>` : ''}</span>`;
+function showMyPic() {
+  $('#profile-initial').outerHTML = picHtml(user.username, user.avatar, 'profile-avatar').replace('<span class="', '<span id="profile-initial" class="');
+  $('#pic-remove').hidden = !user.avatar;
+}
+
+function avatar(name, status, url = null) {
+  return picHtml(name, url, 'person-avatar', status ? `<i class="presence ${status}"></i>` : '');
 }
 
 function renderRequests({ incoming, outgoing }) {
@@ -71,7 +101,7 @@ function renderFriends() {
         .map((f) => {
           const status = f.playing ? 'playing' : f.online ? 'online' : 'offline';
           const label = f.playing ? 'en partie' : f.online ? 'en ligne' : 'hors ligne';
-          return `<li class="person">${avatar(f.username, status)}
+          return `<li class="person">${avatar(f.username, status, f.avatar)}
             <span class="person-name">${escapeHtml(f.username)} <small class="status-${status}">${label}</small></span>
             <span class="person-actions">
               <button class="btn btn-primary small" data-challenge="${f.id}" ${status === 'online' ? '' : 'disabled'}>⚔ Défier</button>

@@ -699,3 +699,37 @@ body::after {
 .cg-wrap piece.rook.black { background-image: url('../img/pieces/bR.svg'); }
 .cg-wrap piece.queen.black { background-image: url('../img/pieces/bQ.svg'); }
 .cg-wrap piece.king.black { background-image: url('../img/pieces/bK.svg'); }
+
+/* Photos de profil */
+.account-initial img, .person-avatar img, .profile-avatar img, .toast-pic img {
+  width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;
+}
+.has-pic { background: var(--bg-2); }
+.avatar.who {
+  position: relative; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
+  background: linear-gradient(140deg, var(--accent-soft), var(--accent)); color: #fff; font: 700 1.1rem var(--serif);
+  border: 1px solid var(--line-strong);
+}
+.avatar.who img { width: 100%; height: 100%; border-radius: 11px; object-fit: cover; display: block; }
+.avatar.who.has-pic { background: var(--bg-2); }
+.player.turn .avatar.who { border-color: var(--accent); box-shadow: 0 0 14px rgba(143, 107, 255, 0.45); }
+.avatar-color {
+  position: absolute; right: -4px; bottom: -4px; width: 15px; height: 15px; border-radius: 5px;
+  border: 2px solid var(--bg); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+.avatar-color.white { background: linear-gradient(145deg, #fafaf3, #cfcbbd); }
+.avatar-color.black { background: linear-gradient(145deg, #4a4a46, #1a1a18); }
+.toast-title { display: flex; align-items: center; gap: 8px; }
+.toast-pic {
+  width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  background: linear-gradient(140deg, var(--accent-soft), var(--accent)); color: #fff; font: 700 0.8rem var(--serif);
+}
+.profile-pic { position: relative; cursor: pointer; flex: none; border-radius: 50%; }
+.profile-pic .profile-avatar { width: 84px; height: 84px; font-size: 2rem; }
+.profile-pic-edit {
+  position: absolute; right: -2px; bottom: -2px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--surface-2); border: 1px solid var(--line-strong); font-size: 0.85rem; transition: transform 0.15s;
+}
+.profile-pic:hover .profile-pic-edit { transform: scale(1.1); border-color: var(--accent); }
+.profile-pic:hover .profile-avatar { box-shadow: 0 0 0 3px var(--accent), 0 0 30px rgba(143, 107, 255, 0.5); }
+.pic-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }

@@ -2,7 +2,7 @@
 import { Chessground } from '../vendor/chessground/chessground.min.js';
 import { LEVELS } from './engine.js';
 import { $, $$, Chess, getPref, setPref, loadGames, gameRow, escapeHtml } from './common.js';
-import { session, challenge, watchFriends } from './compte.js';
+import { session, challenge, watchFriends, picHtml } from './compte.js';
 
 // --- Échiquier animé : la « partie de l'Opéra » (Morphy, 1858) ---------------
 const OPERA = 'e4 e5 Nf3 d6 d4 Bg4 dxe5 Bxf3 Qxf3 dxe5 Bc4 Nf6 Qb3 Qe7 Nc3 c6 Bg5 b5 Nxb5 cxb5 Bxb5+ Nbd7 O-O-O Rd8 Rxd7 Rxd7 Rd1 Qe6 Bxd7+ Nxd7 Qb8+ Nxb8 Rd8#'.split(' ');
@@ -74,7 +74,7 @@ function renderFriends() {
       .map((f) => {
         const status = f.playing ? 'playing' : f.online ? 'online' : 'offline';
         const label = f.playing ? 'en partie' : f.online ? 'en ligne' : 'hors ligne';
-        return `<li class="person"><span class="person-avatar">${escapeHtml(f.username[0].toUpperCase())}<i class="presence ${status}"></i></span>
+        return `<li class="person">${picHtml(f.username, f.avatar, 'person-avatar', `<i class="presence ${status}"></i>`)}
           <span class="person-name">${escapeHtml(f.username)} <small class="status-${status}">${label}</small></span>
           <span class="person-actions"><button class="btn btn-primary small" data-challenge="${f.id}" ${status === 'online' ? '' : 'disabled'}>⚔ Défier</button></span></li>`;
       })

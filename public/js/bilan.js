@@ -1,11 +1,11 @@
 // Page « Bilan » : le moteur analyse chaque coup, puis Noa, le coach, explique la partie.
-import { Chessground } from '/vendor/chessground/chessground.min.js';
-import { Engine, toWhiteCp, winPercent, formatEval } from '/js/engine.js';
-import { attachArrows } from '/js/arrows.js';
-import { explainMove, resetPhrasing } from '/js/explain.js';
-import { scrollMoveIntoList } from '/js/common.js';
-import { $, $$, Chess, colorName, getGame, loadGames, saveGame, resultText, escapeHtml, frSan, gameRow, serverGameToLocal } from '/js/common.js';
-import { api } from '/js/compte.js';
+import { Chessground } from '../vendor/chessground/chessground.min.js';
+import { Engine, toWhiteCp, winPercent, formatEval } from './engine.js';
+import { attachArrows } from './arrows.js';
+import { explainMove, resetPhrasing } from './explain.js';
+import { scrollMoveIntoList } from './common.js';
+import { $, $$, Chess, colorName, getGame, loadGames, saveGame, resultText, escapeHtml, frSan, gameRow, serverGameToLocal, historyToGame } from './common.js';
+import { session, historyGame } from './compte.js';
 
 const DEPTH = 13;
 
@@ -40,7 +40,7 @@ function showPicker() {
   const list = loadGames();
   $('#pick-list').innerHTML = list.length
     ? list.map(gameRow).join('')
-    : '<li class="empty">Tu n’as pas encore joué de partie. <a href="/">Lance-toi !</a></li>';
+    : '<li class="empty">Tu n’as pas encore joué de partie. <a href="./">Lance-toi !</a></li>';
   $('#pgn-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const txt = $('#pgn-input').value.trim();
@@ -64,7 +64,7 @@ function showPicker() {
       pgn: txt,
     };
     saveGame(g);
-    history.replaceState(null, '', '/bilan?partie=' + g.id);
+    history.replaceState(null, '', 'bilan.html?partie=' + g.id);
     $('#pick').hidden = true;
     start(g);
   });
@@ -217,7 +217,7 @@ function showReview() {
   const r = game.result === '*' ? { title: 'Partie non terminée', sub: '' } : resultText(game.result, game.reason, names);
   $('#r-title').textContent = `${game.white} contre ${game.black}`;
   $('#r-sub').textContent = `${r.title}${r.sub ? ' ' + r.sub : ''} · ${Math.ceil(plies.length / 2)} coups`;
-  $('#r-replay').href = game.mode === 'ia' ? `/jeu?ia=${game.level || 3}` : '/';
+  $('#r-replay').href = game.mode === 'ia' ? `jeu.html?ia=${game.level || 3}` : '/';
   $('#r-copy').addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(game.pgn);
@@ -329,7 +329,7 @@ function writeCoach(st) {
   }
   $('#coach-title').textContent = title;
   const acc = who ? who.acc : (st.w.acc + st.b.acc) / 2;
-  $('#coach-avatar').src = `/img/noa/${acc >= 88 ? 'frime' : acc >= 78 ? 'content' : acc >= 65 ? 'neutre' : acc >= 50 ? 'hmm' : 'grimace'}.svg`;
+  $('#coach-avatar').src = `img/noa/${acc >= 88 ? 'frime' : acc >= 78 ? 'content' : acc >= 65 ? 'neutre' : acc >= 50 ? 'hmm' : 'grimace'}.svg`;
   $('#coach-text').innerHTML = lines.map((l) => `<p>${l}</p>`).join('');
   $('#coach-text').addEventListener('click', (e) => {
     const a = e.target.closest('[data-goto]');
@@ -452,7 +452,7 @@ function goTo(ply) {
 const EMOTE = { best: 'frime', excellent: 'content', good: 'neutre', inaccuracy: 'hmm', mistake: 'grimace', blunder: 'surpris' };
 
 function noaSays(emote, html) {
-  return `<div class="noa-says"><img class="noa-face" src="/img/noa/${emote}.svg" alt="Noa" width="56" height="56">
+  return `<div class="noa-says"><img class="noa-face" src="img/noa/${emote}.svg" alt="Noa" width="56" height="56">
     <div class="bubble"><span class="noa-name">Noa</span>${html}</div></div>`;
 }
 
@@ -544,9 +544,11 @@ const id = new URLSearchParams(location.search).get('partie');
 if (id && getGame(id)) start(getGame(id));
 else if (id) {
   // Partie jouée contre un ami : on la récupère sur le serveur
-  api(`/api/parties/${encodeURIComponent(id)}`)
-    .then(({ game }) => {
-      const g = serverGameToLocal(game);
+  session
+    .then(() => historyGame(id))
+    .then((h) => {
+      if (!h) return showPicker();
+      const g = serverGameToLocal(historyToGame(h));
       saveGame(g);
       start(g);
     })

@@ -3,17 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Partie — Roque</title>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <title>Partie — ROOOK</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/vendor/chessground-assets/chessground.base.css">
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="vendor/chessground-assets/chessground.base.css">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="page-game">
   <header class="topbar">
-    <a class="logo" href="/"><span class="logo-mark">♜</span> Roque</a>
+    <a class="logo" href="./"><span class="logo-mark">♜</span> ROOOK</a>
     <div class="topbar-right">
       <span class="mode-label" id="mode-label"></span>
       <button class="icon-btn sound-toggle" id="sound-toggle" type="button" title="Couper le son">🔊</button>
@@ -76,13 +76,12 @@
     <div class="end-actions">
       <a class="btn btn-primary" id="end-review">📊 Voir le bilan</a>
       <button class="btn btn-ghost" id="end-rematch">Revanche</button>
-      <a class="btn btn-ghost" href="/">Accueil</a>
+      <a class="btn btn-ghost" href="./">Accueil</a>
     </div>
     <button class="modal-close" id="end-close" aria-label="Fermer">×</button>
   </dialog>
 
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script type="module" src="/js/jeu.js"></script>
+  <script type="module" src="js/jeu.js"></script>
 </body>
 </html>

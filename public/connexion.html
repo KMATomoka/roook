@@ -3,21 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Connexion — Roque</title>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <title>Connexion — ROOOK</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="page-auth">
   <header class="topbar">
-    <a class="logo" href="/"><span class="logo-mark">♜</span> Roque</a>
+    <a class="logo" href="./"><span class="logo-mark">♜</span> ROOOK</a>
   </header>
 
   <main class="auth">
     <div class="card auth-card">
-      <img class="auth-noa" src="/img/noa/content.svg" alt="" width="88" height="88">
+      <img class="auth-noa" src="img/noa/content.svg" alt="" width="88" height="88">
       <div class="auth-tabs" role="tablist">
         <button role="tab" data-tab="connexion" aria-selected="true">Connexion</button>
         <button role="tab" data-tab="inscription" aria-selected="false">Créer un compte</button>
@@ -37,12 +37,15 @@
   </main>
 
   <script type="module">
-    import { api } from '/js/compte.js';
+    import { session, signIn, signUp } from './js/compte.js';
     const form = document.querySelector('#auth-form');
     const err = document.querySelector('#auth-error');
     const params = new URLSearchParams(location.search);
-    // On ne revient que vers une page du site (jamais vers un autre site)
-    const back = (params.get('retour') || '').startsWith('/') && !params.get('retour').startsWith('//') ? params.get('retour') : '/amis';
+    // On ne revient que vers une page de ce site (adresse relative, jamais vers un autre site)
+    const wanted = params.get('retour') || '';
+    const back = /^(\.\/|[a-z]+\.html)[^:]*$/i.test(wanted) && !wanted.includes('//') ? wanted : 'amis.html';
+    // Déjà connecté : on file directement
+    session.then(({ user }) => user && (location.href = back));
     let mode = params.get('mode') === 'inscription' ? 'inscription' : 'connexion';
 
     function setMode(m) {
@@ -62,7 +65,9 @@
       const btn = document.querySelector('#auth-submit');
       btn.disabled = true;
       try {
-        await api('/api/' + mode, { method: 'POST', body: { username: form.username.value.trim(), password: form.password.value } });
+        const name = form.username.value.trim();
+        if (mode === 'inscription') await signUp(name, form.password.value);
+        else await signIn(name, form.password.value);
         location.href = back;
       } catch (ex) {
         err.textContent = ex.message;

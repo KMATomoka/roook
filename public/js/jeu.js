@@ -1,19 +1,20 @@
 // Page de partie : contre un ami en ligne, contre l'IA, ou à deux sur le même écran.
-import { Chessground } from '/vendor/chessground/chessground.min.js';
-import { Engine, LEVELS } from '/js/engine.js';
+import { Chessground } from '../vendor/chessground/chessground.min.js';
+import { Engine, LEVELS } from './engine.js';
 import {
   $, $$, Chess, colorName, legalDests, isPromotion, askPromotion, saveGame, getPref, setPref,
   resultText, localGameOver, formatClock, escapeHtml, material, frSan,
-} from '/js/common.js';
-import { isMuted, setMuted, lowTimeBeep } from '/js/sound.js';
-import { createFx } from '/js/fx.js';
-import { attachArrows } from '/js/arrows.js';
-import { scrollMoveIntoList } from '/js/common.js';
-import { session } from '/js/compte.js';
+} from './common.js';
+import { isMuted, setMuted, lowTimeBeep } from './sound.js';
+import { createFx } from './fx.js';
+import { attachArrows } from './arrows.js';
+import { scrollMoveIntoList } from './common.js';
+import { session } from './compte.js';
+import { gameSocket } from './online.js';
 const account = await session;
 
 const params = new URLSearchParams(location.search);
-const onlineId = location.pathname.startsWith('/partie/') ? location.pathname.split('/')[2] : null;
+const onlineId = params.get('partie');
 const mode = onlineId ? 'ami' : params.has('ia') ? 'ia' : 'local';
 
 // ---------------------------------------------------------------------------
@@ -166,7 +167,7 @@ function playerHtml(c) {
     ? `<div class="clock ${isTurn && clocks.running ? 'running' : ''} ${liveClock(c) < 20000 ? 'low' : ''}" data-clock="${c}">${formatClock(liveClock(c))}</div>`
     : '';
   const face = mode === 'ia' && c !== myColor
-    ? `<img class="avatar noa" data-noa src="/img/noa/${noaMood}.svg" alt="Noa" width="44" height="44">`
+    ? `<img class="avatar noa" data-noa src="img/noa/${noaMood}.svg" alt="Noa" width="44" height="44">`
     : `<div class="avatar ${colorName(c)}"></div>`;
   return `${face}
     <div class="pinfo"><div class="pname">${dot}${escapeHtml(names[c] || '…')} ${sub}</div>
@@ -370,7 +371,7 @@ function finish(end) {
     const noaWon = end.result !== '1/2-1/2' && (end.result === '1-0' ? 'w' : 'b') !== myColor;
     const face = end.result === '1/2-1/2' ? 'hmm' : noaWon ? 'frime' : 'content';
     setNoaMood(face, 0);
-    $('#end-icon').innerHTML = `<img class="end-noa" src="/img/noa/${face}.svg" alt="Noa" width="96" height="96">`;
+    $('#end-icon').innerHTML = `<img class="end-noa" src="img/noa/${face}.svg" alt="Noa" width="96" height="96">`;
   }
   $('#end-title').textContent = r.title;
   $('#end-sub').textContent = r.sub ? r.sub.charAt(0).toUpperCase() + r.sub.slice(1) + '.' : '';
@@ -378,7 +379,7 @@ function finish(end) {
     const noaWon = end.result !== '1/2-1/2' && (end.result === '1-0' ? 'w' : 'b') !== myColor;
     $('#end-sub').textContent += noaWon ? ' Noa : « Trop facile. Tu prends ta revanche ? »' : end.result === '1/2-1/2' ? ' Noa : « Hmm… on remet ça ? »' : ' Noa : « GG, bien joué ! »';
   }
-  $('#end-review').href = `/bilan?partie=${encodeURIComponent(gameId)}`;
+  $('#end-review').href = `bilan.html?partie=${encodeURIComponent(gameId)}`;
   $('#end-rematch').textContent = mode === 'ami' ? 'Revanche' : 'Rejouer';
   $('#end-rematch').hidden = mode === 'ami' && !myColor;
   $('#end-rematch').disabled = false;
@@ -415,7 +416,7 @@ function storeGame() {
 
 function openReview() {
   storeGame();
-  location.href = `/bilan?partie=${encodeURIComponent(gameId)}`;
+  location.href = `bilan.html?partie=${encodeURIComponent(gameId)}`;
 }
 $('#end-review').addEventListener('click', (e) => {
   e.preventDefault();
@@ -469,7 +470,7 @@ function setNoaMood(mood, revertAfter = 2400) {
   noaMood = mood;
   const img = document.querySelector('[data-noa]');
   if (img && changed) {
-    img.src = `/img/noa/${mood}.svg`;
+    img.src = `img/noa/${mood}.svg`;
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
       img.animate([{ transform: 'scale(.6) rotate(-12deg)' }, { transform: 'scale(1.18) rotate(4deg)' }, { transform: 'none' }], { duration: 380, easing: 'ease-out' });
     }
@@ -537,29 +538,28 @@ let online = { status: 'waiting' };
 function startOnline() {
   $('#mode-label').textContent = 'Partie entre amis';
   $('#chat').hidden = false;
-  socket = account.socket;
-  if (!socket) return;
+  if (!account.user) {
+    $('.game-layout').innerHTML = `<div class="card notfound"><h2>Connecte-toi pour suivre cette partie</h2>
+      <p>Les parties entre amis sont réservées aux joueurs inscrits.</p>
+      <a class="btn btn-primary" href="connexion.html?retour=${encodeURIComponent('jeu.html?partie=' + onlineId)}">Se connecter</a></div>`;
+    return;
+  }
+  socket = gameSocket(onlineId, account.user);
 
-  const join = () =>
-    socket.emit('join', { id: onlineId }, (res) => {
-      if (res.error) {
-        $('.game-layout').innerHTML = `<div class="card notfound"><h2>Partie introuvable</h2>
-          <p>Cette partie n’existe plus : elle est peut-être terminée depuis longtemps, ou le serveur a redémarré.</p>
-          <a class="btn btn-primary" href="/amis">Retour à mes amis</a></div>`;
-        return;
-      }
-      myColor = res.color;
-      orientation = myColor || 'w';
-      $('#chat-log').innerHTML = '';
-      res.chat.forEach(addChat);
-      if (!myColor && !account.user) {
-        $('#status').innerHTML = 'Tu regardes en spectateur. <a href="/connexion">Connecte-toi</a> pour défier tes amis.';
-      }
-      render();
-    });
-  // On rejoint la partie maintenant, puis à chaque reconnexion
-  if (socket.connected) join();
-  socket.on('connect', join);
+  socket.emit('join', { id: onlineId }, (res) => {
+    if (res.error) {
+      $('.game-layout').innerHTML = `<div class="card notfound"><h2>Partie introuvable</h2>
+        <p>Ce lien ne correspond à aucune partie.</p>
+        <a class="btn btn-primary" href="amis.html">Retour à mes amis</a></div>`;
+      return;
+    }
+    myColor = res.color;
+    orientation = myColor || 'w';
+    $('#chat-log').innerHTML = '';
+    res.chat.forEach(addChat);
+    if (!myColor) $('#chat').hidden = true; // les spectateurs regardent sans écrire
+    render();
+  });
 
   socket.on('state', (s) => {
     const wasOver = online.status === 'over';

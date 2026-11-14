@@ -1,30 +1,27 @@
-// Page « Mes amis » : ajouter, accepter, défier, et l'historique des parties.
-import { $, escapeHtml, gameRow, saveGame, getGame, serverGameToLocal as toLocal } from '/js/common.js';
-import { session, api, challenge, refreshBadge, toast } from '/js/compte.js';
+// Page « Mes amis » : ajouter, accepter, défier, et l'historique des parties (Firebase).
+import { $, escapeHtml, gameRow, saveGame, getGame, serverGameToLocal as toLocal, historyToGame as fromHistory } from './common.js';
+import { session, challenge, toast, watchFriends, addFriend, acceptFriend, declineFriend, cancelRequest, removeFriend, myHistory } from './compte.js';
 
-const { user, stats, socket } = await session;
-if (!user) location.href = '/connexion?retour=/amis';
+const { user } = await session;
+if (!user) location.href = 'connexion.html?retour=amis.html';
 else start();
+
+let friends = [];
+let incoming = [];
 
 function start() {
   $('#friends-page').hidden = false;
   $('#profile-initial').textContent = user.username[0].toUpperCase();
   $('#profile-name').textContent = user.username;
-  const total = stats.wins + stats.losses + stats.draws;
-  $('#profile-stats').textContent = total
-    ? `${total} partie${total > 1 ? 's' : ''} · ${stats.wins} victoire${stats.wins > 1 ? 's' : ''}, ${stats.losses} défaite${stats.losses > 1 ? 's' : ''}, ${stats.draws} nulle${stats.draws > 1 ? 's' : ''}`
-    : 'Ajoute tes amis par leur pseudo, puis défie-les quand ils sont en ligne.';
 
   $('#add-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const input = e.target.username;
     const msg = $('#add-msg');
     try {
-      const res = await api('/api/amis', { method: 'POST', body: { username: input.value.trim() } });
-      msg.textContent = res.message;
+      msg.textContent = await addFriend(input.value);
       msg.className = 'form-msg ok';
       input.value = '';
-      load();
     } catch (ex) {
       msg.textContent = ex.message;
       msg.className = 'form-msg error';
@@ -32,47 +29,36 @@ function start() {
     msg.hidden = false;
   });
 
-  // Mises à jour en direct : présence, demandes, nouveaux amis
-  socket?.on('amis:maj', load);
-  socket?.on('presence', ({ id, online, playing }) => {
-    const f = friends.find((x) => x.id === id);
-    if (!f) return;
-    Object.assign(f, { online, playing });
+  // Tout se met à jour en direct : présence des amis, demandes reçues et envoyées
+  watchFriends((data) => {
+    friends = data.friends;
+    incoming = data.incoming;
     renderFriends();
+    renderRequests(data);
   });
-
-  load();
   loadHistory();
 }
 
-let friends = [];
+function avatar(name, status) {
+  return `<span class="person-avatar">${escapeHtml(name[0].toUpperCase())}${status ? `<i class="presence ${status}"></i>` : ''}</span>`;
+}
 
-async function load() {
-  const data = await api('/api/amis');
-  friends = data.friends;
-  renderFriends();
-
-  $('#incoming-card').hidden = !data.incoming.length;
-  $('#incoming').innerHTML = data.incoming
+function renderRequests({ incoming, outgoing }) {
+  $('#incoming-card').hidden = !incoming.length;
+  $('#incoming').innerHTML = incoming
     .map(
-      (u) => `<li class="person">${avatar(u)}<span class="person-name">${escapeHtml(u.username)}</span>
+      (u) => `<li class="person">${avatar(u.username)}<span class="person-name">${escapeHtml(u.username)}</span>
         <span class="person-actions"><button class="btn btn-primary small" data-accept="${u.id}">Accepter</button>
         <button class="btn btn-ghost small" data-decline="${u.id}">Refuser</button></span></li>`,
     )
     .join('');
-
-  $('#outgoing-card').hidden = !data.outgoing.length;
-  $('#outgoing').innerHTML = data.outgoing
+  $('#outgoing-card').hidden = !outgoing.length;
+  $('#outgoing').innerHTML = outgoing
     .map(
-      (u) => `<li class="person">${avatar(u)}<span class="person-name">${escapeHtml(u.username)} <small class="muted">en attente</small></span>
-        <span class="person-actions"><button class="btn btn-ghost small" data-remove="${u.id}">Annuler</button></span></li>`,
+      (u) => `<li class="person">${avatar(u.username)}<span class="person-name">${escapeHtml(u.username)} <small class="muted">en attente</small></span>
+        <span class="person-actions"><button class="btn btn-ghost small" data-cancel="${u.id}">Annuler</button></span></li>`,
     )
     .join('');
-  refreshBadge();
-}
-
-function avatar(u, status) {
-  return `<span class="person-avatar">${escapeHtml(u.username[0].toUpperCase())}${status ? `<i class="presence ${status}"></i>` : ''}</span>`;
 }
 
 function renderFriends() {
@@ -85,10 +71,10 @@ function renderFriends() {
         .map((f) => {
           const status = f.playing ? 'playing' : f.online ? 'online' : 'offline';
           const label = f.playing ? 'en partie' : f.online ? 'en ligne' : 'hors ligne';
-          return `<li class="person">${avatar(f, status)}
+          return `<li class="person">${avatar(f.username, status)}
             <span class="person-name">${escapeHtml(f.username)} <small class="status-${status}">${label}</small></span>
             <span class="person-actions">
-              <button class="btn btn-primary small" data-challenge="${f.id}" ${f.online && !f.playing ? '' : 'disabled'}>⚔ Défier</button>
+              <button class="btn btn-primary small" data-challenge="${f.id}" ${status === 'online' ? '' : 'disabled'}>⚔ Défier</button>
               <button class="icon-btn" data-remove="${f.id}" title="Retirer de mes amis" aria-label="Retirer ${escapeHtml(f.username)} de mes amis">✕</button>
             </span></li>`;
         })
@@ -100,25 +86,35 @@ document.addEventListener('click', async (e) => {
   const b = e.target.closest('button');
   if (!b) return;
   try {
-    if (b.dataset.challenge) challenge(friends.find((f) => f.id === Number(b.dataset.challenge)));
-    if (b.dataset.accept) await api(`/api/amis/${b.dataset.accept}/accepter`, { method: 'POST' });
-    if (b.dataset.decline) await api(`/api/amis/${b.dataset.decline}/refuser`, { method: 'POST' });
-    if (b.dataset.remove) {
-      const name = b.closest('.person').querySelector('.person-name').firstChild.textContent.trim();
-      if (!confirm(`Retirer ${name} ?`)) return;
-      await api(`/api/amis/${b.dataset.remove}`, { method: 'DELETE' });
+    if (b.dataset.challenge) challenge(friends.find((f) => f.id === b.dataset.challenge));
+    if (b.dataset.accept) {
+      const req = incoming.find((r) => r.id === b.dataset.accept);
+      await acceptFriend(req.id, req.username);
     }
-    if (b.dataset.accept || b.dataset.decline || b.dataset.remove) load();
+    if (b.dataset.decline) await declineFriend(b.dataset.decline);
+    if (b.dataset.cancel) await cancelRequest(b.dataset.cancel);
+    if (b.dataset.remove) {
+      const f = friends.find((x) => x.id === b.dataset.remove);
+      if (!confirm(`Retirer ${f.username} de tes amis ?`)) return;
+      await removeFriend(f.id);
+    }
   } catch (ex) {
     toast(escapeHtml(ex.message), { cls: 'error' });
   }
 });
 
 async function loadHistory() {
-  const { games } = await api('/api/parties');
-  // On garde une copie locale pour que le bilan s'ouvre directement
-  for (const g of games) if (!getGame(g.id)) saveGame(toLocal(g));
+  const games = await myHistory(200);
+  const wins = games.filter((g) => (g.result === '1-0' && g.me === 'w') || (g.result === '0-1' && g.me === 'b')).length;
+  const draws = games.filter((g) => g.result === '1/2-1/2').length;
+  const losses = games.length - wins - draws;
+  const n = games.length;
+  $('#profile-stats').textContent = n
+    ? `${n} partie${n > 1 ? 's' : ''} · ${wins} victoire${wins > 1 ? 's' : ''}, ${losses} défaite${losses > 1 ? 's' : ''}, ${draws} nulle${draws > 1 ? 's' : ''}`
+    : 'Ajoute tes amis par leur pseudo, puis défie-les quand ils sont en ligne.';
+  // Copie locale pour que le bilan s'ouvre directement
+  for (const g of games) if (!getGame(g.id)) saveGame(toLocal(fromHistory(g)));
   $('#history').innerHTML = games.length
-    ? games.map((g) => gameRow(toLocal(g))).join('')
+    ? games.slice(0, 30).map((g) => gameRow(toLocal(fromHistory(g)))).join('')
     : '<li class="empty">Tes parties contre tes amis apparaîtront ici.</li>';
 }

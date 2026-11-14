@@ -1,62 +1,54 @@
-# Roque — site d'échecs entre amis
+# ROOOK — échecs entre amis
+
+Site : **https://kmatomoka.github.io/roook/**
 
 - **Comptes et amis** : chacun crée son compte (pseudo + mot de passe), ajoute ses amis par leur pseudo, voit qui est en ligne et les défie en un clic. L'ami reçoit le défi en direct, où qu'il soit sur le site.
-- **Parties entre amis** : en temps réel, à la pendule (bullet, blitz, rapide, classique), avec chat, nulle et revanche. Chaque partie terminée est enregistrée dans l'historique.
-- **Contre Noa** : l'IA, 8 niveaux, du débutant au grand maître.
-- **Bilan** : Noa, le coach, note et explique chaque coup (meilleur coup, erreur, gaffe…), avec précision en %, graphique et moments clés.
+- **Parties entre amis** : en temps réel, à la pendule (bullet, blitz, rapide, classique), avec chat, nulle et revanche. Chaque partie terminée va dans l'historique du joueur.
+- **Contre Noa** : l'IA, 8 niveaux, du débutant au grand maître (le moteur tourne dans le navigateur).
+- **Bilan** : Noa, le coach, note et explique chaque coup, avec précision en %, graphique et moments clés.
 - **Même écran** et **analyse d'un PGN** collé.
+
+## Comment c'est hébergé (gratuit)
+
+- **GitHub Pages** sert le site (pages, images, moteur de l'IA) depuis la branche `gh-pages`. Pour publier une nouvelle version : `npm run deploy` (construit le site dans `dist/` puis l'envoie sur `gh-pages`).
+- **Firebase** (projet `roook-echecs`, offre gratuite Spark) gère :
+  - les **comptes** (Authentication, « adresse e-mail / mot de passe » : l'adresse est fabriquée à partir du pseudo et ne sert jamais à écrire) ;
+  - la **base temps réel** (Realtime Database, Belgique) : profils, amis, demandes, présence, défis, parties, historique.
+
+La configuration Firebase (`public/js/firebase-config.js`) n'est pas secrète. La sécurité vient des **règles de la base** (`database.rules.json`, à recopier dans la console Firebase → Realtime Database → Règles si on les modifie) :
+seul le joueur dont c'est le tour peut ajouter un coup, personne ne lit l'historique ou les demandes d'un autre, on ne peut défier que ses amis, etc.
 
 ## Lancer le site sur ton ordinateur
 
-Il faut [Node.js](https://nodejs.org) **version 22.13 ou plus** (la base de données utilise SQLite, intégré à Node).
+Il faut [Node.js](https://nodejs.org) 20 ou plus.
 
 ```bash
 npm install
 npm start
 ```
 
-Puis ouvre http://localhost:3000
-
-> Sur ton ordinateur, seuls les appareils de ton réseau peuvent te rejoindre.
-> Pour jouer avec des amis ailleurs, il faut mettre le site en ligne.
-
-## La base de données
-
-Les comptes, les amitiés et l'historique des parties sont dans un fichier SQLite : `data/roque.db`.
-Il est créé automatiquement au premier lancement. Les mots de passe y sont chiffrés (scrypt), jamais en clair.
-
-- Pour tout remettre à zéro : arrête le serveur et supprime le dossier `data/`.
-- Pour mettre la base ailleurs : variable d'environnement `DATA_DIR` (ex. `DATA_DIR=/var/data`).
-
-## Mettre le site en ligne (Railway, relié à GitHub)
-
-Le projet est prêt pour Railway : `railway.json` (démarrage, contrôle de santé, redémarrage) et `.nvmrc` (Node 24).
-
-1. Sur [railway.com](https://railway.com), connecte-toi avec GitHub.
-2. *New Project* → *Deploy from GitHub repo* → choisis `roque` (autorise Railway à voir ce dépôt seulement).
-3. **Volume pour les comptes** : sur le service, *Add Volume*, chemin de montage `/data`.
-   Railway fournit alors `RAILWAY_VOLUME_MOUNT_PATH`, et la base s'y range toute seule.
-   Sans volume, la base est effacée à chaque mise à jour (les comptes disparaissent).
-4. *Settings* → *Networking* → *Generate Domain* : tu obtiens une adresse du type `https://roque-production.up.railway.app`.
-5. À chaque `git push` sur la branche `main`, Railway remet le site à jour automatiquement.
-
-Autre hébergeur (Render, Fly.io…) : même principe, avec un disque persistant et la variable `DATA_DIR` qui pointe dessus.
+Puis ouvre http://localhost:3000 (le site local utilise la même base Firebase que le site en ligne).
 
 ## Organisation du code
 
 | Fichier | Rôle |
 |---|---|
-| `server.js` | Serveur : comptes, amis, invitations, parties en temps réel (Socket.io), vérifie chaque coup |
-| `server/db.js` | Base de données SQLite : comptes, sessions, amitiés, historique |
 | `public/index.html`, `js/accueil.js` | Page d'accueil |
 | `public/connexion.html` | Connexion et création de compte |
 | `public/amis.html`, `js/amis.js` | Mes amis, demandes, défis, historique |
-| `public/js/compte.js` | Compte en haut de page, notifications de défi, fenêtre « Défier » |
 | `public/jeu.html`, `js/jeu.js` | Page de partie (ami, Noa, même écran) |
+| `public/js/online.js` | Parties entre amis via Firebase (coups, pendule, nulle, revanche, chat) |
+| `public/js/compte.js` | Compte, présence, amis, défis et notifications |
+| `public/js/fb.js`, `js/firebase-config.js` | Connexion à Firebase |
 | `public/bilan.html`, `js/bilan.js`, `js/explain.js` | Bilan de partie et explications de Noa |
 | `public/js/engine.js` | IA (moteur dans le navigateur) et niveaux |
-| `public/css/style.css` | Le style du site (thème espace violet) |
+| `public/css/style.css` | Le style (thème espace violet) |
+| `database.rules.json` | Règles de sécurité de la base Firebase |
+| `scripts/build.js` | Construit le site dans `dist/` |
 
-Les parties en cours sont gardées en mémoire : si le serveur redémarre pendant une partie, elle est perdue. Les parties terminées, elles, sont dans la base.
+## Limites à connaître
 
-Crédits : moteur Stockfish (GPL), échiquier Chessground de Lichess (GPL), pièces originales dessinées pour Roque, avatar de Noa tiré de son overlay.
+Il n'y a pas de serveur : ce sont les navigateurs des joueurs qui vérifient les coups et font tourner la pendule.
+Les règles de la base empêchent de jouer à la place de l'adversaire ou hors de son tour, mais un joueur très malin pourrait trafiquer sa propre pendule.
+
+Crédits : moteur Stockfish (GPL, licence dans `vendor/stockfish/`), échiquier Chessground de Lichess (GPL), pièces originales dessinées pour ROOOK, avatar de Noa tiré de son overlay.

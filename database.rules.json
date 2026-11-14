@@ -1,0 +1,90 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['username']) && newData.child('username').val().matches(/^[A-Za-z0-9_-]{3,20}$/)"
+      }
+    },
+    "usernames": {
+      "$name": {
+        ".read": "auth != null",
+        ".write": "auth != null && !data.exists() && newData.val() === auth.uid && $name.matches(/^[a-z0-9_-]{3,20}$/)"
+      }
+    },
+    "status": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "friendRequests": {
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$from": {
+          ".write": "auth != null && (auth.uid === $from || (auth.uid === $to && !newData.exists())) && $from !== $to",
+          ".validate": "newData.hasChildren(['username', 'at'])"
+        }
+      }
+    },
+    "sentRequests": {
+      "$from": {
+        ".read": "auth != null && auth.uid === $from",
+        "$to": {
+          ".write": "auth != null && (auth.uid === $from || (auth.uid === $to && !newData.exists()))",
+          ".validate": "newData.hasChildren(['username', 'at'])"
+        }
+      }
+    },
+    "friends": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$fid": {
+          ".write": "auth != null && $uid !== $fid && (!newData.exists() ? (auth.uid === $uid || auth.uid === $fid) : ((auth.uid === $uid && root.child('friendRequests/' + $uid + '/' + $fid).exists()) || (auth.uid === $fid && root.child('friendRequests/' + $fid + '/' + $uid).exists())))",
+          ".validate": "newData.hasChildren(['username', 'since'])"
+        }
+      }
+    },
+    "invites": {
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$id": {
+          ".write": "auth != null && ((!data.exists() && newData.child('from').val() === auth.uid && root.child('friends/' + $to + '/' + auth.uid).exists()) || (data.exists() && !newData.exists() && (auth.uid === $to || data.child('from').val() === auth.uid)))",
+          ".validate": "newData.hasChildren(['from', 'fromName', 'color', 'base', 'inc', 'expires'])"
+        }
+      }
+    },
+    "inviteReplies": {
+      "$from": {
+        ".read": "auth != null && auth.uid === $from",
+        "$id": {
+          ".write": "auth != null && (auth.uid === $from || root.child('friends/' + $from + '/' + auth.uid).exists())"
+        }
+      }
+    },
+    "games": {
+      "$g": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && (newData.child('white').val() === auth.uid || newData.child('black').val() === auth.uid)) || (data.exists() && (data.child('white').val() === auth.uid || data.child('black').val() === auth.uid)))",
+        ".validate": "newData.hasChildren(['white', 'black', 'names', 'time', 'status', 'round'])",
+        "moves": {
+          "$n": {
+            ".validate": "newData.isString() && newData.val().matches(/^[a-h][1-8][a-h][1-8][qrbn]?$/) && !data.exists() && ($n.matches(/[02468]$/) ? root.child('games/' + $g + '/white').val() === auth.uid : root.child('games/' + $g + '/black').val() === auth.uid)"
+          }
+        },
+        "chat": {
+          "$m": {
+            ".validate": "newData.hasChildren(['from', 'text', 'at']) && newData.child('text').isString() && newData.child('text').val().length <= 300"
+          }
+        }
+      }
+    },
+    "history": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    }
+  }
+}

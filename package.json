@@ -1,10 +1,11 @@
 {
-  "name": "roque-echecs",
+  "name": "roook-echecs",
   "version": "1.0.0",
-  "description": "Site d'échecs : parties entre amis, IA et bilan",
-  "main": "server.js",
+  "description": "ROOOK : site d'échecs entre amis (GitHub Pages + Firebase)",
   "scripts": {
-    "start": "node server.js"
+    "build": "node scripts/build.js",
+    "start": "node scripts/build.js && node scripts/serve.js",
+    "deploy": "node scripts/build.js && node scripts/deploy.js"
   },
   "author": "",
   "license": "ISC",
@@ -12,11 +13,13 @@
   "dependencies": {
     "@lichess-org/chessground": "^10.5.0",
     "chess.js": "^1.4.0",
-    "express": "^4.22.3",
-    "socket.io": "^4.8.4",
     "stockfish": "^19.0.1"
   },
   "engines": {
-    "node": ">=22.13"
+    "node": ">=20"
+  },
+  "private": true,
+  "devDependencies": {
+    "express": "^4.22.3"
   }
 }

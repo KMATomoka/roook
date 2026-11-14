@@ -3,21 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Roque — Échecs entre amis</title>
+  <title>ROOOK — Échecs entre amis</title>
   <meta name="description" content="Joue aux échecs en ligne avec tes amis, affronte une IA et reçois un bilan de chaque partie.">
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/vendor/chessground-assets/chessground.base.css">
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="vendor/chessground-assets/chessground.base.css">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="page-home">
   <header class="topbar">
-    <a class="logo" href="/"><span class="logo-mark">♜</span> Roque</a>
+    <a class="logo" href="./"><span class="logo-mark">♜</span> ROOOK</a>
     <nav class="topnav">
       <a href="#jouer">Jouer</a>
-      <a href="/bilan">Analyser</a>
+      <a href="bilan.html">Analyser</a>
     </nav>
   </header>
 
@@ -70,7 +70,7 @@
 
       <article class="mode-card" id="card-ia">
         <div class="noa-card-head">
-          <img class="mode-noa" id="noa-level-face" src="/img/noa/neutre.svg" alt="Noa" width="76" height="76">
+          <img class="mode-noa" id="noa-level-face" src="img/noa/neutre.svg" alt="Noa" width="76" height="76">
           <div>
             <h3>Contre Noa</h3>
             <p>Noa s’adapte à ton niveau : du débutant qui rigole au grand maître qui ne pardonne rien.</p>
@@ -127,7 +127,7 @@
         <div class="mode-icon">📊</div>
         <h3>Analyser une partie</h3>
         <p>Colle une partie au format PGN et obtiens son bilan complet.</p>
-        <a class="btn btn-ghost" href="/bilan">Analyser</a>
+        <a class="btn btn-ghost" href="bilan.html">Analyser</a>
       </article>
     </div>
   </section>
@@ -147,10 +147,9 @@
   </section>
 
   <footer class="footer">
-    <p>Roque · moteur <a href="https://stockfishchess.org" target="_blank" rel="noopener">Stockfish</a> · échiquier <a href="https://github.com/lichess-org/chessground" target="_blank" rel="noopener">Chessground</a> · pièces originales Roque</p>
+    <p>ROOOK · moteur <a href="https://stockfishchess.org" target="_blank" rel="noopener">Stockfish</a> · échiquier <a href="https://github.com/lichess-org/chessground" target="_blank" rel="noopener">Chessground</a> · pièces originales ROOOK</p>
   </footer>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script type="module" src="/js/accueil.js"></script>
+  <script type="module" src="js/accueil.js"></script>
 </body>
 </html>

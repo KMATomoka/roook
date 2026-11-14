@@ -1,6 +1,6 @@
 // Effets visuels des coups : prises, échec, échec et mat.
 // Tout passe par l'API Web Animations : rien ne reste dans la page une fois l'effet terminé.
-import { playSound } from '/js/sound.js';
+import { playSound } from './sound.js';
 
 const ROLE = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
 const COLOR = { w: 'white', b: 'black' };

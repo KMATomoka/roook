@@ -1,8 +1,8 @@
 // Page d'accueil
-import { Chessground } from '/vendor/chessground/chessground.min.js';
-import { LEVELS } from '/js/engine.js';
-import { $, $$, Chess, getPref, setPref, loadGames, gameRow, escapeHtml } from '/js/common.js';
-import { session, api, challenge } from '/js/compte.js';
+import { Chessground } from '../vendor/chessground/chessground.min.js';
+import { LEVELS } from './engine.js';
+import { $, $$, Chess, getPref, setPref, loadGames, gameRow, escapeHtml } from './common.js';
+import { session, challenge, watchFriends } from './compte.js';
 
 // --- Échiquier animé : la « partie de l'Opéra » (Morphy, 1858) ---------------
 const OPERA = 'e4 e5 Nf3 d6 d4 Bg4 dxe5 Bxf3 Qxf3 dxe5 Bc4 Nf6 Qb3 Qe7 Nc3 c6 Bg5 b5 Nxb5 cxb5 Bxb5+ Nbd7 O-O-O Rd8 Rxd7 Rxd7 Rd1 Qe6 Bxd7+ Nxd7 Qb8+ Nxb8 Rd8#'.split(' ');
@@ -39,7 +39,7 @@ $$('[data-open]').forEach((a) =>
 );
 
 // --- Contre un ami (comptes) ----------------------------------------------------
-const { user, socket } = await session;
+const { user } = await session;
 let friends = [];
 
 async function loadFriends() {
@@ -47,24 +47,23 @@ async function loadFriends() {
   if (!user) {
     box.innerHTML = `<p>Crée ton compte gratuit, ajoute tes amis par leur pseudo et défie-les en un clic : ils reçoivent ton défi en direct.</p>
       <div class="ami-actions">
-        <a class="btn btn-primary" href="/connexion?mode=inscription&retour=/%23jouer">Créer un compte</a>
-        <a class="btn btn-ghost" href="/connexion?retour=/%23jouer">Se connecter</a>
+        <a class="btn btn-primary" href="connexion.html?mode=inscription&retour=.%2F%23jouer">Créer un compte</a>
+        <a class="btn btn-ghost" href="connexion.html?retour=.%2F%23jouer">Se connecter</a>
       </div>`;
     return;
   }
-  try {
-    friends = (await api('/api/amis')).friends;
-  } catch {
-    friends = [];
-  }
-  renderFriends();
+  // Amis et présence, mis à jour en direct
+  watchFriends((data) => {
+    friends = data.friends;
+    renderFriends();
+  });
 }
 
 function renderFriends() {
   const box = $('#ami-content');
   if (!friends.length) {
-    box.innerHTML = `<p>Tu n’as pas encore d’amis sur Roque. Ajoute-les avec leur pseudo !</p>
-      <div class="ami-actions"><a class="btn btn-primary" href="/amis">Ajouter un ami</a></div>`;
+    box.innerHTML = `<p>Tu n’as pas encore d’amis sur ROOOK. Ajoute-les avec leur pseudo !</p>
+      <div class="ami-actions"><a class="btn btn-primary" href="amis.html">Ajouter un ami</a></div>`;
     return;
   }
   const rank = (f) => (f.online && !f.playing ? 0 : f.playing ? 1 : 2);
@@ -80,21 +79,13 @@ function renderFriends() {
           <span class="person-actions"><button class="btn btn-primary small" data-challenge="${f.id}" ${status === 'online' ? '' : 'disabled'}>⚔ Défier</button></span></li>`;
       })
       .join('')}</ul>
-    <a class="more-link" href="/amis">Gérer mes amis →</a>`;
+    <a class="more-link" href="amis.html">Gérer mes amis →</a>`;
 }
 
 $('#ami-content').addEventListener('click', (e) => {
   const b = e.target.closest('[data-challenge]');
-  if (b) challenge(friends.find((f) => f.id === Number(b.dataset.challenge)));
+  if (b) challenge(friends.find((f) => f.id === b.dataset.challenge));
 });
-socket?.on('presence', ({ id, online, playing }) => {
-  const f = friends.find((x) => x.id === id);
-  if (f) {
-    Object.assign(f, { online, playing });
-    renderFriends();
-  }
-});
-socket?.on('amis:maj', loadFriends);
 loadFriends();
 
 // --- Contre l'IA ---------------------------------------------------------------
@@ -104,14 +95,14 @@ lvl.value = getPref('niveau', 3);
 // La tête de Noa change avec le niveau : golmon au niveau 1, lunettes de soleil au niveau 8
 const LEVEL_FACE = ['golmon', 'rire', 'content', 'neutre', 'hmm', 'grimace', 'colere', 'frime'];
 // On précharge les visages pour que le changement soit instantané
-LEVEL_FACE.forEach((f) => (new Image().src = `/img/noa/${f}.svg`));
+LEVEL_FACE.forEach((f) => (new Image().src = `img/noa/${f}.svg`));
 let lastFace = null;
 const showLevel = () => {
   const L = LEVELS[lvl.value - 1];
   const face = LEVEL_FACE[lvl.value - 1];
   if (face !== lastFace) {
     const img = $('#noa-level-face');
-    img.src = `/img/noa/${face}.svg`;
+    img.src = `img/noa/${face}.svg`;
     img.alt = `Noa, niveau ${L.n}`;
     if (lastFace && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
       img.animate(
@@ -131,7 +122,7 @@ formIa.addEventListener('submit', (e) => {
   e.preventDefault();
   setPref('niveau', Number(lvl.value));
   setPref('cadence', formIa.cadence.value);
-  location.href = `/jeu?ia=${lvl.value}&couleur=${formIa.couleur.value}&cadence=${encodeURIComponent(formIa.cadence.value)}`;
+  location.href = `jeu.html?ia=${lvl.value}&couleur=${formIa.couleur.value}&cadence=${encodeURIComponent(formIa.cadence.value)}`;
 });
 
 // --- Sur le même écran ------------------------------------------------------------
@@ -139,7 +130,7 @@ const formLocal = $('#form-local');
 formLocal.addEventListener('submit', (e) => {
   e.preventDefault();
   setPref('cadence', formLocal.cadence.value);
-  location.href = `/jeu?local=1&cadence=${encodeURIComponent(formLocal.cadence.value)}`;
+  location.href = `jeu.html?local=1&cadence=${encodeURIComponent(formLocal.cadence.value)}`;
 });
 
 // La dernière cadence choisie est proposée par défaut partout

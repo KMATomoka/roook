@@ -687,15 +687,15 @@ body::after {
 /* ==========================================================================
    Pièces « Roque » (dessins originaux, public/img/pieces) : remplacent le jeu classique
    ========================================================================== */
-.cg-wrap piece.pawn.white { background-image: url('/img/pieces/wP.svg'); }
-.cg-wrap piece.knight.white { background-image: url('/img/pieces/wN.svg'); }
-.cg-wrap piece.bishop.white { background-image: url('/img/pieces/wB.svg'); }
-.cg-wrap piece.rook.white { background-image: url('/img/pieces/wR.svg'); }
-.cg-wrap piece.queen.white { background-image: url('/img/pieces/wQ.svg'); }
-.cg-wrap piece.king.white { background-image: url('/img/pieces/wK.svg'); }
-.cg-wrap piece.pawn.black { background-image: url('/img/pieces/bP.svg'); }
-.cg-wrap piece.knight.black { background-image: url('/img/pieces/bN.svg'); }
-.cg-wrap piece.bishop.black { background-image: url('/img/pieces/bB.svg'); }
-.cg-wrap piece.rook.black { background-image: url('/img/pieces/bR.svg'); }
-.cg-wrap piece.queen.black { background-image: url('/img/pieces/bQ.svg'); }
-.cg-wrap piece.king.black { background-image: url('/img/pieces/bK.svg'); }
+.cg-wrap piece.pawn.white { background-image: url('../img/pieces/wP.svg'); }
+.cg-wrap piece.knight.white { background-image: url('../img/pieces/wN.svg'); }
+.cg-wrap piece.bishop.white { background-image: url('../img/pieces/wB.svg'); }
+.cg-wrap piece.rook.white { background-image: url('../img/pieces/wR.svg'); }
+.cg-wrap piece.queen.white { background-image: url('../img/pieces/wQ.svg'); }
+.cg-wrap piece.king.white { background-image: url('../img/pieces/wK.svg'); }
+.cg-wrap piece.pawn.black { background-image: url('../img/pieces/bP.svg'); }
+.cg-wrap piece.knight.black { background-image: url('../img/pieces/bN.svg'); }
+.cg-wrap piece.bishop.black { background-image: url('../img/pieces/bB.svg'); }
+.cg-wrap piece.rook.black { background-image: url('../img/pieces/bR.svg'); }
+.cg-wrap piece.queen.black { background-image: url('../img/pieces/bQ.svg'); }
+.cg-wrap piece.king.black { background-image: url('../img/pieces/bK.svg'); }

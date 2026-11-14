@@ -1,5 +1,5 @@
 // Outils partagés entre les pages.
-import { Chess } from '/vendor/chess.js/chess.js';
+import { Chess } from '../vendor/chess.js/chess.js';
 
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -163,7 +163,7 @@ export function gameRow(g) {
     const win = (g.result === '1-0' && g.me === 'w') || (g.result === '0-1' && g.me === 'b');
     outcome = g.result === '1/2-1/2' ? 'draw' : win ? 'win' : 'loss';
   }
-  return `<li><a href="/bilan?partie=${encodeURIComponent(g.id)}" class="game-row ${outcome}">
+  return `<li><a href="bilan.html?partie=${encodeURIComponent(g.id)}" class="game-row ${outcome}">
     <span class="gr-players">${escapeHtml(g.white)} <em>contre</em> ${escapeHtml(g.black)}</span>
     <span class="gr-meta">${res} · ${Math.ceil(g.moves.length / 2)} coups · ${d}</span></a></li>`;
 }
@@ -188,6 +188,21 @@ export function serverGameToLocal(g) {
     moves: g.moves,
     pgn: c.pgn() + ' ' + g.result,
     cadence: g.cadence,
+  };
+}
+
+/** Une partie de l'historique Firebase -> format attendu par serverGameToLocal */
+export function historyToGame(g) {
+  return {
+    id: g.id,
+    white: g.white,
+    black: g.black,
+    me: g.me,
+    result: g.result,
+    reason: g.reason,
+    moves: g.moves ? g.moves.split(' ') : [],
+    date: g.date,
+    cadence: { base: g.base, inc: g.inc },
   };
 }
 

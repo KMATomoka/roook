@@ -1,7 +1,7 @@
 // Petite surcouche autour de Stockfish (WebAssembly), qui tourne dans le navigateur.
-import { Chess } from '/vendor/chess.js/chess.js';
+import { Chess } from '../vendor/chess.js/chess.js';
 
-const ENGINE_URL = '/vendor/stockfish/stockfish-19-lite-single.js';
+const ENGINE_URL = 'vendor/stockfish/stockfish-19-lite-single.js';
 
 // Niveaux de l'IA : de très faible à la force maximale de Stockfish.
 export const LEVELS = [

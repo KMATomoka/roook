@@ -3,17 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Bilan de partie — Roque</title>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <title>Bilan de partie — ROOOK</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/vendor/chessground-assets/chessground.base.css">
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="vendor/chessground-assets/chessground.base.css">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="page-review">
   <header class="topbar">
-    <a class="logo" href="/"><span class="logo-mark">♜</span> Roque</a>
+    <a class="logo" href="./"><span class="logo-mark">♜</span> ROOOK</a>
     <span class="mode-label">Bilan de partie</span>
   </header>
 
@@ -38,7 +38,7 @@
   <!-- Analyse en cours -->
   <main class="progress-screen" id="progress" hidden>
     <div class="card progress-card">
-      <img class="noa-thinking" src="/img/noa/hmm.svg" alt="Noa réfléchit" width="96" height="96">
+      <img class="noa-thinking" src="img/noa/hmm.svg" alt="Noa réfléchit" width="96" height="96">
       <h2>Noa analyse ta partie…</h2>
       <p id="progress-text">Je m’installe devant l’échiquier</p>
       <div class="bar"><div id="progress-bar"></div></div>
@@ -54,14 +54,14 @@
         <p class="lead" id="r-sub"></p>
       </div>
       <div class="review-head-actions">
-        <a class="btn btn-ghost" id="r-replay" href="/">Rejouer</a>
+        <a class="btn btn-ghost" id="r-replay" href="./">Rejouer</a>
         <button class="btn btn-ghost" id="r-copy">Copier le PGN</button>
       </div>
     </section>
 
     <section class="summary">
       <div class="card coach">
-        <img class="coach-avatar" id="coach-avatar" src="/img/noa/neutre.svg" alt="Noa" width="64" height="64">
+        <img class="coach-avatar" id="coach-avatar" src="img/noa/neutre.svg" alt="Noa" width="64" height="64">
         <div>
           <h2 id="coach-title"></h2>
           <div id="coach-text"></div>
@@ -103,7 +103,6 @@
     </section>
   </main>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script type="module" src="/js/bilan.js"></script>
+  <script type="module" src="js/bilan.js"></script>
 </body>
 </html>

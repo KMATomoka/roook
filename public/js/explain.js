@@ -1,8 +1,8 @@
 // Noa, le coach : explique avec des mots simples pourquoi un coup est bon ou mauvais.
 // Les explications viennent de l'analyse de la position (pièces attaquées, défendues,
 // fourchettes, mat, développement, centre…), pas d'une phrase toute faite.
-import { Chess } from '/vendor/chess.js/chess.js';
-import { frSan } from '/js/common.js';
+import { Chess } from '../vendor/chess.js/chess.js';
+import { frSan } from './common.js';
 
 const NAME = { p: 'pion', n: 'cavalier', b: 'fou', r: 'tour', q: 'dame', k: 'roi' };
 const FEM = { r: true, q: true };

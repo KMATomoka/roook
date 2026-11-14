@@ -28,16 +28,19 @@ Il est créé automatiquement au premier lancement. Les mots de passe y sont chi
 - Pour tout remettre à zéro : arrête le serveur et supprime le dossier `data/`.
 - Pour mettre la base ailleurs : variable d'environnement `DATA_DIR` (ex. `DATA_DIR=/var/data`).
 
-## Mettre le site en ligne
+## Mettre le site en ligne (Railway, relié à GitHub)
 
-Exemple avec **Render** (render.com) :
+Le projet est prêt pour Railway : `railway.json` (démarrage, contrôle de santé, redémarrage) et `.nvmrc` (Node 24).
 
-1. Mets ce dossier sur GitHub.
-2. Sur Render : *New* → *Web Service* → choisis ton dépôt.
-3. Build command : `npm install` · Start command : `npm start`.
-4. **Important pour les comptes** : ajoute un *Disk* (disque persistant) monté par exemple sur `/var/data`, et la variable d'environnement `DATA_DIR=/var/data`.
-   Sans disque, la base est effacée à chaque redéploiement (les comptes disparaissent). Le disque est payant sur Render ; sur **Railway**, un *Volume* fait la même chose.
-5. L'hébergeur te donne une adresse du type `https://roque-xxxx.onrender.com` : partage-la !
+1. Sur [railway.com](https://railway.com), connecte-toi avec GitHub.
+2. *New Project* → *Deploy from GitHub repo* → choisis `roque` (autorise Railway à voir ce dépôt seulement).
+3. **Volume pour les comptes** : sur le service, *Add Volume*, chemin de montage `/data`.
+   Railway fournit alors `RAILWAY_VOLUME_MOUNT_PATH`, et la base s'y range toute seule.
+   Sans volume, la base est effacée à chaque mise à jour (les comptes disparaissent).
+4. *Settings* → *Networking* → *Generate Domain* : tu obtiens une adresse du type `https://roque-production.up.railway.app`.
+5. À chaque `git push` sur la branche `main`, Railway remet le site à jour automatiquement.
+
+Autre hébergeur (Render, Fly.io…) : même principe, avec un disque persistant et la variable `DATA_DIR` qui pointe dessus.
 
 ## Organisation du code
 

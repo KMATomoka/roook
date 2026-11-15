@@ -225,7 +225,7 @@ export function roleBadge(role) {
 export const BADGES = {
   fondateur: { name: 'Fondateur', emoji: '👑', cls: 'founder', how: 'Réservé au fondateur de ROOOK.' },
   admin: { name: 'Admin', emoji: '🛡️', cls: 'admin', how: 'Réservé aux administrateurs.' },
-  royal: { name: 'Royal', emoji: '⚜️', cls: 'royal', how: 'Débloqué avec 100 victoires en ligne (le pack Royal chess).' },
+  royal: { name: 'Royal', emoji: '⚜️', cls: 'royal', how: 'Débloqué avec 100 victoires en ligne (le pack Royal chess) ; d’office pour les admins et le fondateur.' },
   // Badge du pack Sakura chess : ouvert à tous pour l'instant (free) ; il ne s'affiche sur le profil que si on le porte
   sakura: { name: 'Sakura', emoji: '🌸', cls: 'sakura', free: true, how: 'Le badge du pack Sakura chess, ouvert à tous.' },
 };
@@ -253,7 +253,7 @@ export function ownedBadges({ role, royal }) {
   const out = [];
   if (role === 'fondateur') out.push('fondateur');
   if (role === 'admin') out.push('admin');
-  if (royal) out.push('royal');
+  if (royal || role === 'admin' || role === 'fondateur') out.push('royal'); // Royal : d'office pour le staff
   for (const [id, b] of Object.entries(BADGES)) if (b.free) out.push(id);
   return out;
 }
@@ -262,7 +262,7 @@ export function ownedBadges({ role, royal }) {
 export function shownBadge(badge, role, hasRoyalProof) {
   if (badge === 'fondateur' && role === 'fondateur') return badge;
   if (badge === 'admin' && role === 'admin') return badge;
-  if (badge === 'royal' && hasRoyalProof) return badge;
+  if (badge === 'royal' && (hasRoyalProof || role === 'admin' || role === 'fondateur')) return badge;
   if (BADGES[badge]?.free) return badge;
   return null;
 }
@@ -281,6 +281,7 @@ export async function chooseBadge(id) {
   if (!currentUser) return;
   const uid = currentUser.id;
   if (!id) return set(ref(db, `users/${uid}/badge`), null);
+  if (id === 'royal' && isAdmin()) return set(ref(db, `users/${uid}/badge`), 'royal'); // staff : pas de preuve à joindre
   if (id === 'royal') {
     const hist = (await get(ref(db, `history/${uid}`))).val() || {};
     const keys = [];

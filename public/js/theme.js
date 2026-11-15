@@ -47,8 +47,9 @@ export const PACKS = [
     id: 'royal',
     name: 'Royal chess',
     desc: 'Or et crème, esprit chevalier : plateau ivoire et brun liseré d’or, pièces couronnées et joyaux.',
-    // Se débloque avec 100 victoires en ligne contre des amis (parties vérifiées par l'arbitre)
-    unlock: { wins: 100 },
+    // Se débloque avec 100 victoires en ligne contre des amis (parties vérifiées par l'arbitre) ;
+    // débloqué d'office pour les admins et le fondateur (staff)
+    unlock: { wins: 100, staff: true },
     items: {
       board: { name: 'Damier royal', desc: 'Ivoire et brun profond, liseré d’or.' },
       pieces: { name: 'Pièces royales', desc: 'Crème pour les Blancs, or pour les Noirs : couronnes, joyaux, cavalier en armure.' },
@@ -63,25 +64,39 @@ const IDS = new Set(PACKS.map((p) => p.id));
 const LOCAL = 'roque:equip'; // sans compte
 const CACHE = 'roque:equip-dernier'; // dernier équipement affiché (pour éviter un « flash » au chargement)
 const WINS_CACHE = 'roque:victoires'; // dernier nombre de victoires connu (même raison)
+const STAFF_CACHE = 'roque:staff'; // admin ou fondateur (même raison)
 
 // Victoires en ligne du joueur (parties entre amis, vérifiées par l'arbitre) : débloquent des packs
 let wins = Number(readLocal(WINS_CACHE)) || 0;
+// Admin ou fondateur : certains packs (Royal) sont débloqués d'office
+let staff = !!readLocal(STAFF_CACHE);
 const packById = (id) => PACKS.find((p) => p.id === id);
 /** Un pack est-il débloqué pour ce joueur ? */
 export const isUnlocked = (id) => {
   const p = packById(id);
-  return !!p && (!p.unlock || wins >= p.unlock.wins);
+  return !!p && (!p.unlock || wins >= p.unlock.wins || (!!p.unlock.staff && staff));
 };
 /** Progression vers un pack verrouillé : { wins, need, unlocked }. */
 export const unlockProgress = (id) => {
   const need = packById(id)?.unlock?.wins || 0;
-  return { wins, need, unlocked: wins >= need };
+  return { wins, need, unlocked: isUnlocked(id) };
 };
 
 function clean(e) {
   const out = {};
   for (const s of SLOTS) out[s] = e && IDS.has(e[s]) && isUnlocked(e[s]) ? e[s] : DEFAULT;
   return out;
+}
+
+/** Rôle du joueur : admin ou fondateur ? */
+async function loadStaff(u) {
+  try {
+    const role = (await get(ref(db, `roles/${u}`))).val();
+    staff = role === 'admin' || role === 'fondateur';
+    writeLocal(STAFF_CACHE, staff);
+  } catch {
+    // hors ligne : on garde la dernière valeur connue
+  }
 }
 
 /** Compte les victoires en ligne dans l'historique du joueur (les parties contre Noa ne comptent pas). */
@@ -147,13 +162,15 @@ export const ready = new Promise((resolve) => {
     uid = u ? u.uid : null;
     if (u) {
       try {
-        const [snap] = await Promise.all([get(ref(db, `users/${u.uid}/equip`)), loadWins(u.uid)]);
+        const [snap] = await Promise.all([get(ref(db, `users/${u.uid}/equip`)), loadWins(u.uid), loadStaff(u.uid)]);
         equip = clean(snap.val());
       } catch {
         // hors ligne ou base injoignable : on garde le dernier équipement connu
       }
     } else {
       wins = 0; // sans compte, pas de victoires en ligne
+      staff = false;
+      writeLocal(STAFF_CACHE, false);
       equip = clean(readLocal(LOCAL));
     }
     changed();

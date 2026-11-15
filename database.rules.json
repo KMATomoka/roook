@@ -5,7 +5,11 @@
       "$uid": {
         ".read": "auth != null",
         ".write": "auth != null && auth.uid === $uid && (!root.child('bans/' + auth.uid).exists() || (root.child('bans/' + auth.uid).child('until').val() > 0 && root.child('bans/' + auth.uid).child('until').val() < now))",
-        ".validate": "newData.hasChildren(['username']) && newData.child('username').val().matches(/^[A-Za-z0-9_-]{3,20}$/) && (!newData.child('private').exists() || newData.child('private').isBoolean())"
+        ".validate": "newData.hasChildren(['username']) && newData.child('username').val().matches(/^[A-Za-z0-9_-]{3,20}$/) && (!newData.child('private').exists() || newData.child('private').isBoolean())",
+        "bio": {
+          ".write": "auth != null && (root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur') && !newData.exists()",
+          ".validate": "newData.isString() && newData.val().length <= 300"
+        }
       }
     },
     "private": {

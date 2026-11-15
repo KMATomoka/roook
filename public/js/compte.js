@@ -891,6 +891,7 @@ export async function loadProfile(uid) {
     username: user.username,
     createdAt: user.createdAt || 0,
     isPrivate: user.private === true,
+    bio: typeof user.bio === 'string' ? user.bio : '',
     avatar,
     online: !!status?.connections,
     playing: !!status?.playing,
@@ -905,6 +906,17 @@ export async function loadProfile(uid) {
 }
 
 /** Rend mon profil privé (seuls mes amis voient mes statistiques et mes parties) ou public. */
+export const BIO_MAX = 300;
+
+/** Enregistre ma bio (texte libre, 300 caractères au plus ; vide = pas de bio). */
+export async function setBio(text) {
+  if (!currentUser) return;
+  // Pas plus d'une ligne vide d'affilée
+  const bio = String(text || '').replace(/\r/g, '').replace(/\n{3,}/g, '\n\n').trim().slice(0, BIO_MAX);
+  await set(ref(db, `users/${currentUser.id}/bio`), bio || null);
+  return bio;
+}
+
 export async function setProfilePrivate(isPrivate) {
   if (!currentUser) return;
   await set(ref(db, `users/${currentUser.id}/private`), !!isPrivate);

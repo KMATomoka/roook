@@ -71,6 +71,11 @@ const rules = {
         '.read': ME,
         '.write': `${ME} && ${OWNER('$uid')} && ${OK}`,
         '.validate': "newData.hasChildren(['username']) && newData.child('username').val().matches(/^[A-Za-z0-9_-]{3,20}$/) && (!newData.child('private').exists() || newData.child('private').isBoolean())",
+        // Bio du profil : 300 caractères au plus ; un admin peut l'effacer (modération)
+        bio: {
+          '.write': `${ME} && ${ADMIN} && !newData.exists()`,
+          '.validate': 'newData.isString() && newData.val().length <= 300',
+        },
       },
     },
     // Adresse e-mail : visible par le joueur lui-même et par les admins seulement

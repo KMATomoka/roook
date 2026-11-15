@@ -3,7 +3,7 @@
 import { $, escapeHtml } from './common.js';
 import {
   session, toast, picHtml, loadProfile, setProfilePrivate, profileUrl, addFriend, acceptFriend, challenge, cadenceLabel, logout,
-  setAvatar, removeAvatar, myEmail, changeEmail, roleBadge,
+  setAvatar, removeAvatar, myEmail, changeEmail, roleBadge, setBio, BIO_MAX,
 } from './compte.js';
 
 const page = $('#profile-page');
@@ -143,6 +143,7 @@ function render(p) {
           ${p.relation === 'friend' ? '<span class="badge me">ami</span>' : ''}
         </h1>
         <p class="pf-meta">${presenceTxt}<span>Membre depuis ${date(p.createdAt, { month: 'long', year: 'numeric' })}</span>${p.friends ? `<span>${plural(p.friends.length, 'ami')}</span>` : ''}</p>
+        ${bioHtml(p, me)}
         ${s ? `<p class="pf-headline">${s.all.n ? `<b>${s.all.rate}%</b> de victoires sur ${plural(s.all.n, 'partie')} en ligne` : 'Pas encore de partie en ligne'}</p>` : ''}
       </div>
       <div class="pf-actions">${actions(p)}</div>
@@ -165,6 +166,26 @@ function render(p) {
   `;
 
   wire(p);
+}
+
+/** Bio : affichée à tous ; sur son propre profil, un bouton pour l'écrire ou la modifier. */
+function bioHtml(p, me) {
+  const text = p.bio ? `<p class="pf-bio">${escapeHtml(p.bio)}</p>` : me ? '<p class="pf-bio empty">Pas encore de bio. Présente-toi en quelques mots !</p>' : '';
+  if (!me) return text;
+  return `<div class="pf-bio-box" id="bio-box">
+    ${text}
+    <button class="link-btn" type="button" data-bio="edit">✏️ ${p.bio ? 'Modifier ma bio' : 'Écrire ma bio'}</button>
+    <form class="pf-bio-form" id="bio-form" hidden>
+      <textarea name="bio" maxlength="${BIO_MAX}" rows="3" placeholder="Ex. : Joueur du dimanche, fan des ouvertures risquées. Défie-moi en blitz !">${escapeHtml(p.bio || '')}</textarea>
+      <div class="pf-bio-bar">
+        <span class="muted" id="bio-count"></span>
+        <span>
+          <button class="btn btn-ghost small" type="button" data-bio="cancel">Annuler</button>
+          <button class="btn btn-primary small">Enregistrer</button>
+        </span>
+      </div>
+    </form>
+  </div>`;
 }
 
 function actions(p) {
@@ -322,6 +343,34 @@ function gameLine(p, g) {
 }
 
 function wire(p) {
+  // Bio (son propre profil)
+  const bioForm = page.querySelector('#bio-form');
+  if (bioForm) {
+    const area = bioForm.bio;
+    const count = () => (page.querySelector('#bio-count').textContent = `${area.value.length} / ${BIO_MAX}`);
+    page.querySelector('#bio-box').addEventListener('click', (e) => {
+      const a = e.target.closest('[data-bio]')?.dataset.bio;
+      if (a === 'edit') {
+        bioForm.hidden = false;
+        e.target.closest('[data-bio]').hidden = true;
+        count();
+        area.focus();
+        area.setSelectionRange(area.value.length, area.value.length);
+      }
+      if (a === 'cancel') load(p.id);
+    });
+    area.addEventListener('input', count);
+    bioForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await setBio(area.value);
+        toast('Bio enregistrée ✨', { cls: 'info' });
+        load(p.id);
+      } catch (ex) {
+        toast(escapeHtml(ex.message), { cls: 'error' });
+      }
+    });
+  }
   // Photo de profil : clic sur la photo ou sur « Changer ma photo »
   page.querySelector('#pic-input')?.addEventListener('change', async (e) => {
     const file = e.target.files[0];

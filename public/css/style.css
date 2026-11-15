@@ -1048,3 +1048,14 @@ a.person-link:hover { color: var(--accent-soft); }
 .pf-account .email-form { margin-top: 12px; }
 @media (max-width: 600px) { .pf-account { flex-direction: column; } }
 .badge.founder { color: #f2cf4d; border-color: rgba(242, 207, 77, 0.55); background: rgba(242, 207, 77, 0.12); }
+
+/* Bio du profil */
+.pf-bio { margin: 10px 0 0; max-width: 60ch; white-space: pre-line; overflow-wrap: anywhere; line-height: 1.5; color: var(--text); }
+.pf-bio.empty { color: var(--muted); font-style: italic; }
+.pf-bio-box { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.pf-bio-box > .link-btn { font-size: 0.85rem; }
+.pf-bio-form { width: min(560px, 100%); display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.pf-bio-form textarea { resize: vertical; min-height: 84px; line-height: 1.45; font: 500 0.95rem var(--font); }
+.pf-bio-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.82rem; }
+.pf-bio-bar > span:last-child { display: flex; gap: 8px; }
+.admin-bio { white-space: pre-line; font-weight: 500 !important; }

@@ -83,6 +83,7 @@ function members() {
       return {
         id,
         username: u.username,
+        bio: typeof u.bio === 'string' ? u.bio : '',
         createdAt: u.createdAt || 0,
         email: data.private[id]?.email || null,
         online: !!st.connections,
@@ -175,6 +176,7 @@ function details(m, me) {
   if (m.ban) actions.push('<button class="btn btn-primary small" data-a="unban">✓ Débannir</button>');
   else if (!me && !m.admin) actions.push('<button class="btn btn-danger small" data-a="ban">⛔ Bannir…</button>');
   if (m.avatar) actions.push('<button class="btn btn-ghost small" data-a="photo">🖼 Retirer la photo</button>');
+  if (m.bio) actions.push('<button class="btn btn-ghost small" data-a="bio">🧹 Effacer la bio</button>');
   if (m.email) actions.push('<button class="btn btn-ghost small" data-a="reset">✉ Envoyer un lien « nouveau mot de passe »</button>');
   actions.unshift(`<a class="btn btn-ghost small" href="${profileUrl(m.id)}">👤 Voir le profil</a>`);
   // Nommer admin : admins et fondateur. Retirer le rôle d'un admin : le fondateur seulement. Le fondateur est intouchable.
@@ -189,6 +191,7 @@ function details(m, me) {
       <div><dt>Rôle</dt><dd>${m.role === 'fondateur' ? 'Fondateur' : m.role === 'admin' ? 'Administrateur' : 'Membre'}</dd></div>
       <div><dt>Parties entre amis</dt><dd>${g.n ? `${g.n} · ${g.w} V · ${g.l} D · ${g.d} N` : 'aucune'}</dd></div>
       <div><dt>Amis (${m.friends.length})</dt><dd>${m.friends.length ? m.friends.map(escapeHtml).join(', ') : 'aucun'}</dd></div>
+      <div class="wide"><dt>Bio</dt><dd class="admin-bio">${m.bio ? escapeHtml(m.bio) : '—'}</dd></div>
       <div class="wide"><dt>Identifiant</dt><dd><code>${m.id}</code></dd></div>
     </dl>
     <div class="member-actions">${actions.join('') || '<span class="muted">C’est ton compte.</span>'}</div>
@@ -226,6 +229,11 @@ async function onClick(e) {
       if (!confirm(`Retirer la photo de profil de ${m.username} ?`)) return;
       await remove(ref(db, `avatars/${id}`));
       toast(`Photo de <b>${escapeHtml(m.username)}</b> retirée.`, { cls: 'info' });
+    }
+    if (a === 'bio') {
+      if (!confirm(`Effacer la bio de ${m.username} ?`)) return;
+      await remove(ref(db, `users/${id}/bio`));
+      toast(`Bio de <b>${escapeHtml(m.username)}</b> effacée.`, { cls: 'info' });
     }
     if (a === 'reset') {
       if (!confirm(`Envoyer à ${m.email} un e-mail pour choisir un nouveau mot de passe ?`)) return;

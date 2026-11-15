@@ -181,32 +181,32 @@
     <div class="rule"></div>
     <section>
       <h2>Les douze pièces</h2>
-      <p class="sub">« Nacre et Abysses » : des silhouettes d’échecs classiques, faciles à reconnaître, avec un détail marin sur chaque pièce. <b>Pion</b> perle, <b>Tour</b> de corail à hublot, <b>Fou</b> coquillage, <b>Cavalier</b> hippocampe, <b>Dame</b> couronne de perles, <b>Roi</b> trident.</p>
+      <p class="sub">« Nacre et Abysses » : des silhouettes d’échecs classiques, faciles à reconnaître, avec un détail marin sur chaque pièce. <b>Pion</b> perle, <b>Tour</b> de corail à hublot, <b>Fou</b> coquillage, <b>Cavalier</b> hippocampe mythique, <b>Dame</b> couronne de perles, <b>Roi</b> trident.</p>
       <div class="pieces" id="pieces"></div>
     </section>
 
     <div class="rule"></div>
     <section>
       <h2>Le cavalier : choisis ton style</h2>
-      <p class="sub">Six idées pour le cavalier, chacune en nacre et en abysses. <b>Clique sur une idée</b> : tous les échiquiers de la page la prennent, pour la voir en vrai. Dis-moi ensuite laquelle tu gardes (A à F).</p>
+      <p class="sub">Six idées pour le cavalier, chacune en nacre et en abysses. <b>Clique sur une idée</b> : tous les échiquiers de la page la prennent, pour la voir en vrai. Le <b>E · Hippocampe mythique</b> est retenu : c’est lui qui est posé sur les échiquiers.</p>
       <div class="kgrid" id="knights"></div>
     </section>
 
     <div class="rule"></div>
     <section>
-      <h2>La prise : « Kraken »</h2>
+      <h2>La prise : « Siphon »</h2>
       <div class="demo">
         <figure><div class="frame" id="demo-board"></div></figure>
         <div>
-          <p>Quand une pièce est prise, <b>deux tentacules</b> sortent de la case, l’attrapent et l’entraînent au fond. Un nuage d’encre se dissipe et des bulles remontent.</p>
+          <p>Quand une pièce est prise, <b>un petit siphon</b> s’ouvre sur la case : la pièce tourne de plus en plus vite et disparaît au fond, puis le tourbillon se referme et quelques bulles remontent. Court et net.</p>
           <p>À l’échec, <b>un aileron de requin</b> tourne autour du roi menacé, avec l’étiquette « Échec ! ».</p>
           <div class="btns">
-            <button id="demo-capture">🐙 Voir une prise</button>
+            <button id="demo-capture">🌀 Voir une prise</button>
             <button id="demo-check" class="ghost">🦈 Voir un échec</button>
           </div>
           <ul class="facts" style="margin-top:18px">
             <li><b>Coup</b> : un petit « bloup » sous l’eau.</li>
-            <li><b>Prise</b> : un remous sourd, un choc et des bulles.</li>
+            <li><b>Prise</b> : l’eau qui tourbillonne et s’engouffre, quelques bulles.</li>
             <li><b>Échec</b> : deux battements graves, comme un cœur qui s’emballe.</li>
           </ul>
         </div>
@@ -240,7 +240,7 @@
         <div class="slot"><small>Plateau</small><b>Grand Bleu</b><p>Eau claire et eau profonde, reflets qui ondulent.</p></div>
         <div class="slot"><small>Pièces</small><b>Nacre et Abysses</b><p>Nacre irisée contre bleu des abysses lumineux.</p></div>
         <div class="slot"><small>Fin de partie</small><b>Les Abysses</b><p>Baleine et lumière à la victoire, kraken à la défaite.</p></div>
-        <div class="slot"><small>Prise et son</small><b>Kraken</b><p>Des tentacules emportent la pièce prise ; aileron à l’échec.</p></div>
+        <div class="slot"><small>Prise et son</small><b>Siphon</b><p>Un tourbillon aspire la pièce prise ; aileron à l’échec.</p></div>
       </div>
       <p style="margin-top:18px">Le badge du pack : <span class="badge-demo">🌊 Océan</span></p>
       <div class="ask">À toi de choisir : <b>le badge</b> (🌊 vague, 🐙 poulpe ou 🐋 baleine), et si le pack est <b>libre pour tous</b> ou <b>à débloquer</b>. Dis-moi ce que tu changerais : couleurs, pièces, animations.</div>
@@ -468,7 +468,7 @@
       renderBoards();
       renderKnights();
     }
-    renderKnights();
+    useKnight(4); // E · Hippocampe mythique
     const kGrid = document.getElementById('knights');
     kGrid.addEventListener('click', (e) => { const o = e.target.closest('.kopt'); if (o) useKnight(+o.dataset.i); });
     kGrid.addEventListener('keydown', (e) => { const o = e.target.closest('.kopt'); if (o && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); useKnight(+o.dataset.i); } });
@@ -634,8 +634,34 @@
       <path d="M0 30 Q60 -12 120 30" fill="none" stroke="#3a0f2a" stroke-width="6" stroke-linecap="round"/></svg>`;
 
     // ------------------------------------------------------------------
-    // Prise « Kraken » : deux tentacules sortent de la case et emportent la pièce
+    // Prise « Siphon » : un tourbillon s'ouvre sur la case et aspire la pièce prise
     // ------------------------------------------------------------------
+    const WHIRL = (() => {
+      const arm = (a0, w, col, op) => {
+        const pts = [];
+        for (let i = 0; i <= 44; i++) {
+          const t = i / 44, r = 47 - 42 * t, a = a0 + t * Math.PI * 1.7;
+          pts.push(`${(Math.cos(a) * r).toFixed(1)} ${(Math.sin(a) * r).toFixed(1)}`);
+        }
+        return `<path d="M${pts.join(' L')}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" opacity="${op}"/>`;
+      };
+      const arms = [0, 1, 2, 3].map((k) => arm((k * Math.PI) / 2, 3, '#e6fbff', 0.8)).join('') + [0, 1, 2, 3].map((k) => arm((k * Math.PI) / 2 + 0.7, 1.5, '#6fe3ea', 0.75)).join('');
+      return `<svg viewBox="-50 -50 100 100" width="100%" height="100%" style="display:block">
+        <defs><radialGradient id="wp" r=".5"><stop offset="0" stop-color="#01070f" stop-opacity=".95"/><stop offset=".28" stop-color="#05223a" stop-opacity=".8"/><stop offset=".7" stop-color="#1d6f8f" stop-opacity=".35"/><stop offset="1" stop-color="#6fe3ea" stop-opacity="0"/></radialGradient></defs>
+        <circle r="49" fill="url(#wp)"/>${arms}</svg>`;
+    })();
+    // son : l'eau qui tourbillonne et s'engouffre
+    function swirl(at = 0, dur = 1.1, vol = 0.35) {
+      const a = audio(), t = a.currentTime + at;
+      const src = noise(dur), f = a.createBiquadFilter(), g = a.createGain();
+      f.type = 'bandpass';
+      f.Q.value = 2.2;
+      f.frequency.setValueAtTime(1500, t);
+      f.frequency.exponentialRampToValueAtTime(200, t + dur);
+      env(g, t, vol, dur * 0.25, dur);
+      src.connect(f).connect(g).connect(out);
+      src.start(t);
+    }
     const capBoard = document.getElementById('demo-board');
     const CAP_FEN = 'r1b1k2r/ppp2ppp/2n5/3q4/8/2N5/PPP2PPP/R1BQK2R';
     function capture(sound) {
@@ -644,42 +670,36 @@
       const victim = board.querySelector('[data-sq="d5"] .pc');
       const { x, y, s } = center(board, 'd5');
       setTimeout(() => {
-        slide(board, 'c3', 'd5');
-        if (sound) { bloop(); whoosh(0.2, 1, 0.5); thump(0.75); bubbles(0.8, 10, 1); }
+        if (sound) { swirl(0, 1.1); bubbles(0.3, 6, 0.7, 0.07); bloop(0.6); }
+        if (reduce) {
+          victim.remove();
+          slide(board, 'c3', 'd5');
+          setTimeout(() => mark(board, 'c3', 'd5'), 230);
+          return;
+        }
+        // le siphon s'ouvre, tourne, puis se referme
+        const wp = el(fx, 'p', { left: `${x}px`, top: `${y}px`, width: `${s * 1.45}px`, height: `${s * 1.45}px` }, WHIRL);
+        once(wp, [
+          { transform: 'translate(-50%,-50%) rotate(0deg) scale(.2)', opacity: 0 },
+          { transform: 'translate(-50%,-50%) rotate(-160deg) scale(1)', opacity: 1, offset: 0.3 },
+          { transform: 'translate(-50%,-50%) rotate(-480deg) scale(.95)', opacity: 0.9, offset: 0.72 },
+          { transform: 'translate(-50%,-50%) rotate(-680deg) scale(.25)', opacity: 0 },
+        ], { duration: 1150, easing: 'linear' });
+        // la pièce prise tourne de plus en plus vite et disparaît au centre
+        victim.style.zIndex = 6;
+        victim.animate([
+          { transform: 'rotate(0deg) scale(1)', filter: 'none', opacity: 1 },
+          { transform: 'rotate(-80deg) scale(.88)', filter: 'none', opacity: 1, offset: 0.3 },
+          { transform: 'rotate(-460deg) scale(0)', filter: 'brightness(.35)', opacity: 0 },
+        ], { duration: 820, delay: 120, easing: 'cubic-bezier(.5,0,.85,.55)', fill: 'forwards' });
+        // puis la pièce qui prend arrive sur la case
         setTimeout(() => {
-          mark(board, 'c3', 'd5');
-          if (reduce) { victim.remove(); return; }
-          const D = 1500;
-          // la pièce prise passe devant, tremble, puis s'enfonce dans la case
-          victim.style.zIndex = 6;
-          victim.animate([
-            { transform: 'none', clipPath: 'inset(-20% -20% 0 -20%)' },
-            { transform: 'none', clipPath: 'inset(-20% -20% 0 -20%)', offset: 0.28 },
-            { transform: 'translateX(-4%) rotate(-4deg)', clipPath: 'inset(-20% -20% 0 -20%)', offset: 0.36 },
-            { transform: 'translateX(4%) rotate(4deg)', clipPath: 'inset(-20% -20% 0 -20%)', offset: 0.44 },
-            { transform: 'translateY(0)', clipPath: 'inset(-20% -20% 0 -20%)', offset: 0.52 },
-            { transform: 'translateY(100%)', clipPath: 'inset(-20% -20% 100% -20%)' },
-          ], { duration: D, easing: 'cubic-bezier(.5,0,.6,1)', fill: 'forwards' });
-          // les deux tentacules : cachés sous la case, ils montent, serrent et redescendent
-          for (const side of [-1, 1]) {
-            const box = el(fx, 'p', { left: `${x - s * 0.8}px`, top: `${y + s / 2 - s * 1.45}px`, width: `${s * 1.6}px`, height: `${s * 1.45}px`, overflow: 'hidden', zIndex: 7 });
-            const t = el(box, 'p', { left: side < 0 ? `${s * 0.18}px` : `${s * 0.88}px`, bottom: '0', width: `${s * 0.62}px`, height: `${s * 1.4}px`, transformOrigin: '50% 100%' }, TENTACLE(side > 0));
-            t.animate([
-              { transform: 'translateY(100%) rotate(0deg)' },
-              { transform: `translateY(4%) rotate(${side * -6}deg)`, offset: 0.26 },
-              { transform: `translateY(0) rotate(${side * 4}deg)`, offset: 0.36 },
-              { transform: `translateY(2%) rotate(${side * -3}deg)`, offset: 0.46 },
-              { transform: 'translateY(100%) rotate(0deg)' },
-            ], { duration: D, delay: side > 0 ? 70 : 0, easing: 'cubic-bezier(.45,0,.55,1)', fill: 'both' }).finished.then(() => box.remove());
-          }
-          // nuage d'encre qui se dissipe
-          for (let i = 0; i < 7; i++) {
-            const r = s * rand(0.45, 0.8);
-            const ink = el(fx, 'p', { left: `${x + rand(-0.35, 0.35) * s}px`, top: `${y + rand(-0.1, 0.4) * s}px`, width: `${r}px`, height: `${r}px`, borderRadius: '50%', background: 'radial-gradient(circle, rgba(34,8,44,.85), rgba(34,8,44,0) 70%)', zIndex: 6 });
-            once(ink, [{ transform: 'translate(-50%,-50%) scale(.2)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1)', opacity: 0.9, offset: 0.3 }, { transform: `translate(calc(-50% + ${rand(-0.4, 0.4) * s}px), calc(-50% - ${s * 0.5}px)) scale(1.8)`, opacity: 0 }], { duration: 1300, delay: D * 0.62 + i * 25, easing: 'ease-out', fill: 'backwards' });
-          }
-          bubbleFx(fx, x, y + s * 0.3, s, 16, { delay: D * 0.55, spread: 0.5, rise: 1.8, spanMs: 600 });
-        }, 230);
+          slide(board, 'c3', 'd5');
+          board.querySelector('[data-sq="c3"] .pc').style.zIndex = 7;
+          if (sound) bloop();
+          setTimeout(() => mark(board, 'c3', 'd5'), 230);
+        }, 640);
+        bubbleFx(fx, x, y, s, 6, { delay: 650, spread: 0.3, rise: 1.3, spanMs: 300, size: 0.9 });
       }, 300);
     }
 

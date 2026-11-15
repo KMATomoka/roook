@@ -567,12 +567,12 @@ function gunshot(at = 0, vol = 1) {
   // Le chien qui tombe, juste avant
   if (at >= 0.015) burst({ at: at - 0.014, dur: 0.012, vol: 0.35 * vol, freq: 3800, q: 6 });
   const out = a.createGain();
-  out.gain.value = vol * 0.6; // un peu moins fort
+  out.gain.value = vol * 0.45; // volume de base du coup de feu
   out.connect(master);
   const send = canyon();
   if (send) {
     const s = a.createGain();
-    s.gain.value = 0.75;
+    s.gain.value = 0.6;
     out.connect(s).connect(send);
   }
   const sat = saturator(a, 3.2);
@@ -736,9 +736,9 @@ const western = {
   move: () => boot(),
   // Le coup de feu (au moment où l'éclair du canon apparaît), parfois un ricochet, puis la douille
   capture: () => {
-    gunshot(0.1);
-    if (Math.random() < 0.35) ricochet(0.2);
-    shell(0.45);
+    gunshot(0.1, 0.7); // la prise : plus discrète que le BANG de fin de partie
+    if (Math.random() < 0.35) ricochet(0.2, 0.6);
+    shell(0.45, 0.7);
   },
   castle: () => {
     boot(0);

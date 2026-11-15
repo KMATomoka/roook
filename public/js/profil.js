@@ -196,8 +196,8 @@ const badgesOf = (p, me) => ownedBadges({ role: p.role, royal: p.hasRoyalProof |
 
 /** Les badges du joueur, avec leur nom ; celui affiché en partie est marqué. */
 function badgesRow(p, me) {
-  // Les badges ouverts à tous (Sakura) ne s'affichent que si le joueur les porte
-  const owned = badgesOf(p, me).filter((id) => !BADGES[id].free || id === p.badge);
+  // Sur le profil : les badges de rôle (Fondateur, Admin) toujours, les autres seulement si le joueur les porte
+  const owned = badgesOf(p, me).filter((id) => BADGES[id].role || id === p.badge);
   if (!owned.length) return '';
   return `<span class="pf-badges">${owned
     .map((id) => `<span class="pf-badge ${id === p.badge ? 'worn' : ''}" title="${id === p.badge ? 'Badge affiché en partie' : ''}">${badgeHtml(id)}</span>`)

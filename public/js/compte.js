@@ -223,8 +223,8 @@ export function roleBadge(role) {
 // Badges : on en possède plusieurs, on en affiche UN en partie (l'emoji à côté du pseudo)
 // ---------------------------------------------------------------------------
 export const BADGES = {
-  fondateur: { name: 'Fondateur', emoji: '👑', cls: 'founder', how: 'Réservé au fondateur de ROOOK.' },
-  admin: { name: 'Admin', emoji: '🛡️', cls: 'admin', how: 'Réservé aux administrateurs.' },
+  fondateur: { name: 'Fondateur', emoji: '👑', cls: 'founder', role: true, how: 'Réservé au fondateur de ROOOK.' },
+  admin: { name: 'Admin', emoji: '🛡️', cls: 'admin', role: true, how: 'Réservé aux administrateurs.' },
   royal: { name: 'Royal', emoji: '⚜️', cls: 'royal', how: 'Débloqué avec 100 victoires en ligne (le pack Royal chess) ; d’office pour les admins et le fondateur.' },
   // Badge du pack Sakura chess : ouvert à tous pour l'instant (free) ; il ne s'affiche sur le profil que si on le porte
   sakura: { name: 'Sakura', emoji: '🌸', cls: 'sakura', free: true, how: 'Le badge du pack Sakura chess, ouvert à tous.' },
@@ -238,8 +238,35 @@ export function badgeHtml(id, { name = true } = {}) {
   if (!b) return '';
   return name
     ? `<span class="badge ${b.cls}">${b.emoji} ${b.name}</span>`
-    : `<span class="badge-emoji ${b.cls}" title="${b.name}" aria-label="Badge ${b.name}">${b.emoji}</span>`;
+    : `<span class="badge-emoji ${b.cls}" data-tip="${b.emoji} Badge ${b.name}" tabindex="0" role="img" aria-label="Badge ${b.name}">${b.emoji}</span>`;
 }
+
+// Infobulle des badges (en partie, seul l'emoji est affiché) : le nom du badge au survol, au clavier ou au toucher.
+// Elle flotte au-dessus de la page, donc rien ne la coupe (la zone du pseudo masque ce qui dépasse).
+(function badgeTips() {
+  if (typeof document === 'undefined') return;
+  let tip = null;
+  const show = (target) => {
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.className = 'badge-tip';
+      tip.setAttribute('role', 'tooltip');
+      document.body.appendChild(tip);
+    }
+    tip.textContent = target.dataset.tip;
+    const r = target.getBoundingClientRect();
+    tip.style.left = `${Math.min(Math.max(r.left + r.width / 2, 70), innerWidth - 70)}px`;
+    tip.style.top = `${r.top}px`;
+    tip.classList.add('on');
+  };
+  const hide = () => tip && tip.classList.remove('on');
+  const find = (e) => e.target?.closest?.('[data-tip]');
+  document.addEventListener('pointerover', (e) => { const t = find(e); if (t) show(t); });
+  document.addEventListener('pointerout', (e) => { if (find(e)) hide(); });
+  document.addEventListener('focusin', (e) => { const t = find(e); if (t) show(t); });
+  document.addEventListener('focusout', hide);
+  addEventListener('scroll', hide, { passive: true });
+})();
 
 /** Victoires en ligne (parties entre amis, vérifiées) dans un historique : leurs clés, des plus anciennes aux plus récentes. */
 export function winKeys(history) {

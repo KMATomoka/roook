@@ -1508,7 +1508,20 @@ a.person-link:hover { color: var(--accent-soft); }
 
 /* Badges : profil (nom + emoji) et en partie (emoji seul à côté du pseudo) */
 .badge.founder, .badge.admin, .badge.royal, .badge.sakura, .badge.western { height: auto; padding: 3px 10px; font-size: 0.74rem; margin-right: 0; gap: 4px; }
-.badge-emoji { display: inline-grid; place-items: center; margin-left: 6px; font-size: 0.95em; line-height: 1; vertical-align: -1px; }
+.badge-emoji { display: inline-grid; place-items: center; margin-left: 6px; font-size: 0.95em; line-height: 1; vertical-align: -1px; cursor: help; border-radius: 4px; }
+.badge-emoji:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Infobulle des badges (js/compte.js) */
+.badge-tip {
+  position: fixed; z-index: 9999; pointer-events: none; white-space: nowrap;
+  transform: translate(-50%, calc(-100% - 10px)); opacity: 0; transition: opacity 0.12s ease;
+  padding: 0.38em 0.75em; border-radius: 8px; font: 600 0.8rem/1.2 var(--font); color: #f4f1ff;
+  background: #17132a; border: 1px solid rgba(155, 123, 255, 0.45); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+}
+.badge-tip::after {
+  content: ''; position: absolute; left: 50%; bottom: -5px; width: 8px; height: 8px; transform: translateX(-50%) rotate(45deg);
+  background: #17132a; border-right: 1px solid rgba(155, 123, 255, 0.45); border-bottom: 1px solid rgba(155, 123, 255, 0.45);
+}
+.badge-tip.on { opacity: 1; }
 .badge-emoji.founder { filter: drop-shadow(0 0 4px rgba(60, 242, 163, 0.65)); }
 .badge-emoji.royal { filter: drop-shadow(0 0 4px rgba(255, 210, 110, 0.75)); }
 .badge-emoji.sakura { filter: drop-shadow(0 0 4px rgba(255, 170, 195, 0.7)); }

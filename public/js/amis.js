@@ -1,6 +1,6 @@
-// Page « Mes amis » : ajouter, accepter, défier, et l'historique des parties (Firebase).
+// Page « Mes amis » : demandes, défis, photo de profil, et l'historique des parties (Firebase).
 import { $, escapeHtml, gameRow, saveGame, getGame, serverGameToLocal as toLocal, historyToGame as fromHistory } from './common.js';
-import { session, challenge, toast, watchFriends, addFriend, acceptFriend, declineFriend, cancelRequest, removeFriend, myHistory, picHtml, setAvatar, removeAvatar } from './compte.js';
+import { session, challenge, toast, watchFriends, acceptFriend, declineFriend, cancelRequest, removeFriend, myHistory, picHtml, setAvatar, removeAvatar } from './compte.js';
 
 const { user } = await session;
 if (!user) location.href = 'connexion.html?retour=amis.html';
@@ -37,21 +37,6 @@ function start() {
     } catch (ex) {
       toast(escapeHtml(ex.message), { cls: 'error' });
     }
-  });
-
-  $('#add-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const input = e.target.username;
-    const msg = $('#add-msg');
-    try {
-      msg.textContent = await addFriend(input.value);
-      msg.className = 'form-msg ok';
-      input.value = '';
-    } catch (ex) {
-      msg.textContent = ex.message;
-      msg.className = 'form-msg error';
-    }
-    msg.hidden = false;
   });
 
   // Tout se met à jour en direct : présence des amis, demandes reçues et envoyées
@@ -109,7 +94,7 @@ function renderFriends() {
             </span></li>`;
         })
         .join('')
-    : '<li class="empty">Pas encore d’amis. Ajoute-en un avec son pseudo !</li>';
+    : '<li class="empty">Pas encore d’amis. <a href="#" data-open-search>Cherche un joueur</a> par son pseudo dans la barre du haut.</li>';
 }
 
 document.addEventListener('click', async (e) => {
@@ -141,7 +126,7 @@ async function loadHistory() {
   const n = games.length;
   $('#profile-stats').textContent = n
     ? `${n} partie${n > 1 ? 's' : ''} · ${wins} victoire${wins > 1 ? 's' : ''}, ${losses} défaite${losses > 1 ? 's' : ''}, ${draws} nulle${draws > 1 ? 's' : ''}`
-    : 'Ajoute tes amis par leur pseudo, puis défie-les quand ils sont en ligne.';
+    : 'Cherche tes amis avec la barre de recherche en haut, puis défie-les quand ils sont en ligne.';
   // Copie locale pour que le bilan s'ouvre directement
   for (const g of games) if (!getGame(g.id)) saveGame(toLocal(fromHistory(g)));
   $('#history').innerHTML = games.length

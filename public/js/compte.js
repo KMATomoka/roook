@@ -6,6 +6,7 @@ import { escapeHtml, getPref, setPref } from './common.js';
 import {
   auth, db, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   ref, get, set, update, remove, push, onValue, onChildAdded, onChildRemoved, onDisconnect, serverTimestamp,
+  query, orderByKey, startAt, endAt, limitToFirst,
   serverNow, pseudoEmail, USERNAME_RE,
 } from './fb.js';
 
@@ -133,6 +134,7 @@ function renderAccount(user) {
     el.innerHTML = `<a class="btn btn-primary small" href="connexion.html?retour=${back}">Se connecter</a>`;
   } else {
     el.innerHTML = `
+      ${SEARCH_HTML}
       <a class="account-chip" href="amis.html" title="Mes amis et mes parties">
         ${picHtml(user.username, user.avatar, 'account-initial')}
         <span class="account-name">${escapeHtml(user.username)}</span>
@@ -145,6 +147,162 @@ function renderAccount(user) {
     });
   }
   bar.appendChild(el);
+  if (user) setupSearch(el.querySelector('.player-search'));
+}
+
+// ---------------------------------------------------------------------------
+// Recherche de joueurs (barre du haut) : on tape le début d'un pseudo, on ajoute ou on défie
+// ---------------------------------------------------------------------------
+const SEARCH_HTML = `
+  <div class="player-search" role="search">
+    <button class="icon-btn search-toggle" type="button" aria-label="Rechercher un joueur" title="Rechercher un joueur">⌕</button>
+    <div class="search-box">
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input type="search" class="search-input" placeholder="Rechercher un joueur" maxlength="20" autocomplete="off" spellcheck="false" aria-label="Rechercher un joueur">
+      <div class="search-results" hidden></div>
+    </div>
+  </div>`;
+
+/** Joueurs dont le pseudo commence par `text` (10 au maximum), avec leur lien avec moi. */
+export async function searchPlayers(text) {
+  const q = String(text || '').trim().toLowerCase();
+  if (!currentUser || !/^[a-z0-9_-]{1,20}$/.test(q)) return [];
+  const uid = currentUser.id;
+  const [found, friends, sent, received] = await Promise.all([
+    get(query(ref(db, 'usernames'), orderByKey(), startAt(q), endAt(q + ''), limitToFirst(10))),
+    get(ref(db, `friends/${uid}`)),
+    get(ref(db, `sentRequests/${uid}`)),
+    get(ref(db, `friendRequests/${uid}`)),
+  ]);
+  const ids = Object.values(found.val() || {}).filter((id) => typeof id === 'string' && id !== uid);
+  const players = await Promise.all(
+    ids.map(async (id) => {
+      const isFriend = friends.child(id).exists();
+      const [name, avatar, st] = await Promise.all([
+        get(ref(db, `users/${id}/username`)).then((x) => x.val()).catch(() => null),
+        avatarOf(id),
+        isFriend ? get(ref(db, `status/${id}`)).then((x) => x.val() || {}).catch(() => ({})) : null,
+      ]);
+      if (!name) return null; // compte supprimé
+      const relation = isFriend ? 'friend' : sent.child(id).exists() ? 'sent' : received.child(id).exists() ? 'received' : 'none';
+      return { id, username: name, avatar, relation, online: !!st?.connections, playing: !!st?.playing };
+    }),
+  );
+  return players.filter(Boolean);
+}
+
+/** Ouvre la recherche et place le curseur dedans (par exemple depuis un bouton « Ajouter un ami »). */
+export function openPlayerSearch() {
+  const box = document.querySelector('.player-search');
+  if (!box) return;
+  box.classList.add('open');
+  box.querySelector('.search-input').focus();
+}
+
+function setupSearch(box) {
+  if (!box) return;
+  const input = box.querySelector('.search-input');
+  const list = box.querySelector('.search-results');
+  let timer = null;
+  let seq = 0;
+  let results = [];
+
+  const close = () => {
+    list.hidden = true;
+    box.classList.remove('open');
+  };
+  const action = (p) => {
+    if (p.relation === 'none') return '<button class="btn btn-primary small" data-s="add">+ Ajouter</button>';
+    if (p.relation === 'sent') return '<span class="search-tag">Demande envoyée</span>';
+    if (p.relation === 'received') return '<button class="btn btn-primary small" data-s="accept">Accepter</button>';
+    if (p.online && !p.playing) return '<button class="btn btn-primary small" data-s="challenge">⚔ Défier</button>';
+    return `<span class="search-tag">${p.playing ? 'En partie' : 'Hors ligne'}</span>`;
+  };
+  const render = (msg) => {
+    list.hidden = false;
+    if (msg) return void (list.innerHTML = `<div class="search-empty">${msg}</div>`);
+    list.innerHTML = results.length
+      ? results
+          .map((p) => {
+            const status = p.relation !== 'friend' ? '' : p.playing ? 'playing' : p.online ? 'online' : 'offline';
+            return `<div class="search-row" data-id="${p.id}">
+              ${picHtml(p.username, p.avatar, 'person-avatar', status ? `<i class="presence ${status}"></i>` : '')}
+              <span class="search-name">${escapeHtml(p.username)}${p.relation === 'friend' ? ' <small>ami</small>' : ''}</span>
+              ${action(p)}
+            </div>`;
+          })
+          .join('')
+      : '<div class="search-empty">Aucun joueur trouvé.</div>';
+  };
+  const run = async () => {
+    const text = input.value.trim();
+    const n = ++seq;
+    if (!text) return void (list.hidden = true);
+    if (!/^[A-Za-z0-9_-]+$/.test(text)) return render('Un pseudo ne contient que des lettres, des chiffres, « _ » ou « - ».');
+    try {
+      const found = await searchPlayers(text);
+      if (n !== seq) return;
+      results = found;
+      render();
+    } catch {
+      if (n === seq) render('Recherche impossible pour le moment.');
+    }
+  };
+
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(run, 220);
+  });
+  input.addEventListener('focus', () => input.value.trim() && run());
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      input.value = '';
+      close();
+      input.blur();
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      list.querySelector('.search-row button')?.click();
+    }
+  });
+  box.querySelector('.search-toggle').addEventListener('click', () => (box.classList.contains('open') ? close() : openPlayerSearch()));
+  document.addEventListener('click', (e) => {
+    if (!box.contains(e.target) && !e.target.closest('[data-open-search]')) close();
+  });
+  // Raccourci clavier : « / » pour chercher un joueur
+  document.addEventListener('keydown', (e) => {
+    if (e.key === '/' && !e.ctrlKey && !e.metaKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '')) {
+      e.preventDefault();
+      openPlayerSearch();
+    }
+  });
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-open-search]')) {
+      e.preventDefault();
+      openPlayerSearch();
+    }
+  });
+  list.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-s]');
+    if (!b) return;
+    const p = results.find((r) => r.id === b.closest('.search-row').dataset.id);
+    if (!p) return;
+    b.disabled = true;
+    try {
+      if (b.dataset.s === 'add') toast(escapeHtml(await addFriend(p.username)), { cls: 'info' });
+      if (b.dataset.s === 'accept') {
+        await acceptFriend(p.id, p.username);
+        toast(`Toi et <b>${escapeHtml(p.username)}</b> êtes maintenant amis !`, { cls: 'info' });
+      }
+      if (b.dataset.s === 'challenge') {
+        close();
+        return challenge({ id: p.id, username: p.username });
+      }
+    } catch (ex) {
+      toast(escapeHtml(ex.message), { cls: 'error' });
+    }
+    run();
+  });
 }
 
 // ---------------------------------------------------------------------------

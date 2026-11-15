@@ -62,8 +62,8 @@ async function loadFriends() {
 function renderFriends() {
   const box = $('#ami-content');
   if (!friends.length) {
-    box.innerHTML = `<p>Tu n’as pas encore d’amis sur ROOOK. Ajoute-les avec leur pseudo !</p>
-      <div class="ami-actions"><a class="btn btn-primary" href="amis.html">Ajouter un ami</a></div>`;
+    box.innerHTML = `<p>Tu n’as pas encore d’amis sur ROOOK. Cherche-les par leur pseudo dans la barre de recherche, en haut.</p>
+      <div class="ami-actions"><button class="btn btn-primary" type="button" data-open-search>⌕ Rechercher un joueur</button></div>`;
     return;
   }
   const rank = (f) => (f.online && !f.playing ? 0 : f.playing ? 1 : 2);

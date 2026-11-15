@@ -2,7 +2,7 @@
 
 Site : **https://kmatomoka.github.io/roook/**
 
-- **Comptes et amis** : chacun crée son compte (pseudo + mot de passe), ajoute ses amis par leur pseudo, voit qui est en ligne et les défie en un clic. L'ami reçoit le défi en direct, où qu'il soit sur le site.
+- **Comptes et amis** : chacun crée son compte (pseudo + mot de passe), trouve ses amis avec la barre « Rechercher un joueur » en haut de chaque page (ou la touche « / »), voit qui est en ligne et les défie en un clic. L'ami reçoit le défi en direct, où qu'il soit sur le site.
 - **Photo de profil** : chacun choisit sa photo sur la page « Mes amis » (recadrée et réduite à 160 px). Elle s'affiche en partie à côté du pseudo, dans la liste d'amis et dans les défis.
 - **Parties entre amis** : en temps réel, à la pendule (bullet, blitz, rapide, classique), avec chat, nulle et revanche. Chaque partie terminée va dans l'historique du joueur.
 - **Contre Noa** : l'IA, 8 niveaux, du débutant au grand maître (le moteur tourne dans le navigateur).

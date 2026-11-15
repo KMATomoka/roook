@@ -25,6 +25,10 @@ import {
   runTransaction,
   query,
   limitToLast,
+  limitToFirst,
+  orderByKey,
+  startAt,
+  endAt,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
 import { firebaseConfig } from './firebase-config.js';
 
@@ -51,6 +55,10 @@ export {
   runTransaction,
   query,
   limitToLast,
+  limitToFirst,
+  orderByKey,
+  startAt,
+  endAt,
 };
 
 // Écart entre l'horloge de cet ordinateur et celle de Firebase (pour des pendules justes)

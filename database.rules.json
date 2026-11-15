@@ -8,6 +8,7 @@
       }
     },
     "usernames": {
+      ".read": "auth != null && query.orderByKey == true && query.limitToFirst <= 10",
       "$name": {
         ".read": "auth != null",
         ".write": "auth != null && !data.exists() && newData.val() === auth.uid && $name.matches(/^[a-z0-9_-]{3,20}$/)"

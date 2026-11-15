@@ -678,7 +678,6 @@ body::after {
 .profile .lead { margin: 2px 0 0; }
 .friends-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 18px; align-items: start; }
 .friends-main { display: flex; flex-direction: column; gap: 18px; }
-.add-friend { display: flex; gap: 8px; }
 .form-msg { margin: 10px 0 0; font-size: 0.9rem; }
 .form-msg.ok { color: var(--mint); }
 .form-msg.error { color: var(--danger); }
@@ -733,3 +732,50 @@ body::after {
 .profile-pic:hover .profile-pic-edit { transform: scale(1.1); border-color: var(--accent); }
 .profile-pic:hover .profile-avatar { box-shadow: 0 0 0 3px var(--accent), 0 0 30px rgba(143, 107, 255, 0.5); }
 .pic-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+/* Recherche de joueurs (barre du haut) */
+.player-search { position: relative; }
+.search-toggle { display: none; font-size: 1.1rem; }
+.search-box { position: relative; }
+.search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; font-size: 1.05rem; }
+.player-search input.search-input {
+  width: clamp(150px, 18vw, 230px); padding: 7px 12px 7px 32px; border-radius: 99px;
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--text); font: 500 0.9rem var(--font);
+  transition: border-color 0.15s, width 0.2s, box-shadow 0.15s;
+}
+.player-search input.search-input::placeholder { color: var(--muted); }
+.player-search input.search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(143, 107, 255, 0.2); width: clamp(180px, 22vw, 270px); }
+.search-input::-webkit-search-cancel-button { filter: invert(0.7); }
+.search-results {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 150; width: min(340px, calc(100vw - 32px));
+  background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: 14px; padding: 6px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), 0 0 30px rgba(143, 107, 255, 0.15);
+  display: flex; flex-direction: column; gap: 2px; max-height: 60vh; overflow-y: auto;
+}
+.search-results[hidden] { display: none; }
+.search-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 10px; }
+.search-row:hover { background: rgba(255, 255, 255, 0.04); }
+.search-row .person-avatar { width: 34px; height: 34px; }
+.search-row .presence { border-color: var(--surface-2); }
+.search-name { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-name small { color: var(--accent-soft); font-weight: 500; margin-left: 4px; }
+.search-tag { color: var(--muted); font-size: 0.8rem; white-space: nowrap; }
+.search-empty { color: var(--muted); font-size: 0.88rem; padding: 10px; text-align: center; }
+@media (max-width: 760px) {
+  .search-toggle { display: grid; place-items: center; }
+  .search-box { display: none; }
+  .player-search.open .search-box {
+    display: block; position: fixed; left: 16px; right: 16px; top: 64px; z-index: 160;
+  }
+  .player-search.open .search-input, .player-search.open .search-input:focus { width: 100%; box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5); }
+  .search-results { left: 0; right: 0; width: auto; }
+}
+@media (max-width: 640px) {
+  .topbar { gap: 10px; }
+  .account { gap: 6px; }
+  .topnav { gap: 12px; }
+}
+@media (max-width: 400px) {
+  .logo { font-size: 1.15rem; }
+  .logo-mark { width: 30px; height: 30px; }
+}

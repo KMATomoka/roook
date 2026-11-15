@@ -12,6 +12,15 @@ import {
   serverNow, pseudoEmail, USERNAME_RE, EMAIL_RE, isLegacyEmail,
 } from './fb.js';
 
+// Menu du haut (même menu sur toutes les pages) : la page en cours est mise en avant
+{
+  const here = location.pathname.split('/').pop() || 'index.html';
+  const section = { 'jeu.html': 'jouer.html', 'profil.html': 'amis.html' }[here] || here;
+  document.querySelectorAll('.topnav a').forEach((a) => {
+    if (a.getAttribute('href') === section) a.setAttribute('aria-current', 'page');
+  });
+}
+
 export const CADENCES = [
   ['1+0', 'Bullet · 1 min'],
   ['3+0', 'Blitz · 3 min'],
@@ -832,25 +841,14 @@ export async function historyGame(id, uid = null) {
   return g ? { id, ...g } : null;
 }
 
-/** Range une partie contre Noa dans l'historique du compte (pour les statistiques du profil). */
-export function saveAiGame(g) {
-  if (!currentUser || !g.moves.length) return;
-  set(ref(db, `history/${currentUser.id}/${g.id}`), {
-    white: g.white,
-    black: g.black,
-    me: g.me,
-    mode: 'ia',
-    level: g.level,
-    result: g.result,
-    reason: g.reason || '',
-    moves: g.moves.join(' '),
-    base: g.cadence?.base || 0,
-    inc: g.cadence?.inc || 0,
-    date: serverTimestamp(),
-  }).catch(() => {});
-}
 
 export const me = () => currentUser;
+
+/** Déconnexion, puis retour à l'accueil. */
+export async function logout() {
+  await signOut(auth).catch(() => {});
+  location.href = './';
+}
 
 // ---------------------------------------------------------------------------
 // Profils

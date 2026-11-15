@@ -9,7 +9,7 @@ import { isMuted, setMuted, lowTimeBeep } from './sound.js';
 import { createFx } from './fx.js';
 import { attachArrows } from './arrows.js';
 import { scrollMoveIntoList } from './common.js';
-import { session, avatarOf, saveAiGame, profileUrl } from './compte.js';
+import { session, avatarOf, profileUrl } from './compte.js';
 import { gameSocket } from './online.js';
 const account = await session;
 
@@ -448,7 +448,6 @@ function storeGame() {
     cadence: mode === 'ami' ? online.time : { base: cadence.base, inc: cadence.inc },
   };
   saveGame(record);
-  if (mode === 'ia') saveAiGame(record); // compte dans les statistiques du profil
 }
 
 function openReview() {

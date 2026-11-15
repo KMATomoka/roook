@@ -16,7 +16,8 @@
   <header class="topbar">
     <a class="logo" href="./"><span class="logo-mark">♜</span> ROOOK</a>
     <nav class="topnav">
-      <a href="#jouer">Jouer</a>
+      <a href="jouer.html">Jouer</a>
+      <a href="amis.html">Amis</a>
       <a href="bilan.html">Analyser</a>
     </nav>
   </header>
@@ -28,8 +29,8 @@
       <h1>Tes amis, un défi,<br><em>une partie.</em></h1>
       <p class="lead">Crée ton compte, ajoute tes amis et défie-les en un clic. Entraîne-toi contre une IA à ton niveau, puis découvre le bilan de ta partie : tes meilleurs coups, tes erreurs et des conseils pour progresser.</p>
       <div class="hero-cta">
-        <a class="btn btn-primary btn-lg" href="#jouer" data-open="ami">Jouer avec un ami</a>
-        <a class="btn btn-ghost btn-lg" href="#jouer" data-open="ia">Affronter Noa</a>
+        <a class="btn btn-primary btn-lg" href="jouer.html#ami">Jouer avec un ami</a>
+        <a class="btn btn-ghost btn-lg" href="jouer.html#ia">Affronter Noa</a>
       </div>
       <ul class="hero-points">
         <li><b>Ton compte, tes amis</b> Ajoute-les par leur pseudo et défie-les.</li>
@@ -58,83 +59,34 @@
     </div>
   </section>
 
-  <section class="modes" id="jouer">
-    <h2 class="section-title">Comment veux-tu jouer ?</h2>
-    <div class="mode-grid">
-
-      <article class="mode-card" id="card-ami">
-        <div class="mode-icon">♞♘</div>
-        <h3>Contre un ami</h3>
-        <div id="ami-content" class="ami-content"><p class="muted">Chargement…</p></div>
-      </article>
-
-      <article class="mode-card" id="card-ia">
-        <div class="noa-card-head">
-          <img class="mode-noa" id="noa-level-face" src="img/noa/neutre.svg" alt="Noa" width="76" height="76">
-          <div>
-            <h3>Contre Noa</h3>
-            <p>Noa s’adapte à ton niveau : du débutant qui rigole au grand maître qui ne pardonne rien.</p>
-          </div>
-        </div>
-        <form id="form-ia" class="mode-form">
-          <label><span>Niveau : <b id="lvl-name"></b> <span class="muted" id="lvl-elo"></span></span>
-            <input type="range" name="niveau" min="1" max="8" value="3" id="lvl">
-          </label>
-          <div class="lvl-scale"><span>Facile</span><span>Imbattable</span></div>
-          <fieldset><legend>Ta couleur</legend>
-            <div class="seg">
-              <label><input type="radio" name="couleur" value="w" checked><span>Blancs</span></label>
-              <label><input type="radio" name="couleur" value="random"><span>Au hasard</span></label>
-              <label><input type="radio" name="couleur" value="b"><span>Noirs</span></label>
-            </div>
-          </fieldset>
-          <label>Temps pour chaque joueur
-            <select name="cadence">
-              <option value="1+0">Bullet · 1 min</option>
-              <option value="3+0">Blitz · 3 min</option>
-              <option value="3+2">Blitz · 3 min + 2 s</option>
-              <option value="5+0">Blitz · 5 min</option>
-              <option value="10+0" selected>Rapide · 10 min</option>
-              <option value="15+10">Rapide · 15 min + 10 s</option>
-              <option value="30+0">Classique · 30 min</option>
-            </select>
-          </label>
-          <button class="btn btn-primary">Lancer la partie</button>
-        </form>
-      </article>
-
-      <article class="mode-card small">
-        <div class="mode-icon">♔♚</div>
-        <h3>Sur le même écran</h3>
-        <p>Deux joueurs, un seul ordinateur : chacun joue à son tour.</p>
-        <form id="form-local" class="mode-form">
-          <label>Temps pour chaque joueur
-            <select name="cadence">
-              <option value="1+0">Bullet · 1 min</option>
-              <option value="3+0">Blitz · 3 min</option>
-              <option value="3+2">Blitz · 3 min + 2 s</option>
-              <option value="5+0">Blitz · 5 min</option>
-              <option value="10+0" selected>Rapide · 10 min</option>
-              <option value="15+10">Rapide · 15 min + 10 s</option>
-              <option value="30+0">Classique · 30 min</option>
-            </select>
-          </label>
-          <button class="btn btn-ghost">Commencer</button>
-        </form>
-      </article>
-
-      <article class="mode-card small">
-        <div class="mode-icon">📊</div>
-        <h3>Analyser une partie</h3>
-        <p>Colle une partie au format PGN et obtiens son bilan complet.</p>
-        <a class="btn btn-ghost" href="bilan.html">Analyser</a>
-      </article>
+  <section class="explore">
+    <h2 class="section-title">Que veux-tu faire ?</h2>
+    <div class="explore-grid">
+      <a class="explore-card" href="jouer.html">
+        <span class="explore-icon">♞</span>
+        <h3>Jouer</h3>
+        <p>Une partie contre un ami, contre Noa ou sur le même écran, à la pendule.</p>
+        <span class="explore-go">Jouer →</span>
+      </a>
+      <a class="explore-card" href="amis.html">
+        <span class="explore-icon">👥</span>
+        <h3>Mes amis</h3>
+        <p>Retrouve tes amis, vois qui est en ligne et défie-les en un clic.</p>
+        <span class="explore-go">Voir mes amis →</span>
+      </a>
+      <a class="explore-card" href="bilan.html">
+        <span class="explore-icon">📊</span>
+        <h3>Analyser</h3>
+        <p>Le bilan de tes parties par Noa, ou d’une partie collée au format PGN.</p>
+        <span class="explore-go">Analyser →</span>
+      </a>
+      <a class="explore-card" href="profil.html">
+        <span class="explore-icon">🏆</span>
+        <h3>Mon profil</h3>
+        <p>Tes victoires, ton taux de réussite, ta forme et ton rival.</p>
+        <span class="explore-go">Voir mon profil →</span>
+      </a>
     </div>
-  </section>
-
-  <section class="recent" id="recent" hidden>
-    <h2 class="section-title">Tes dernières parties</h2>
-    <ul class="game-list" id="recent-list"></ul>
   </section>
 
   <section class="how">

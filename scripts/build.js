@@ -46,7 +46,7 @@ for (const file of walk(dist)) {
   const before = src;
   if (isHtml) src = src.replace(/(src|href)="((?:js|css|vendor)\/[^"?]+\.(?:js|css))"/g, (m, attr, url) => `${attr}="${tag(url)}"`);
   // imports de modules : from './x.js', import('./x.js') (y compris le script de connexion.html)
-  src = src.replace(/(from\s*|import\()(['"])(\.{1,2}\/[^'"?]+\.js)\2/g, (m, kw, q, url) => `${kw}${q}${tag(url)}${q}`);
+  src = src.replace(/(from\s*|import\s*\(|import\s+)(['"])(\.{1,2}\/[^'"?]+\.js)\2/g, (m, kw, q, url) => `${kw}${q}${tag(url)}${q}`);
   if (src !== before) {
     fs.writeFileSync(file, src);
     tagged++;

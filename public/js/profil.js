@@ -1,12 +1,10 @@
-// Page « Profil » : statistiques d'un joueur (victoires, défaites, taux, séries, couleurs, contre Noa…),
+// Page « Profil » : statistiques d'un joueur en ligne (victoires, défaites, taux, séries, couleurs, rival…),
 // ses dernières parties, et pour son propre profil : le choix public / privé.
 import { $, escapeHtml } from './common.js';
-import { LEVELS } from './engine.js';
 import {
-  session, toast, picHtml, loadProfile, setProfilePrivate, profileUrl, addFriend, acceptFriend, challenge, cadenceLabel,
+  session, toast, picHtml, loadProfile, setProfilePrivate, profileUrl, addFriend, acceptFriend, challenge, cadenceLabel, logout,
 } from './compte.js';
 
-const LEVEL_FACE = ['golmon', 'rire', 'content', 'neutre', 'hmm', 'grimace', 'colere', 'frime'];
 const page = $('#profile-page');
 const { user, banned } = await session;
 const wanted = new URLSearchParams(location.search).get('id');
@@ -51,12 +49,10 @@ function record(list) {
 
 function stats(games) {
   const sorted = [...games].sort((a, b) => (a.date || 0) - (b.date || 0)); // du plus ancien au plus récent
-  // Statistiques « classées » : seulement les parties entre amis, vérifiées par l'arbitre de la base.
-  // Les parties contre Noa se jouent dans le navigateur (invérifiables) : elles ont leur propre carte.
+  // Seulement les parties en ligne contre des amis (vérifiées par l'arbitre de la base) ; les parties contre Noa ne comptent pas.
   const list = sorted.filter((g) => g.mode !== 'ia');
   const all = record(list);
   const friends = list;
-  const noa = sorted.filter((g) => g.mode === 'ia');
 
   // Séries de victoires
   let cur = 0, best = 0, run = 0;
@@ -91,9 +87,6 @@ function stats(games) {
   }
   const rival = [...opps.values()].sort((a, b) => b.games.length - a.games.length)[0] || null;
 
-  // Contre Noa : meilleur niveau battu
-  const beaten = noa.filter((g) => outcome(g) === 'w').map((g) => g.level || 0);
-  const bestLevel = beaten.length ? Math.max(...beaten) : 0;
 
   // Longueur des parties, cadence préférée, victoire la plus rapide
   const lengths = list.map(plies);
@@ -105,14 +98,14 @@ function stats(games) {
   const favCad = [...cad.entries()].sort((a, b) => b[1] - a[1])[0];
 
   return {
-    all, friends: record(friends), noa: record(noa), noaGames: noa, white, black,
+    all, friends: record(friends), white, black,
     best, cur, streak, streakKind,
     winsHow: how('w'), lossesHow: how('l'),
     rival: rival && { ...rival, rec: record(rival.games) },
-    bestLevel, avgMoves, fastest,
+    avgMoves, fastest,
     favCadence: favCad ? cadenceLabel(Number(favCad[0].split('|')[0]), Number(favCad[0].split('|')[1])) : null,
     form: list.slice(-10).map(outcome),
-    recent: [...sorted].reverse().slice(0, 12),
+    recent: [...list].reverse().slice(0, 12),
   };
 }
 
@@ -147,7 +140,7 @@ function render(p) {
           ${p.relation === 'friend' ? '<span class="badge me">ami</span>' : ''}
         </h1>
         <p class="pf-meta">${presenceTxt}<span>Membre depuis ${date(p.createdAt, { month: 'long', year: 'numeric' })}</span>${p.friends ? `<span>${plural(p.friends.length, 'ami')}</span>` : ''}</p>
-        ${s ? `<p class="pf-headline">${s.all.n ? `<b>${s.all.rate}%</b> de victoires sur ${plural(s.all.n, 'partie classée')}` : s.noa.n ? 'Pas encore de partie classée entre amis' : 'Pas encore de partie jouée'}</p>` : ''}
+        ${s ? `<p class="pf-headline">${s.all.n ? `<b>${s.all.rate}%</b> de victoires sur ${plural(s.all.n, 'partie')} en ligne` : 'Pas encore de partie en ligne'}</p>` : ''}
       </div>
       <div class="pf-actions">${actions(p)}</div>
     </section>
@@ -159,12 +152,12 @@ function render(p) {
         <div class="pf-lock">🔒</div>
         <h2>Ce profil est privé</h2>
         <p class="muted">Seuls les amis de ${escapeHtml(p.username)} voient ses statistiques et ses parties.${p.relation === 'none' ? ' Ajoute-le en ami pour les voir.' : ''}</p>
-      </section>` : s.all.n === 0 && s.noa.n === 0 ? `
+      </section>` : s.all.n === 0 ? `
       <section class="card pf-empty">
         <img src="img/noa/hmm.svg" alt="" width="80" height="80">
         <h2>Aucune partie pour l’instant</h2>
-        <p class="muted">${me ? 'Tes statistiques apparaîtront ici dès ta première partie terminée, contre un ami ou contre Noa.' : `${escapeHtml(p.username)} n’a pas encore terminé de partie.`}</p>
-        ${me ? '<a class="btn btn-primary" href="./#jouer">Jouer une partie</a>' : ''}
+        <p class="muted">${me ? 'Tes statistiques apparaîtront ici dès ta première partie en ligne contre un ami.' : `${escapeHtml(p.username)} n’a pas encore joué de partie en ligne.`}</p>
+        ${me ? '<a class="btn btn-primary" href="amis.html">Défier un ami</a>' : ''}
       </section>` : statsHtml(p, s)}
   `;
 
@@ -174,7 +167,9 @@ function render(p) {
 function actions(p) {
   if (p.relation === 'me') {
     return `<a class="btn btn-ghost small" href="amis.html">👥 Mes amis</a>
-      <a class="btn btn-ghost small" href="amis.html#photo">📷 Changer ma photo</a>`;
+      <a class="btn btn-ghost small" href="amis.html#photo">📷 Changer ma photo</a>
+      ${p.admin ? '<a class="btn btn-ghost small" href="admin.html">🛡 Administration</a>' : ''}
+      <button class="btn btn-ghost small" data-act="logout">⎋ Se déconnecter</button>`;
   }
   if (p.relation === 'none') return '<button class="btn btn-primary" data-act="add">+ Ajouter en ami</button>';
   if (p.relation === 'sent') return '<span class="search-tag">Demande d’ami envoyée</span>';
@@ -224,22 +219,12 @@ function howList(c, total) {
 
 function statsHtml(p, s) {
   const streakTxt = !s.streak ? '—' : s.streakKind === 'w' ? `🔥 ${plural(s.streak, 'victoire')}` : s.streakKind === 'l' ? `${plural(s.streak, 'défaite')}` : `${plural(s.streak, 'nulle')}`;
-  const lvl = s.bestLevel ? LEVELS[s.bestLevel - 1] : null;
   const rival = s.rival;
-  if (!s.all.n) {
-    return `
-    <section class="card pf-hint">
-      <h2>Statistiques classées</h2>
-      <p class="muted">Elles comptent seulement les parties contre des amis, vérifiées par l’arbitre du site. ${p.relation === 'me' ? 'Défie un ami pour lancer les tiennes !' : 'Aucune pour l’instant.'}</p>
-    </section>
-    <section class="pf-grid">${noaCard(s)}</section>
-    ${recentHtml(p, s)}`;
-  }
   return `
     <section class="pf-overview">
       <div class="card pf-ring-card">${rateRing(s.all.rate)}<p class="muted">Score : ${s.all.score}% (une nulle compte ½)</p></div>
       <div class="pf-tiles">
-        ${tile(s.all.n, s.all.n > 1 ? 'parties classées' : 'partie classée')}
+        ${tile(s.all.n, s.all.n > 1 ? 'parties' : 'partie')}
         ${tile(s.all.w, s.all.w > 1 ? 'victoires' : 'victoire', 'w')}
         ${tile(s.all.l, s.all.l > 1 ? 'défaites' : 'défaite', 'l')}
         ${tile(s.all.d, s.all.d > 1 ? 'nulles' : 'nulle', 'd')}
@@ -266,15 +251,11 @@ function statsHtml(p, s) {
       </div>
 
       <div class="card pf-card">
-        <h2>Entre amis</h2>
-        ${s.friends.n ? `${bar(s.friends)}
-        <dl class="pf-facts">
-          <div><dt>Taux de victoire</dt><dd>${s.friends.rate}%</dd></div>
-          <div><dt>Rival</dt><dd>${rival ? `${rival.id ? `<a href="${profileUrl(rival.id)}">${escapeHtml(rival.name)}</a>` : escapeHtml(rival.name)} <small class="muted">(${rival.rec.w}-${rival.rec.d}-${rival.rec.l})</small>` : '—'}</dd></div>
-        </dl>` : '<p class="muted">Aucune partie contre un ami pour l’instant.</p>'}
+        <h2>Rival</h2>
+        ${rival ? `<p class="pf-rival">${rival.id ? `<a href="${profileUrl(rival.id)}">${escapeHtml(rival.name)}</a>` : escapeHtml(rival.name)}</p>
+        <p class="muted">L’adversaire le plus affronté : ${plural(rival.rec.n, 'partie')}</p>
+        ${bar(rival.rec)}` : '<p class="muted">—</p>'}
       </div>
-
-      ${noaCard(s)}
 
       <div class="card pf-card">
         <h2>Victoires</h2>
@@ -286,9 +267,9 @@ function statsHtml(p, s) {
         ${howList(s.lossesHow, s.all.l)}
       </div>
 
-      <div class="card pf-card pf-wide">
+      <div class="card pf-card">
         <h2>En bref</h2>
-        <dl class="pf-facts pf-facts-3">
+        <dl class="pf-facts pf-facts-1">
           <div><dt>Coups par partie</dt><dd>${s.avgMoves || '—'}</dd></div>
           <div><dt>Victoire la plus rapide</dt><dd>${s.fastest ? `${Math.ceil(plies(s.fastest) / 2)} coups` : '—'}</dd></div>
           <div><dt>Cadence préférée</dt><dd>${s.favCadence || '—'}</dd></div>
@@ -297,19 +278,6 @@ function statsHtml(p, s) {
     </section>
 
     ${recentHtml(p, s)}`;
-}
-
-function noaCard(s) {
-  const lvl = s.bestLevel ? LEVELS[s.bestLevel - 1] : null;
-  return `
-      <div class="card pf-card">
-        <h2>Contre Noa <small class="muted">· entraînement, non classé</small></h2>
-        ${s.noa.n ? `<div class="pf-noa">
-          <img src="img/noa/${lvl ? LEVEL_FACE[lvl.n - 1] : 'frime'}.svg" alt="" width="64" height="64">
-          <div><b>${lvl ? `Niveau ${lvl.n} battu` : 'Pas encore battu'}</b><small class="muted">${lvl ? `${lvl.name} · ${lvl.elo}` : 'Noa reste invaincu… pour l’instant'}</small></div>
-        </div>
-        ${bar(s.noa)}` : '<p class="muted">Aucune partie contre Noa pour l’instant.</p>'}
-      </div>`;
 }
 
 function recentHtml(p, s) {
@@ -322,9 +290,7 @@ function recentHtml(p, s) {
 function gameLine(p, g) {
   const o = outcome(g);
   const oppName = g.me === 'w' ? g.black : g.white;
-  const opp = g.mode === 'ia'
-    ? `Noa <small class="muted">niv. ${g.level || '?'}</small>`
-    : g.opp ? `<a href="${profileUrl(g.opp)}">${escapeHtml(oppName)}</a>` : escapeHtml(oppName);
+  const opp = g.opp ? `<a href="${profileUrl(g.opp)}">${escapeHtml(oppName)}</a>` : escapeHtml(oppName);
   const review = p.relation === 'me' ? `bilan.html?partie=${encodeURIComponent(g.id)}` : `bilan.html?partie=${encodeURIComponent(g.id)}&joueur=${encodeURIComponent(p.id)}`;
   return `<li class="pf-game">
     <span class="pf-res ${o}">${o === 'w' ? 'Victoire' : o === 'l' ? 'Défaite' : 'Nulle'}</span>
@@ -355,6 +321,7 @@ function wire(p) {
       if (b.dataset.act === 'add') toast(escapeHtml(await addFriend(p.username)), { cls: 'info' });
       if (b.dataset.act === 'accept') await acceptFriend(p.id, p.username);
       if (b.dataset.act === 'challenge') return challenge({ id: p.id, username: p.username });
+      if (b.dataset.act === 'logout') return logout();
       load(p.id);
     } catch (ex) {
       toast(escapeHtml(ex.message), { cls: 'error' });

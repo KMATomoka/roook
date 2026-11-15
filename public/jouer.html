@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jouer — ROOOK</title>
+  <meta name="description" content="Joue aux échecs en ligne avec tes amis, affronte une IA et reçois un bilan de chaque partie.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="page-play">
+  <header class="topbar">
+    <a class="logo" href="./"><span class="logo-mark">♜</span> ROOOK</a>
+    <nav class="topnav">
+      <a href="jouer.html">Jouer</a>
+      <a href="amis.html">Amis</a>
+      <a href="bilan.html">Analyser</a>
+    </nav>
+  </header>
+
+  <main class="play-page">
+    <div class="page-head">
+      <p class="eyebrow">Jouer</p>
+      <h1>Comment veux-tu jouer ?</h1>
+      <p class="lead">Défie un ami en ligne, entraîne-toi contre Noa, ou joue à deux sur le même écran.</p>
+    </div>
+
+  <section class="modes" id="jouer">
+    <div class="mode-grid">
+
+      <article class="mode-card" id="card-ami">
+        <div class="mode-icon">♞♘</div>
+        <h3>Contre un ami</h3>
+        <div id="ami-content" class="ami-content"><p class="muted">Chargement…</p></div>
+      </article>
+
+      <article class="mode-card" id="card-ia">
+        <div class="noa-card-head">
+          <img class="mode-noa" id="noa-level-face" src="img/noa/neutre.svg" alt="Noa" width="76" height="76">
+          <div>
+            <h3>Contre Noa</h3>
+            <p>Noa s’adapte à ton niveau : du débutant qui rigole au grand maître qui ne pardonne rien.</p>
+          </div>
+        </div>
+        <form id="form-ia" class="mode-form">
+          <label><span>Niveau : <b id="lvl-name"></b> <span class="muted" id="lvl-elo"></span></span>
+            <input type="range" name="niveau" min="1" max="8" value="3" id="lvl">
+          </label>
+          <div class="lvl-scale"><span>Facile</span><span>Imbattable</span></div>
+          <fieldset><legend>Ta couleur</legend>
+            <div class="seg">
+              <label><input type="radio" name="couleur" value="w" checked><span>Blancs</span></label>
+              <label><input type="radio" name="couleur" value="random"><span>Au hasard</span></label>
+              <label><input type="radio" name="couleur" value="b"><span>Noirs</span></label>
+            </div>
+          </fieldset>
+          <label>Temps pour chaque joueur
+            <select name="cadence">
+              <option value="1+0">Bullet · 1 min</option>
+              <option value="3+0">Blitz · 3 min</option>
+              <option value="3+2">Blitz · 3 min + 2 s</option>
+              <option value="5+0">Blitz · 5 min</option>
+              <option value="10+0" selected>Rapide · 10 min</option>
+              <option value="15+10">Rapide · 15 min + 10 s</option>
+              <option value="30+0">Classique · 30 min</option>
+            </select>
+          </label>
+          <button class="btn btn-primary">Lancer la partie</button>
+        </form>
+      </article>
+
+      <article class="mode-card small">
+        <div class="mode-icon">♔♚</div>
+        <h3>Sur le même écran</h3>
+        <p>Deux joueurs, un seul ordinateur : chacun joue à son tour.</p>
+        <form id="form-local" class="mode-form">
+          <label>Temps pour chaque joueur
+            <select name="cadence">
+              <option value="1+0">Bullet · 1 min</option>
+              <option value="3+0">Blitz · 3 min</option>
+              <option value="3+2">Blitz · 3 min + 2 s</option>
+              <option value="5+0">Blitz · 5 min</option>
+              <option value="10+0" selected>Rapide · 10 min</option>
+              <option value="15+10">Rapide · 15 min + 10 s</option>
+              <option value="30+0">Classique · 30 min</option>
+            </select>
+          </label>
+          <button class="btn btn-ghost">Commencer</button>
+        </form>
+      </article>
+
+    </div>
+  </section>
+
+  <section class="recent" id="recent" hidden>
+    <h2 class="section-title">Tes dernières parties</h2>
+    <ul class="game-list" id="recent-list"></ul>
+  </section>
+
+  </main>
+
+  <script type="module" src="js/jouer.js"></script>
+</body>
+</html>

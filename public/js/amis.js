@@ -152,7 +152,7 @@ document.addEventListener('click', async (e) => {
 });
 
 async function loadHistory() {
-  const games = await myHistory(200);
+  const games = (await myHistory(200)).filter((g) => g.mode !== 'ia'); // seulement les parties en ligne
   const wins = games.filter((g) => (g.result === '1-0' && g.me === 'w') || (g.result === '0-1' && g.me === 'b')).length;
   const draws = games.filter((g) => g.result === '1/2-1/2').length;
   const losses = games.length - wins - draws;

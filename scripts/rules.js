@@ -58,8 +58,7 @@ const AMI_OK = `(newData.child('game').isString() && newData.child('round').isNu
   && newData.child('white').val() === ${GH('names/w')}.val() && newData.child('black').val() === ${GH('names/b')}.val()
   && ((newData.child('me').val() === 'w' && ${GH('white')}.val() === $uid && newData.child('opp').val() === ${GH('black')}.val())
    || (newData.child('me').val() === 'b' && ${GH('black')}.val() === $uid && newData.child('opp').val() === ${GH('white')}.val())))`.replace(/\n\s*/g, ' ');
-// Contre Noa : la partie se joue dans le navigateur, impossible à vérifier ; on borne au moins les valeurs
-const IA_OK = `(newData.child('level').isNumber() && newData.child('level').val() >= 1 && newData.child('level').val() <= 8 && (newData.child('me').val() === 'w' || newData.child('me').val() === 'b') && (newData.child('result').val() === '1-0' || newData.child('result').val() === '0-1' || newData.child('result').val() === '1/2-1/2') && newData.child('date').val() === now)`;
+// (Les parties contre Noa ne vont plus dans l'historique : elles ne comptent pas dans les statistiques.)
 
 const rules = {
   rules: {
@@ -86,7 +85,8 @@ const rules = {
       '.read': `${ME} && query.orderByKey == true && query.limitToFirst <= 10`,
       $name: {
         '.read': true,
-        '.write': `${ME} && !data.exists() && newData.val() === auth.uid && $name.matches(/^[a-z0-9_-]{3,20}$/)`,
+        // Réserver un pseudo libre ; le libérer seulement si c'est le sien (suppression de compte)
+        '.write': `${ME} && ((!data.exists() && newData.val() === auth.uid && $name.matches(/^[a-z0-9_-]{3,20}$/)) || (data.val() === auth.uid && !newData.exists()))`,
       },
     },
     roles: {
@@ -248,7 +248,7 @@ const rules = {
         $h: {
           // On ajoute une partie, on ne la modifie ni ne l'efface (pas de défaite qui disparaît) ; un admin peut supprimer
           '.write': `${ME} && ((auth.uid === $uid && !data.exists() && newData.exists()) || (${ADMIN} && !newData.exists()))`,
-          '.validate': `newData.hasChildren(['white', 'black', 'me', 'mode', 'result', 'reason', 'moves', 'date']) && (newData.child('mode').val() === 'ia' ? ${IA_OK} : ${AMI_OK})`,
+          '.validate': `newData.hasChildren(['white', 'black', 'me', 'mode', 'result', 'reason', 'moves', 'date']) && newData.child('mode').val() === 'ami' && ${AMI_OK}`,
         },
       },
     },

@@ -375,6 +375,145 @@ export function createFx(frame, getOrientation) {
     }, 520);
   }
 
+  // -------------------------------------------------------------------------
+  // Échec et mat « Royal » : le Couronnement
+  //  lumière dorée, le roi vaincu s'incline et se pétrifie, sa couronne s'envole et se pose sur le roi vainqueur,
+  //  rayons d'or derrière lui, poussière d'or qui tombe, titre de cérémonie. (Le son reste celui de base.)
+  // -------------------------------------------------------------------------
+  let crownId = 0;
+  function crownSvg() {
+    const id = 'fx-crown-' + ++crownId;
+    return `<svg viewBox="0 0 100 72" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3c4"/><stop offset=".45" stop-color="#f0c75a"/><stop offset="1" stop-color="#a8740f"/></linearGradient></defs>
+      <g stroke="#5a3b0a" stroke-width="3" stroke-linejoin="round">
+        <path d="M10 56 L5 20 L29 39 L50 9 L71 39 L95 20 L90 56 Z" fill="url(#${id})"/>
+        <rect x="9" y="54" width="82" height="12" rx="2.5" fill="url(#${id})"/>
+        <circle cx="50" cy="9" r="5.5" fill="#fff8e2" stroke-width="2"/>
+        <circle cx="5" cy="20" r="4.2" fill="#fff8e2" stroke-width="2"/>
+        <circle cx="95" cy="20" r="4.2" fill="#fff8e2" stroke-width="2"/>
+        <path d="M50 37 L55 44 L50 51 L45 44 Z" fill="#a01d33" stroke-width="2"/>
+        <circle cx="30" cy="60" r="3.4" fill="#24589c" stroke-width="1.6"/>
+        <circle cx="50" cy="60" r="3.8" fill="#a01d33" stroke-width="1.6"/>
+        <circle cx="70" cy="60" r="3.4" fill="#24589c" stroke-width="1.6"/>
+      </g></svg>`;
+  }
+
+  /** Poussière d'or qui tombe doucement sur tout l'échiquier. */
+  function goldDust(count, gen) {
+    const W = frame.clientWidth;
+    const H = frame.clientHeight;
+    for (let i = 0; i < count; i++) {
+      const side = Math.random() < 0.6 ? 'b' : 'w';
+      const r = rand(2, 4.5) * (W / 520);
+      const d = el(over, 'fx-mote', { left: `${rand(0, W)}px`, top: `${-10}px`, width: `${r}px`, height: `${r}px`, background: pick(ROYAL[side]), boxShadow: `0 0 ${r * 2}px ${r * 0.6}px ${ROYAL.glow[side]}` });
+      const fall = H * rand(0.55, 1.05);
+      const sway = rand(-0.08, 0.08) * W;
+      once(
+        d,
+        [
+          { transform: 'translate(-50%,0) scale(.6)', opacity: 0 },
+          { transform: `translate(calc(-50% + ${sway * 0.4}px), ${fall * 0.25}px) scale(1)`, opacity: 1, offset: 0.2 },
+          { transform: `translate(calc(-50% - ${sway * 0.3}px), ${fall * 0.65}px) scale(.9)`, opacity: 0.85, offset: 0.65 },
+          { transform: `translate(calc(-50% + ${sway}px), ${fall}px) scale(.5)`, opacity: 0 },
+        ],
+        { duration: rand(2400, 3800), delay: rand(0, 1600), easing: 'linear', fill: 'backwards' },
+      );
+    }
+  }
+
+  async function royalMateFx(move, kingSq, winnerSq, loser, outcome, gen) {
+    const { x, y, s } = at(kingSq);
+    const W = frame.clientWidth;
+    const calm = reduceMotion();
+    await wait(140);
+    if (gen !== generation) return;
+
+    // Lumière dorée et assombrissement chaud autour de l'échiquier
+    const glow = el(over, 'fx-screen-flash fx-royal-light');
+    once(glow, [{ opacity: 0 }, { opacity: 0.55, offset: 0.25 }, { opacity: 0 }], { duration: 900, easing: 'ease-out' });
+    const vignette = el(over, 'fx-vignette fx-royal-vignette');
+    vignette.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1100, fill: 'forwards' });
+
+    // Le roi vaincu s'incline lentement et se pétrifie
+    frame.classList.add('mated-' + loser);
+    const king = el(over, 'cg-wrap fx-king', { left: `${x - s / 2}px`, top: `${y - s / 2}px`, width: `${s}px`, height: `${s}px` }, `<piece class="king ${COLOR[loser]}"></piece>`);
+    let dir = FILES.indexOf(move.to[0]) <= FILES.indexOf(kingSq[0]) ? 1 : -1;
+    if (getOrientation() === 'b') dir = -dir;
+    king.animate(
+      calm
+        ? [{ filter: 'none' }, { filter: 'grayscale(1) sepia(.35) brightness(.7)' }]
+        : [
+            { transform: 'rotate(0deg) translateY(0)', filter: 'none' },
+            { transform: `rotate(${dir * -4}deg) translateY(-3%)`, filter: 'brightness(1.25)', offset: 0.18 },
+            { transform: `rotate(${dir * 18}deg) translateY(2%)`, offset: 0.45 },
+            { transform: `rotate(${dir * 74}deg) translateY(12%)`, filter: 'grayscale(1) sepia(.35) brightness(.7) drop-shadow(0 4px 6px rgba(0,0,0,.55))' },
+          ],
+      { duration: calm ? 700 : 2200, delay: calm ? 0 : 900, easing: 'cubic-bezier(.45,.05,.35,1)', fill: 'forwards' },
+    );
+    ring(kingSq, { color: 'rgba(240,216,143,.95)', size: 2.2, width: 0.04, duration: 1100 });
+
+    // Sa couronne s'envole et va couronner le roi vainqueur
+    if (!calm && winnerSq) {
+      const w = at(winnerSq);
+      const cw = s * 0.72;
+      const crown = el(over, 'fx-crown', { left: `${x}px`, top: `${y - s * 0.62}px`, width: `${cw}px`, height: `${cw * 0.72}px` }, crownSvg());
+      const dx = w.x - x;
+      const dy = w.y - s * 0.66 - (y - s * 0.62);
+      const peak = -Math.max(s * 1.6, Math.abs(dx) * 0.35);
+      crown.animate(
+        [
+          { transform: 'translate(-50%,-50%) translate(0,0) scale(.2) rotate(0deg)', opacity: 0 },
+          { transform: 'translate(-50%,-50%) translate(0,-6%) scale(1) rotate(-6deg)', opacity: 1, offset: 0.14 },
+          { transform: `translate(-50%,-50%) translate(0px, ${-s * 0.5}px) scale(1.15) rotate(4deg)`, offset: 0.28 },
+          { transform: `translate(-50%,-50%) translate(${dx * 0.5}px, ${dy * 0.5 + peak}px) scale(1.3) rotate(${dx > 0 ? 8 : -8}deg)`, offset: 0.6 },
+          { transform: `translate(-50%,-50%) translate(${dx}px, ${dy - s * 0.22}px) scale(1.05) rotate(0deg)`, offset: 0.86 },
+          { transform: `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(1) rotate(0deg)`, opacity: 1 },
+        ],
+        { duration: 2300, delay: 1100, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'both' },
+      );
+      // Éclat au moment où elle se pose, rayons d'or derrière le vainqueur
+      setTimeout(() => {
+        if (gen !== generation) return;
+        flashSquare(winnerSq, 'rgba(255,230,160,.95)', 0, 600);
+        ring(winnerSq, { color: 'rgba(255,230,160,.95)', size: 2.6, width: 0.035, duration: 1100 });
+        motes(winnerSq, 'b', { count: 22, spread: 1.4, rise: 1.4 });
+        const rays = el(under, 'fx-sunburst', { left: `${w.x}px`, top: `${w.y}px`, width: `${s * 5}px`, height: `${s * 5}px` });
+        once(rays, [
+          { transform: 'translate(-50%,-50%) rotate(0deg) scale(.4)', opacity: 0 },
+          { transform: 'translate(-50%,-50%) rotate(14deg) scale(1)', opacity: 1, offset: 0.2 },
+          { transform: 'translate(-50%,-50%) rotate(48deg) scale(1.05)', opacity: 0.85, offset: 0.8 },
+          { transform: 'translate(-50%,-50%) rotate(60deg) scale(1.1)', opacity: 0 },
+        ], { duration: 4800, easing: 'linear' });
+        // La couronne disparaît avec le titre
+        setTimeout(() => gen === generation && once(crown, [{ opacity: 1 }, { opacity: 0 }], { duration: 900, fill: 'forwards' }), 3600);
+      }, 1100 + 2300);
+    }
+    if (!calm) setTimeout(() => gen === generation && goldDust(46, gen), 900);
+
+    // Titre de cérémonie
+    setTimeout(() => {
+      if (gen !== generation) return;
+      const sub = outcome === 'win' ? 'Victoire' : outcome === 'loss' ? 'Défaite' : `${loser === 'w' ? 'Les Noirs' : 'Les Blancs'} l’emportent`;
+      const banner = el(over, 'fx-mate-banner royal ' + outcome, { fontSize: `${Math.max(24, W * 0.088)}px` },
+        `<div class="orn">⚜</div><div class="t">Échec et mat</div><div class="rule"><i></i><b>◆</b><i></i></div><div class="s">${sub}</div>`);
+      const parts = [...banner.children];
+      parts.forEach((p, i) =>
+        p.animate(
+          [
+            { opacity: 0, transform: 'translateY(18%)', letterSpacing: i === 1 ? '.4em' : 'normal', filter: 'blur(6px)' },
+            { opacity: 1, transform: 'none', letterSpacing: i === 1 ? '.08em' : 'normal', filter: 'blur(0)' },
+          ],
+          { duration: calm ? 300 : 1100, delay: calm ? 0 : i * 180, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'both' },
+        ),
+      );
+      setTimeout(() => {
+        if (gen !== generation) return;
+        once(banner, [{ opacity: 1 }, { opacity: 0 }], { duration: 900, fill: 'forwards' });
+        once(vignette, [{ opacity: 1 }, { opacity: 0 }], { duration: 1100, fill: 'forwards' });
+      }, 5600);
+    }, calm ? 300 : 700);
+  }
+
   function confetti(x, y, s, W, colors, count) {
     for (let i = 0; i < count; i++) {
       const w = rand(5, 10) * (W / 600);
@@ -423,7 +562,11 @@ export function createFx(frame, getOrientation) {
       const gen = generation;
       if (move.captured) eq.capture === 'classic' ? classicCaptureFx(move) : captureFx(move, eq.capture === 'royal');
       const kSq = move.san.includes('+') || mated ? kingSquare(chess, loser) : null;
-      if (mated && kSq) classicEnd ? classicMateFx(move, kSq, loser, outcome, gen) : mateFx(move, kSq, loser, outcome, gen, eq.endAnim === 'royal');
+      if (mated && kSq) {
+        if (classicEnd) classicMateFx(move, kSq, loser, outcome, gen);
+        else if (eq.endAnim === 'royal') royalMateFx(move, kSq, kingSquare(chess, loser === 'w' ? 'b' : 'w'), loser, outcome, gen);
+        else mateFx(move, kSq, loser, outcome, gen);
+      }
       else if (kSq) (classicEnd ? classicCheckFx : checkFx)(kSq);
     },
     /** Efface tout (nouvelle partie). */

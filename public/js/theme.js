@@ -41,7 +41,7 @@ export const PACKS = [
     items: {
       board: { name: 'Damier royal', desc: 'Ivoire et brun profond, liseré d’or.' },
       pieces: { name: 'Pièces royales', desc: 'Crème pour les Blancs, or pour les Noirs : couronnes, joyaux, cavalier en armure.' },
-      endAnim: { name: 'Mat royal', desc: 'Comme Astrea, avec une pluie de particules d’or et de crème.' },
+      endAnim: { name: 'Le Couronnement', desc: 'Le roi vaincu s’incline et se pétrifie, sa couronne s’envole sur la tête du vainqueur ; rayons et poussière d’or, fanfare de cuivres.' },
       capture: { name: 'Prise royale', desc: 'Comme Astrea, avec des particules d’or ou de crème selon la pièce prise ; mêmes sons.' },
     },
   },

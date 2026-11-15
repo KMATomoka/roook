@@ -180,10 +180,90 @@ function classicMate(outcome) {
   });
 }
 
+/** Cuivre (fanfare) : deux dents de scie désaccordées, filtre qui s'ouvre puis se referme. */
+function brass({ freq, at = 0, dur = 0.4, vol = 0.1 }) {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + at;
+  const f = a.createBiquadFilter();
+  f.type = 'lowpass';
+  f.Q.value = 1.1;
+  f.frequency.setValueAtTime(450, t);
+  f.frequency.linearRampToValueAtTime(2800, t + 0.07);
+  f.frequency.exponentialRampToValueAtTime(1200, t + dur);
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.035);
+  g.gain.setValueAtTime(vol * 0.85, t + Math.max(0.06, dur - 0.1));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.14);
+  f.connect(g).connect(master);
+  for (const det of [-7, 7]) {
+    const o = a.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(freq, t);
+    o.detune.value = det;
+    o.connect(f);
+    o.start(t);
+    o.stop(t + dur + 0.25);
+  }
+}
+
+/** Timbale : coup grave et rond. */
+function timpani(at, vol = 0.45) {
+  tone({ freq: 104, endFreq: 74, at, dur: 0.9, vol, attack: 0.003 });
+  burst({ at, dur: 0.18, vol: vol * 0.5, type: 'lowpass', freq: 380, endFreq: 140, q: 0.8 });
+}
+
+/** Cloche claire (la couronne qui se pose). */
+function bell(freq, at, vol = 0.07) {
+  [1, 2.01, 2.76, 4.07].forEach((m, i) => tone({ freq: freq * m, type: 'sine', at, dur: 2.4 - i * 0.45, vol: vol / (i + 1), attack: 0.002 }));
+}
+
+/**
+ * Échec et mat « Royal » (le Couronnement) : roulement de timbales, fanfare de cuivres,
+ * puis une cloche quand la couronne se pose sur le roi vainqueur. Défaite : cadence grave et solennelle.
+ */
+function royalMate(outcome) {
+  // Scintillement doré au début
+  [1568, 2093, 2637, 3136].forEach((f, i) => tone({ freq: f, type: 'sine', at: 0.12 + i * 0.05, dur: 0.6, vol: 0.025 }));
+  // Roulement de timbales qui monte
+  for (let i = 0; i < 10; i++) timpani(0.15 + i * 0.075, 0.08 + i * 0.022);
+  if (outcome === 'loss') {
+    // Cadence mineure, lente et digne
+    timpani(1.0, 0.5);
+    [[220, 0.55], [174.6, 0.55], [164.8, 1.6]].forEach(([f, d], i) => {
+      const at = 1.0 + i * 0.6;
+      brass({ freq: f, at, dur: d, vol: 0.09 });
+      brass({ freq: f / 2, at, dur: d, vol: 0.06 });
+    });
+    timpani(2.2, 0.45);
+    bell(659.3, 3.45, 0.04);
+    return;
+  }
+  // Fanfare : appel en triolet, puis la tonique tenue, puis l'accord final
+  timpani(1.0, 0.55);
+  const call = [[392, 0.13], [392, 0.13], [392, 0.13], [523.3, 0.55]];
+  let at = 1.0;
+  for (const [f, d] of call) {
+    brass({ freq: f, at, dur: d, vol: 0.1 });
+    brass({ freq: f * 0.75, at, dur: d, vol: 0.05 }); // quarte en dessous
+    at += d + 0.02;
+  }
+  at += 0.05;
+  timpani(at, 0.6);
+  // Accord de do majeur, avec le mi aigu au-dessus
+  for (const f of [261.6, 329.6, 392, 523.3, 659.3]) brass({ freq: f, at, dur: 1.7, vol: f > 500 ? 0.07 : 0.06 });
+  timpani(at + 0.5, 0.35);
+  // La couronne se pose : cloche et étincelles
+  bell(1318.5, 3.45, 0.07);
+  bell(1975.5, 3.5, 0.04);
+  [2637, 3136, 3951].forEach((f, i) => tone({ freq: f, type: 'sine', at: 3.5 + i * 0.07, dur: 0.5, vol: 0.02 }));
+}
+
 const astrea = { move: () => tok(), capture, castle, promote, check };
-// Royal : mêmes sons qu'Astrea (prises, échec, échec et mat inchangés)
+// Royal : mêmes sons qu'Astrea pour les coups, prises et échecs ; son propre échec et mat (fanfare)
 const SETS = { astrea, classic, royal: astrea };
-const MATES = { astrea: mate, classic: classicMate, royal: mate };
+const MATES = { astrea: mate, classic: classicMate, royal: royalMate };
 
 /**
  * Son d'un coup (objet « verbose » de chess.js).

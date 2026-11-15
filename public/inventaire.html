@@ -32,7 +32,7 @@
     </div>
 
     <!-- Ce qui est équipé en ce moment -->
-    <section class="card inv-current" id="inv-current">
+    <section class="inv-current" id="inv-current">
       <div class="inv-current-board" id="inv-current-board"></div>
       <div class="inv-current-info">
         <p class="inv-label">Équipé en ce moment</p>
@@ -42,37 +42,25 @@
       </div>
     </section>
 
-    <!-- Les packs : on clique, puis on choisit -->
-    <section class="inv-section">
-      <div class="inv-section-head">
-        <h2>Packs</h2>
-        <p class="muted">Clique sur un pack pour l’équiper en entier, ou pour choisir seulement son plateau, ses pièces ou ses animations.</p>
-      </div>
-      <div class="inv-tiles" id="inv-tiles"></div>
+    <!-- Onglets : packs, puis chaque catégorie -->
+    <nav class="inv-tabs" id="inv-tabs" role="tablist" aria-label="Catégories"></nav>
+
+    <!-- Grille des éléments + grand aperçu de l'élément choisi -->
+    <section class="inv-browser">
+      <div class="inv-items" id="inv-items" role="listbox"></div>
+      <aside class="inv-detail" id="inv-detail" aria-live="polite">
+        <div class="inv-detail-board" id="inv-detail-board"></div>
+        <div class="inv-detail-body">
+          <p class="inv-tier" id="inv-d-tier"></p>
+          <h2 id="inv-d-name"></h2>
+          <p class="muted" id="inv-d-desc"></p>
+          <div id="inv-d-extra"></div>
+          <div class="inv-detail-actions" id="inv-d-actions"></div>
+        </div>
+      </aside>
     </section>
     <p class="muted inv-note" id="inv-muted" hidden>Le son est coupé sur ce site : réactive-le avec le bouton 🔊 de la page de partie pour entendre les aperçus.</p>
   </main>
-
-  <!-- Fenêtre d'un pack -->
-  <dialog class="modal inv-dialog" id="inv-dialog" aria-labelledby="inv-d-name">
-    <button class="modal-close" type="button" data-close aria-label="Fermer">×</button>
-    <div class="inv-d-grid">
-      <div class="inv-d-side">
-        <div class="inv-d-board" id="inv-d-board"></div>
-        <p class="muted inv-d-hint" id="inv-d-hint">Aperçu du pack</p>
-      </div>
-      <div class="inv-d-main">
-        <p class="inv-label" id="inv-d-status"></p>
-        <h2 id="inv-d-name"></h2>
-        <p class="muted" id="inv-d-desc"></p>
-        <div id="inv-d-lock"></div>
-        <ul class="inv-d-items" id="inv-d-items"></ul>
-        <div class="inv-d-foot">
-          <button class="btn btn-primary" type="button" id="inv-d-all">Équiper tout le pack</button>
-        </div>
-      </div>
-    </div>
-  </dialog>
 
   <script type="module" src="js/inventaire.js"></script>
 </body>

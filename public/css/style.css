@@ -1175,7 +1175,8 @@ a.person-link:hover { color: var(--accent-soft); }
 
 /* Accueil : accès aux pages */
 .explore { max-width: 1200px; margin: 0 auto; padding: 40px clamp(16px, 4vw, 40px); }
-.explore-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.explore-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+@media (max-width: 1150px) { .explore-grid { grid-template-columns: repeat(3, 1fr); } }
 .explore-card {
   display: flex; flex-direction: column; gap: 8px; padding: 22px; border-radius: 18px; text-decoration: none; color: var(--text);
   background: var(--surface); border: 1px solid var(--line); transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
@@ -1684,4 +1685,131 @@ a.person-link:hover { color: var(--accent-soft); }
 .rep-tag {
   display: inline-block; margin-top: 4px; padding: 0.2em 0.6em; border-radius: 99px; font-size: 0.86em;
   color: #cfe0ff; background: rgba(110, 150, 255, 0.14); border: 1px solid rgba(110, 150, 255, 0.4);
+}
+
+/* ==========================================================================
+   Page Apprendre : leçons pour débutants et exercices (apprendre.html, js/apprendre.js)
+   ========================================================================== */
+.learn-home { max-width: 1120px; margin: 0 auto; padding: 32px clamp(16px, 4vw, 40px) 60px; }
+.learn-head { display: grid; grid-template-columns: 1fr minmax(260px, 340px); gap: 28px; align-items: end; margin-bottom: 26px; }
+.learn-head h1 { font: 700 clamp(2rem, 4.6vw, 3rem)/1.05 var(--serif); margin: 4px 0 12px; }
+.learn-head .lead { margin: 0; }
+.learn-progress h2 { margin-bottom: 12px; }
+.learn-bar + .learn-bar { margin-top: 12px; }
+.learn-bar-top { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 6px; }
+.learn-bar-top b { color: var(--accent-soft); }
+.learn-bar-track { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.learn-bar-track div { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--mint)); transition: width 0.4s; }
+
+.learn-tabs { display: flex; gap: 8px; margin-bottom: 22px; border-bottom: 1px solid var(--line); }
+.learn-tab {
+  background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  color: var(--muted); font: 700 1rem var(--font); padding: 10px 14px; cursor: pointer;
+}
+.learn-tab:hover { color: var(--text); }
+.learn-tab[aria-selected='true'] { color: var(--text); border-bottom-color: var(--accent); }
+
+.learn-chapter + .learn-chapter { margin-top: 30px; }
+.learn-chapter-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.learn-chapter-head h2 { font: 700 1.3rem var(--serif); margin: 0 0 2px; }
+.learn-chapter-head p { margin: 0; }
+.learn-num {
+  display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 10px;
+  background: var(--surface-2); border: 1px solid var(--line); font: 700 1.1rem var(--serif); color: var(--accent-soft);
+}
+.learn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; }
+.learn-lesson {
+  display: flex; flex-direction: column; gap: 4px; padding: 16px; border-radius: 16px; text-decoration: none; color: var(--text);
+  background: var(--surface); border: 1px solid var(--line); transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.learn-lesson:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35); }
+.learn-lesson h3 { font: 700 1.08rem var(--serif); margin: 6px 0 0; }
+.learn-lesson p { margin: 0; font-size: 0.85rem; flex: 1; }
+.learn-state { font-size: 0.85rem; font-weight: 700; color: var(--accent-soft); margin-top: 6px; }
+.learn-lesson.done { border-color: rgba(60, 242, 163, 0.35); }
+.learn-lesson.done .learn-state { color: var(--mint); }
+.learn-lesson.next { border-color: var(--accent); background: linear-gradient(160deg, rgba(143, 107, 255, 0.2), var(--surface) 65%); }
+
+/* Pièce dessinée avec le jeu de pièces choisi dans l'inventaire */
+.cg-wrap.learn-ico { display: inline-block; position: relative; width: 52px; height: 52px; vertical-align: middle; flex: none; }
+.cg-wrap.learn-ico piece { position: absolute; inset: 0; width: 100%; height: 100%; transform: none; }
+.learn-card h1 .cg-wrap.learn-ico { width: 40px; height: 40px; margin: -6px 2px 0 -4px; }
+
+.learn-cats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.learn-cat { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.learn-cat-head { display: flex; justify-content: space-between; align-items: baseline; width: 100%; }
+.learn-cat-head h2 { font: 700 1.2rem var(--serif); margin: 0; }
+.learn-cat p { margin: 0 0 6px; }
+.learn-cat .btn { margin-top: 10px; }
+.learn-tip { margin-top: 18px; font-size: 0.9rem; }
+
+/* Pastilles des étapes / des exercices */
+.learn-steps { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.learn-steps a {
+  display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; text-decoration: none;
+  font-size: 0.82rem; font-weight: 700; color: var(--muted); background: var(--surface-2); border: 1px solid var(--line);
+}
+.learn-steps a:hover { border-color: var(--line-strong); color: var(--text); }
+.learn-steps .done a { color: #08281a; background: var(--mint); border-color: var(--mint); }
+.learn-steps .current a { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(143, 107, 255, 0.45); color: var(--text); }
+.learn-steps .done.current a { color: #08281a; }
+
+/* Leçon / exercice en cours */
+.learn-card h1 { font: 700 1.6rem var(--serif); margin: 2px 0 10px; display: flex; align-items: center; gap: 6px; }
+.learn-back { display: inline-block; font-size: 0.88rem; font-weight: 600; text-decoration: none; margin-bottom: 10px; }
+.learn-intro { color: var(--text); font-size: 0.95rem; line-height: 1.55; }
+.learn-intro p { margin: 0; }
+.learn-intro b { color: var(--accent-soft); }
+.learn-turn { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--muted); font-weight: 600; margin: 0 0 6px; }
+.learn-side { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--line-strong); }
+.learn-side.white { background: #f4f1e8; }
+.learn-side.black { background: #1d1b22; }
+.learn-text { font-size: 1.08rem; font-weight: 600; line-height: 1.45; margin: 0 0 8px; }
+.learn-feedback { min-height: 1.5em; margin: 0 0 8px; font-weight: 700; }
+.learn-feedback.good { color: var(--mint); }
+.learn-feedback.bad { color: #ff8a7a; }
+.learn-hint { font-size: 0.92rem; color: #f2cf4d; margin: 0 0 8px; }
+.learn-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.learn-actions #btn-next { margin-left: auto; }
+
+/* Cases à atteindre dans les leçons : un losange doré (puis une coche quand il est atteint) */
+cg-board square.learn-target {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 24 72 50 50 76 28 50Z' fill='%23ffd34d' stroke='%238a5a00' stroke-width='4' stroke-linejoin='round'/%3E%3Cpath d='M50 32 62 50 50 46Z' fill='%23fff3c4'/%3E%3C/svg%3E") center / 100% no-repeat;
+  animation: learn-pulse 1.6s ease-in-out infinite;
+}
+cg-board square.learn-target.done {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='17' fill='%233cf2a3' opacity='.85'/%3E%3Cpath d='M41 50 48 57 60 43' fill='none' stroke='%2308281a' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 100% no-repeat;
+  animation: none;
+}
+@keyframes learn-pulse { 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) { cg-board square.learn-target { animation: none; } }
+
+@media (max-width: 900px) {
+  .learn-head { grid-template-columns: 1fr; }
+  .learn-cats { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .learn-grid { grid-template-columns: 1fr 1fr; }
+  .cg-wrap.learn-ico { width: 44px; height: 44px; }
+}
+
+/* Petits écrans : le menu du haut (5 liens) défile sur le côté au lieu d'élargir la page */
+@media (max-width: 600px) {
+  .topnav {
+    flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent);
+    mask-image: linear-gradient(90deg, #000 85%, transparent);
+    padding-right: 18px;
+  }
+  .topnav::-webkit-scrollbar { display: none; }
+  .topnav a { flex: none; }
+  .topbar > :not(.topnav) { flex: none; }
+}
+/* Apprendre sur petit écran : explication, puis consigne, puis échiquier (la consigne reste visible en jouant) */
+@media (max-width: 900px) {
+  .learn-play { display: flex; flex-direction: column; gap: 12px; }
+  .learn-play .side { display: contents; }
+  .learn-play .learn-card { order: 0; }
+  .learn-play .learn-task { order: 1; }
+  .learn-play .board-col { order: 2; }
 }

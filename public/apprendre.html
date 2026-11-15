@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apprendre — ROOOK</title>
+  <meta name="description" content="Apprends les échecs pas à pas : le déplacement de chaque pièce, les règles spéciales, puis des exercices pour t’entraîner.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&family=Cinzel:wght@600;700&family=Yuji+Syuku&family=Rye&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="vendor/chessground-assets/chessground.base.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="vendor/chessground-assets/chessground.cburnett.css">
+</head>
+<body class="page-learn">
+  <header class="topbar">
+    <a class="logo" href="./"><span class="logo-mark">♜</span> ROOOK</a>
+    <nav class="topnav">
+      <a href="jouer.html">Jouer</a>
+      <a href="apprendre.html">Apprendre</a>
+      <a href="amis.html">Amis</a>
+      <a href="bilan.html">Analyser</a>
+      <a href="inventaire.html">Inventaire</a>
+    </nav>
+  </header>
+
+  <!-- Sommaire : leçons et exercices -->
+  <main class="learn-home" id="home" hidden>
+    <section class="learn-head">
+      <div>
+        <p class="eyebrow">Débutant ou presque</p>
+        <h1>Apprendre les échecs</h1>
+        <p class="lead">D’abord les bases : comment bouge chaque pièce, puis les règles spéciales. Ensuite, entraîne-toi sur de vraies positions : faire mat, gagner une pièce, défendre ton roi.</p>
+      </div>
+      <div class="learn-progress card" id="progress"></div>
+    </section>
+
+    <div class="learn-tabs" role="tablist">
+      <button class="learn-tab" role="tab" data-tab="lecons" id="tab-lecons">📘 Leçons</button>
+      <button class="learn-tab" role="tab" data-tab="exercices" id="tab-exercices">🎯 Entraînements</button>
+    </div>
+
+    <section id="pane-lecons" class="learn-pane"></section>
+    <section id="pane-exercices" class="learn-pane" hidden></section>
+  </main>
+
+  <!-- Une leçon ou un exercice -->
+  <main class="game-layout learn-play" id="play" hidden>
+    <section class="board-col">
+      <div class="board-frame">
+        <div id="board" class="cg-wrap board"></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="card learn-card">
+        <a class="learn-back" href="#lecons" id="back">← Toutes les leçons</a>
+        <p class="eyebrow" id="p-kicker"></p>
+        <h1 id="p-title"></h1>
+        <div class="learn-intro" id="p-intro"></div>
+        <ol class="learn-steps" id="p-steps" aria-label="Étapes"></ol>
+      </div>
+
+      <div class="card learn-task">
+        <p class="learn-turn" id="p-turn"></p>
+        <p class="learn-text" id="p-text"></p>
+        <p class="learn-feedback" id="p-feedback" aria-live="polite"></p>
+        <p class="learn-hint" id="p-hint" hidden></p>
+        <div class="learn-actions">
+          <button class="btn btn-ghost small" id="btn-retry" type="button">↺ Recommencer</button>
+          <button class="btn btn-ghost small" id="btn-hint" type="button">💡 Indice</button>
+          <button class="btn btn-ghost small" id="btn-solution" type="button">👁 Solution</button>
+          <button class="btn btn-primary" id="btn-next" type="button" hidden>Suivant →</button>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script type="module" src="js/apprendre.js"></script>
+</body>
+</html>

@@ -72,11 +72,12 @@
     .coords.ranks span { flex: 1; display: grid; place-items: center; }
     .board { position: relative; display: grid; grid-template-columns: repeat(8, 1fr); aspect-ratio: 1; border-radius: 3px; overflow: hidden; isolation: isolate; }
     .board::after { /* reflets qui ondulent sur tout le plateau */
-      content: ''; position: absolute; inset: -20%; z-index: 1; pointer-events: none; opacity: 0.32; mix-blend-mode: soft-light;
-      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Cpath d='M0 30 Q20 18 38 34 T80 28 T120 36 M0 78 Q24 64 44 82 T88 74 T120 84 M30 0 Q20 22 34 42 T28 86 T36 120 M86 0 Q98 26 82 46 T92 90 T84 120' fill='none' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") 0 0 / 40% 40%;
-      animation: caustic 18s linear infinite;
+      /* motif raccordé sur ses bords ; on le décale d'exactement une tuile (20 % de l'élément), donc la boucle ne se voit pas */
+      content: ''; position: absolute; inset: -50%; z-index: 1; pointer-events: none; opacity: 0.32; mix-blend-mode: soft-light;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Cpath d='M0 30 Q15 18 32 32 T70 26 T120 30 M0 80 Q24 66 44 84 T88 76 T120 80 M30 0 Q20 22 34 42 T28 86 T30 120 M86 0 Q98 26 82 46 T92 90 T86 120' fill='none' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") 0 0 / 20% 20%;
+      animation: caustic 24s linear infinite;
     }
-    @keyframes caustic { to { transform: translate(8%, 6%); } }
+    @keyframes caustic { from { transform: translate(0, 0); } to { transform: translate(-20%, -20%); } }
     @media (prefers-reduced-motion: reduce) { .board::after { animation: none; } }
     .sq { position: relative; }
     .sq.l { /* eau claire du lagon, avec un réseau de reflets */
@@ -263,15 +264,22 @@
         <circle cx="50" cy="66" r="4.2" fill="${c.acc2}" opacity=".6" stroke="none"/>
         <path d="M46.8 63.3 Q48.6 61.8 50.8 62.4" stroke="#fff" stroke-width="1.3" fill="none" opacity=".85"/>
         <g fill="${c.acc}" stroke-width="1"><circle cx="64" cy="74" r="1.8"/><circle cx="60.5" cy="77.5" r="1.3"/><circle cx="38" cy="42" r="1.4"/></g>`,
-      // Cavalier : hippocampe, avec sa nageoire en crinière
+      // Cavalier : hippocampe de guerre (crête en lames, piques, mâchoire ouverte, œil rouge, cicatrice)
       n: (c) => `${base(c)}
-        <path d="M55 19 L58 9 L62 16.5 L66 10 L68 19 L74 15 L73.5 24 L80 23 L76 31 L82 33.5 L76 39 L81 44.5 L73.5 47Z" fill="${c.acc}" stroke-width="1.7"/>
-        <path d="M35 81 C35 70 41 62 47 56 C44 53 42 49.5 41 46.5 L27 44.5 C22.5 44 22 38 26.5 37.5 L42 35 C44 25 51 17.5 59 17.5 C69 17.5 75 27 74 39 C73 51 67 61 67 70 L67 81Z" fill="url(#g)"/>
-        <rect x="33" y="77" width="36" height="5.5" rx="2.75" fill="url(#g)"/>
-        <path d="M29 41 Q35 39.8 41 40.3" fill="none" stroke-width="1.3" opacity=".6"/>
-        <path d="M47.5 56 Q53.5 53.5 59 56.5 M50 63 Q56 61 62.5 63.8 M51 70 Q57.5 68.5 65 71" fill="none" stroke="${c.acc2}" stroke-width="1.6" opacity=".9"/>
-        <circle cx="53" cy="28" r="3.6" fill="#fff" stroke-width="1.5"/><circle cx="52.3" cy="28.3" r="1.9" fill="${c.dark}" stroke="none"/>
-        <ellipse cx="62" cy="24" rx="2.2" ry="5" fill="#fff" opacity=".4" stroke="none" transform="rotate(35 62 24)"/>`,
+        <path d="M53 21 L49 4 L58 14 L60 0 L65 14 L72 3 L72 18 L83 11 L78 25 L90 24 L80 33 L90 40 L78 42 L86 52 L73 49Z" fill="${c.acc}" stroke-width="1.8"/>
+        <path d="M60 9 L61.5 15 M68.5 10 L68 17 M77 20 L74.5 24 M83 32 L78 33.5 M81 44 L76.5 44" stroke-width="1.1" opacity=".55"/>
+        <path d="M73 50 L83 54.5 L72 58Z M70.5 60 L80 65 L69 68Z" fill="${c.acc}" stroke-width="1.6"/>
+        <path d="M46 55 L37.5 54 L44 60Z M42 62.5 L33.5 63 L40.5 67.5Z M38.5 70 L30.5 71.5 L37.5 75Z" fill="${c.acc}" stroke-width="1.6"/>
+        <path d="M35 81 C35 70 40 62 46 56 C43 53 41.5 50 40.5 47 L27 46 L19.5 44.5 L24.5 41.5 L21.5 38 L27 37.5 L41.5 34.5 C43.5 24 51 16.5 59.5 16.5 C70 16.5 76 26.5 75 39 C74 51 68 61 68 70 L68 81Z" fill="url(#g)"/>
+        <rect x="33" y="77" width="37" height="5.5" rx="2.75" fill="url(#g)"/>
+        <path d="M28 44.5 Q35 45.3 41.5 43" fill="none" stroke-width="1.4" opacity=".75"/>
+        <path d="M46.5 56 Q54 52.5 61 56 M49.5 63 Q57 60 64.5 63.5 M50.5 70.5 Q58 68 66.5 71" fill="none" stroke="${c.acc2}" stroke-width="2"/>
+        <ellipse cx="52.5" cy="29.5" rx="3.9" ry="2.9" fill="#ff3355" stroke-width="1.4"/>
+        <ellipse cx="52.5" cy="29.6" rx=".95" ry="2.3" fill="#14020a" stroke="none"/><circle cx="51.3" cy="28.7" r=".75" fill="#fff" stroke="none"/>
+        <path d="M43.5 27 L61 23.5 L61.5 27 L45 31Z" fill="${c.stroke}" stroke-width="1"/>
+        <path d="M57 33 L64 42.5" stroke="#f3b4ca" stroke-width="1.7" stroke-linecap="round"/>
+        <path d="M58.6 37.6 L61.6 35.6 M61 41 L64 39" stroke="#f3b4ca" stroke-width="1.2" stroke-linecap="round"/>
+        <ellipse cx="66" cy="27" rx="1.8" ry="4.5" fill="#fff" opacity=".35" stroke="none" transform="rotate(35 66 27)"/>`,
       // Fou : coquillage en spirale (turritelle), une perle au sommet
       b: (c) => `${base(c)}
         <path d="M38 81 Q41 69 45 63.5 H55 Q59 69 62 81Z" fill="url(#g)"/>

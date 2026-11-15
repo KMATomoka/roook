@@ -570,42 +570,6 @@ export function createFx(frame, getOrientation) {
     }
   }
 
-  /** Une constellation qui se dessine en lumière, étoile après étoile. */
-  function constellation(gen, { delay = 0, life = 3400 } = {}) {
-    if (reduceMotion()) return;
-    const W = frame.clientWidth;
-    // Points (en fraction de l'échiquier) : une étoile à 5 branches stylisée, posée en haut à droite ou à gauche
-    const left = Math.random() < 0.5;
-    const cx = left ? 0.24 : 0.76;
-    const cy = 0.24;
-    const R = 0.15;
-    const pts = [0, 2, 4, 1, 3].map((k) => {
-      const a = -Math.PI / 2 + (k * 2 * Math.PI) / 5;
-      return [(cx + Math.cos(a) * R) * W, (cy + Math.sin(a) * R) * W];
-    });
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('class', 'fx-constellation');
-    svg.setAttribute('viewBox', `0 0 ${W} ${W}`);
-    over.appendChild(svg);
-    const path = [...pts, pts[0]];
-    path.slice(1).forEach(([x2, y2], i) => {
-      const [x1, y1] = path[i];
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      Object.entries({ x1, y1, x2, y2 }).forEach(([k, v]) => line.setAttribute(k, v));
-      const len = Math.hypot(x2 - x1, y2 - y1);
-      line.style.strokeDasharray = `${len}`;
-      line.style.strokeDashoffset = `${len}`;
-      svg.appendChild(line);
-      line.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], { duration: 260, delay: delay + 200 + i * 230, easing: 'ease-out', fill: 'forwards' });
-    });
-    pts.forEach(([px, py], i) => {
-      const w = W * 0.035;
-      const st = el(over, 'fx-star', { left: `${px}px`, top: `${py}px`, width: `${w}px`, height: `${w}px`, background: '#ffffff', filter: 'drop-shadow(0 0 6px #b9a6ff)' });
-      once(st, [{ opacity: 0, transform: 'translate(-50%,-50%) scale(.2) rotate(0deg)' }, { opacity: 1, transform: 'translate(-50%,-50%) scale(1.3) rotate(45deg)', offset: 0.1 }, { opacity: 0.9, transform: 'translate(-50%,-50%) scale(1) rotate(45deg)', offset: 0.85 }, { opacity: 0, transform: 'translate(-50%,-50%) scale(.6) rotate(90deg)' }], { duration: life - i * 230, delay: delay + i * 230, fill: 'backwards' });
-    });
-    once(svg, [{ opacity: 1 }, { opacity: 1, offset: 0.8 }, { opacity: 0 }], { duration: life + 300, delay });
-  }
-
   /** Comète qui traverse l'échiquier en diagonale. */
   function comet({ delay = 0, fromLeft = true } = {}) {
     if (reduceMotion()) return;
@@ -722,7 +686,6 @@ export function createFx(frame, getOrientation) {
       boardWave(kingSq, { delay: 60 });
     }, 900);
     setTimeout(() => gen === generation && kingGlory(winnerSq, gen, 4600), 1350);
-    setTimeout(() => gen === generation && constellation(gen, { life: 3600 }), 1700);
     setTimeout(() => gen === generation && comet({ fromLeft: true }), 2100);
     setTimeout(() => gen === generation && comet({ fromLeft: false }), 2900);
     setTimeout(() => gen === generation && spaceBanner(outcome, loser, W, gen, calm, vignette, 5400), 1250);

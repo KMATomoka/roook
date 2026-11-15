@@ -1986,3 +1986,13 @@ body { padding-bottom: env(safe-area-inset-bottom); }
 }
 /* Menu ouvert : la barre du haut passe devant tout (échiquier et ses effets compris) */
 @media (max-width: 900px) { .topbar.menu-open { z-index: 1000; } }
+/* Bandeau « ouvre le site dans ton navigateur » (navigateurs intégrés aux applis, js/compte.js) */
+.inapp-banner {
+  position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 300;
+  display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 16px;
+  background: #1d1835; border: 1px solid var(--accent); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+  font-size: 0.92rem; animation: toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.inapp-banner p { margin: 0; color: var(--text); line-height: 1.45; }
+.inapp-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.inapp-actions .btn { flex: 1 1 auto; }

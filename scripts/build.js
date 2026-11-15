@@ -54,5 +54,24 @@ for (const file of walk(dist)) {
 }
 console.log(`Version ${version} ajoutée aux scripts de ${tagged} fichiers`);
 
+// Mise à jour automatique : GitHub Pages laisse le navigateur garder une page 10 minutes.
+// Chaque page compare sa version à version.json (jamais en cache) et se recharge une fois si le site a changé.
+fs.writeFileSync(path.join(dist, 'version.json'), JSON.stringify({ v: version }));
+const updater = `<script>
+(function () {
+  var v = '${version}';
+  fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d || d.v === v) return;
+    var key = 'roook-maj-' + d.v;
+    try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch (e) { return; }
+    fetch(location.href, { cache: 'reload' }).then(function () { location.reload(); }, function () { location.reload(); });
+  }).catch(function () {});
+})();
+</script>`;
+for (const file of fs.readdirSync(dist).filter((f) => f.endsWith('.html'))) {
+  const p = path.join(dist, file);
+  fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace('</head>', `${updater}\n</head>`));
+}
+
 const size = (dir) => fs.readdirSync(dir, { withFileTypes: true }).reduce((s, e) => s + (e.isDirectory() ? size(path.join(dir, e.name)) : fs.statSync(path.join(dir, e.name)).size), 0);
 console.log(`Site construit dans dist/ (${(size(dist) / 1e6).toFixed(1)} Mo)`);

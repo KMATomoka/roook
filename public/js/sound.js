@@ -507,15 +507,112 @@ function boot(at = 0, { pitch = 1, vol = 1, spur = true } = {}) {
   if (spur) [4180, 5260, 6320].forEach((f, i) => tone({ freq: f, type: 'sine', at: at + 0.03 + i * 0.025, dur: 0.12, vol: 0.018 * vol, attack: 0.002 }));
 }
 
-/** Coup de revolver : claquement sec, souffle grave, puis l'écho du canyon. */
+/** Réverbération de canyon (créée une seule fois) : réponse impulsionnelle de bruit qui décroît, assombrie,
+ *  plus un écho qui revient de la falaise. Renvoie l'entrée où envoyer un son. */
+let canyonIn = null;
+function canyon() {
+  const a = audio();
+  if (!a) return null;
+  if (canyonIn) return canyonIn;
+  const len = Math.floor(a.sampleRate * 1.9);
+  const ir = a.createBuffer(2, len, a.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = ir.getChannelData(ch);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.4);
+  }
+  const conv = a.createConvolver();
+  conv.buffer = ir;
+  const dark = a.createBiquadFilter();
+  dark.type = 'lowpass';
+  dark.frequency.value = 2400;
+  const wet = a.createGain();
+  wet.gain.value = 0.5;
+  conv.connect(dark).connect(wet).connect(master);
+  // Écho de la falaise
+  const delay = a.createDelay(1);
+  delay.delayTime.value = 0.34;
+  const echoTone = a.createBiquadFilter();
+  echoTone.type = 'lowpass';
+  echoTone.frequency.value = 1400;
+  const feedback = a.createGain();
+  feedback.gain.value = 0.3;
+  const echoOut = a.createGain();
+  echoOut.gain.value = 0.32;
+  delay.connect(echoTone);
+  echoTone.connect(feedback).connect(delay);
+  echoTone.connect(echoOut).connect(master);
+  canyonIn = a.createGain();
+  canyonIn.connect(conv);
+  canyonIn.connect(delay);
+  return canyonIn;
+}
+
+/** Saturation douce (donne le grain d'une détonation). */
+function saturator(a, drive = 3) {
+  const ws = a.createWaveShaper();
+  const curve = new Float32Array(1024);
+  for (let i = 0; i < curve.length; i++) curve[i] = Math.tanh(((i * 2) / curve.length - 1) * drive);
+  ws.curve = curve;
+  return ws;
+}
+
+/**
+ * Coup de revolver : déclic du chien, claquement sec et saturé (attaque instantanée), souffle grave,
+ * puis la réverbération et l'écho du canyon.
+ */
 function gunshot(at = 0, vol = 1) {
-  burst({ at, dur: 0.05, vol: 0.95 * vol, type: 'highpass', freq: 1800, q: 0.7 });
-  burst({ at, dur: 0.12, vol: 0.85 * vol, freq: 1100, q: 0.6 });
-  burst({ at, dur: 0.38, vol: 0.6 * vol, type: 'lowpass', freq: 520, endFreq: 140, q: 0.7 });
-  tone({ freq: 95, endFreq: 38, at, dur: 0.32, vol: 0.55 * vol, attack: 0.002 });
-  // Écho
-  burst({ at: at + 0.24, dur: 0.3, vol: 0.18 * vol, type: 'lowpass', freq: 700, endFreq: 220, q: 0.6 });
-  burst({ at: at + 0.5, dur: 0.35, vol: 0.08 * vol, type: 'lowpass', freq: 520, endFreq: 180, q: 0.6 });
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + at;
+  // Le chien qui tombe, juste avant
+  if (at >= 0.015) burst({ at: at - 0.014, dur: 0.012, vol: 0.35 * vol, freq: 3800, q: 6 });
+  const out = a.createGain();
+  out.gain.value = vol;
+  out.connect(master);
+  const send = canyon();
+  if (send) {
+    const s = a.createGain();
+    s.gain.value = 0.9;
+    out.connect(s).connect(send);
+  }
+  const sat = saturator(a, 3.2);
+  sat.connect(out);
+  // 1. Le claquement : bruit large bande, attaque instantanée, chute très rapide
+  const crack = a.createBufferSource();
+  crack.buffer = noiseBuf;
+  const hp = a.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.value = 350;
+  const cg = a.createGain();
+  cg.gain.setValueAtTime(1.8, t);
+  cg.gain.exponentialRampToValueAtTime(0.35, t + 0.012);
+  cg.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+  crack.connect(hp).connect(cg).connect(sat);
+  crack.start(t, Math.random() * 0.5);
+  crack.stop(t + 0.2);
+  // 2. Le souffle grave de la détonation
+  const boom = a.createOscillator();
+  boom.type = 'sine';
+  boom.frequency.setValueAtTime(160, t);
+  boom.frequency.exponentialRampToValueAtTime(42, t + 0.2);
+  const bg = a.createGain();
+  bg.gain.setValueAtTime(1.3, t);
+  bg.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+  boom.connect(bg).connect(sat);
+  boom.start(t);
+  boom.stop(t + 0.3);
+  const thump = a.createBufferSource();
+  thump.buffer = noiseBuf;
+  const lp = a.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.setValueAtTime(1400, t);
+  lp.frequency.exponentialRampToValueAtTime(180, t + 0.35);
+  const tg = a.createGain();
+  tg.gain.setValueAtTime(1, t);
+  tg.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+  thump.connect(lp).connect(tg).connect(sat);
+  thump.start(t, Math.random() * 0.5);
+  thump.stop(t + 0.45);
 }
 
 /** Ricochet : la balle qui siffle en s'éloignant. */

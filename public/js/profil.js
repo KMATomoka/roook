@@ -3,7 +3,8 @@
 import { $, escapeHtml } from './common.js';
 import {
   session, toast, picHtml, loadProfile, setProfilePrivate, profileUrl, addFriend, acceptFriend, challenge, cadenceLabel, logout,
-  setAvatar, removeAvatar, myEmail, changeEmail, roleBadge, setBio, BIO_MAX,
+  setAvatar, removeAvatar, myEmail, changeEmail, setBio, BIO_MAX,
+  BADGES, ROYAL_WINS, badgeHtml, ownedBadges, winKeys, chooseBadge,
 } from './compte.js';
 
 const page = $('#profile-page');
@@ -138,10 +139,10 @@ function render(p) {
         : `<div class="pf-pic">${picHtml(p.username, p.avatar, 'profile-avatar', `<i class="presence ${presence}"></i>`)}</div>`}
       <div class="pf-id">
         <h1>${escapeHtml(p.username)}
-          ${roleBadge(p.role)}
           ${p.isPrivate ? '<span class="badge">🔒 privé</span>' : ''}
           ${p.relation === 'friend' ? '<span class="badge me">ami</span>' : ''}
         </h1>
+        ${badgesRow(p, me)}
         <p class="pf-meta">${presenceTxt}<span>Membre depuis ${date(p.createdAt, { month: 'long', year: 'numeric' })}</span>${p.friends ? `<span>${plural(p.friends.length, 'ami')}</span>` : ''}</p>
         ${bioHtml(p, me)}
         ${s ? `<p class="pf-headline">${s.all.n ? `<b>${s.all.rate}%</b> de victoires sur ${plural(s.all.n, 'partie')} en ligne` : 'Pas encore de partie en ligne'}</p>` : ''}
@@ -149,7 +150,7 @@ function render(p) {
       <div class="pf-actions">${actions(p)}</div>
     </section>
 
-    ${me ? privacyCard(p) + accountCard() : ''}
+    ${me ? badgeCard(p) + privacyCard(p) + accountCard() : ''}
 
     ${!p.visible ? `
       <section class="card pf-locked">
@@ -186,6 +187,45 @@ function bioHtml(p, me) {
       </div>
     </form>
   </div>`;
+}
+
+/** Victoires en ligne de mon historique (pour le badge Royal). */
+const myWins = (p) => (p.games ? winKeys(Object.fromEntries(p.games.map((g) => [g.id, g]))).length : 0);
+/** Badges possédés : pour soi, Royal compte dès 10 victoires (la preuve est jointe en le choisissant). */
+const badgesOf = (p, me) => ownedBadges({ role: p.role, royal: p.hasRoyalProof || (me && myWins(p) >= ROYAL_WINS) });
+
+/** Les badges du joueur, avec leur nom ; celui affiché en partie est marqué. */
+function badgesRow(p, me) {
+  const owned = badgesOf(p, me);
+  if (!owned.length) return '';
+  return `<div class="pf-badges">${owned
+    .map((id) => `<span class="pf-badge ${id === p.badge ? 'worn' : ''}" title="${id === p.badge ? 'Affiché en partie' : ''}">${badgeHtml(id)}${id === p.badge ? '<small>en partie</small>' : ''}</span>`)
+    .join('')}</div>`;
+}
+
+/** Mon profil : choisir LE badge affiché à côté de mon pseudo en partie. */
+function badgeCard(p) {
+  const owned = badgesOf(p, true);
+  const wins = myWins(p);
+  const options = Object.entries(BADGES).map(([id, b]) => {
+    const has = owned.includes(id);
+    if (!has && id !== 'royal') return ''; // les badges de rôle ne s'affichent que si on les a
+    const on = p.badge === id;
+    const lock = !has ? `<span class="pf-badge-lock">🔒 ${Math.min(wins, ROYAL_WINS)} / ${ROYAL_WINS} victoires</span>` : '';
+    return `<button type="button" class="pf-badge-opt ${b.cls} ${on ? 'on' : ''} ${has ? '' : 'locked'}" data-badge="${id}" ${has ? '' : 'disabled'} aria-pressed="${on}">
+      <span class="pf-badge-emoji">${b.emoji}</span><span class="pf-badge-name">${b.name}</span>${lock || `<span class="pf-badge-state">${on ? '✓ Affiché' : 'Afficher'}</span>`}
+    </button>`;
+  }).join('');
+  return `<section class="card pf-badge-card">
+    <div>
+      <h2>🏅 Badge affiché en partie</h2>
+      <p class="muted">Tu peux en porter un seul : son emoji s’affiche à côté de ton pseudo pendant tes parties.</p>
+    </div>
+    <div class="pf-badge-opts">
+      ${options}
+      <button type="button" class="pf-badge-opt none ${p.badge ? '' : 'on'}" data-badge="" aria-pressed="${!p.badge}"><span class="pf-badge-emoji">∅</span><span class="pf-badge-name">Aucun</span><span class="pf-badge-state">${p.badge ? 'Choisir' : '✓ Choisi'}</span></button>
+    </div>
+  </section>`;
 }
 
 function actions(p) {
@@ -344,6 +384,19 @@ function gameLine(p, g) {
 }
 
 function wire(p) {
+  // Choix du badge affiché en partie
+  page.querySelector('.pf-badge-card')?.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-badge]');
+    if (!b || b.disabled) return;
+    const id = b.dataset.badge || null;
+    try {
+      await chooseBadge(id);
+      toast(id ? `Badge ${BADGES[id].emoji} <b>${BADGES[id].name}</b> affiché en partie.` : 'Plus aucun badge affiché en partie.', { cls: 'info' });
+      load(p.id);
+    } catch (ex) {
+      toast(escapeHtml(ex.message), { cls: 'error' });
+    }
+  });
   // Bio (son propre profil)
   const bioForm = page.querySelector('#bio-form');
   if (bioForm) {

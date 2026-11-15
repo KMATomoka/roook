@@ -9,7 +9,7 @@ import { isMuted, setMuted, lowTimeBeep } from './sound.js';
 import { createFx } from './fx.js';
 import { attachArrows } from './arrows.js';
 import { scrollMoveIntoList } from './common.js';
-import { session, avatarOf, profileUrl } from './compte.js';
+import { session, avatarOf, profileUrl, badgeOf, badgeHtml } from './compte.js';
 import { gameSocket } from './online.js';
 const account = await session;
 
@@ -26,6 +26,7 @@ let orientation = 'w';
 let viewPly = null; // null = position actuelle ; sinon on revoit un coup passé
 let names = { w: 'Blancs', b: 'Noirs' };
 let pics = { w: null, b: null }; // photos de profil des joueurs (si elles existent)
+let badges = { w: null, b: null }; // badge affiché par chaque joueur (emoji à côté du pseudo)
 let picIds = '';
 let over = null; // { result, reason } quand la partie est finie
 let gameId = mode === 'ami' ? onlineId + '-' + Date.now().toString(36) : mode + '-' + Date.now().toString(36);
@@ -179,7 +180,8 @@ function playerHtml(c) {
 function playerName(c) {
   const name = escapeHtml(names[c] || '…');
   const id = mode === 'ami' ? online.ids?.[c] : mode === 'ia' && c === myColor ? account.user?.id : null;
-  return id ? `<a href="${profileUrl(id)}" target="_blank" rel="noopener" title="Voir le profil">${name}</a>` : name;
+  const badge = badgeHtml(badges[c], { name: false });
+  return (id ? `<a href="${profileUrl(id)}" target="_blank" rel="noopener" title="Voir le profil">${name}</a>` : name) + badge;
 }
 
 /** Visage du joueur : Noa, la photo de profil, l'initiale du pseudo, ou un simple carré de couleur. */
@@ -199,9 +201,10 @@ function loadPics(ids) {
   const key = `${ids.w}|${ids.b}`;
   if (key === picIds) return;
   picIds = key;
-  Promise.all([avatarOf(ids.w), avatarOf(ids.b)]).then(([w, b]) => {
+  Promise.all([avatarOf(ids.w), avatarOf(ids.b), badgeOf(ids.w), badgeOf(ids.b)]).then(([w, b, bw, bb]) => {
     if (picIds !== key) return;
     pics = { w, b };
+    badges = { w: bw, b: bb };
     renderPlayers();
   });
 }
@@ -537,6 +540,8 @@ function setupAiColor(c) {
   const ai = 'Noa';
   names = c === 'w' ? { w: me, b: ai } : { w: ai, b: me };
   pics = c === 'w' ? { w: account.user?.avatar || null, b: null } : { w: null, b: account.user?.avatar || null };
+  badges = { w: null, b: null };
+  if (account.user) badgeOf(account.user.id).then((bd) => { badges = c === 'w' ? { w: bd, b: null } : { w: null, b: bd }; renderPlayers(); });
 }
 
 async function aiMove() {

@@ -214,9 +214,74 @@ export const isFounder = () => currentUser?.role === 'fondateur';
 
 /** Badge du rôle d'un joueur (rien pour un simple membre). */
 export function roleBadge(role) {
-  if (role === 'fondateur') return '<span class="badge founder">👑 fondateur</span>';
-  if (role === 'admin') return '<span class="badge admin">🛡 admin</span>';
+  if (role === 'fondateur') return badgeHtml('fondateur');
+  if (role === 'admin') return badgeHtml('admin');
   return '';
+}
+
+// ---------------------------------------------------------------------------
+// Badges : on en possède plusieurs, on en affiche UN en partie (l'emoji à côté du pseudo)
+// ---------------------------------------------------------------------------
+export const BADGES = {
+  fondateur: { name: 'Fondateur', emoji: '👑', cls: 'founder', how: 'Réservé au fondateur de ROOOK.' },
+  admin: { name: 'Admin', emoji: '🛡️', cls: 'admin', how: 'Réservé aux administrateurs.' },
+  royal: { name: 'Royal', emoji: '⚜️', cls: 'royal', how: 'Débloqué avec 10 victoires en ligne (le pack Royal chess).' },
+};
+export const ROYAL_WINS = 10;
+
+/** Pastille d'un badge : emoji + nom (profil), ou seulement l'emoji (en partie). */
+export function badgeHtml(id, { name = true } = {}) {
+  const b = BADGES[id];
+  if (!b) return '';
+  return name
+    ? `<span class="badge ${b.cls}">${b.emoji} ${b.name}</span>`
+    : `<span class="badge-emoji ${b.cls}" title="${b.name}" aria-label="Badge ${b.name}">${b.emoji}</span>`;
+}
+
+/** Victoires en ligne (parties entre amis, vérifiées) dans un historique : leurs clés, des plus anciennes aux plus récentes. */
+export function winKeys(history) {
+  return Object.entries(history || {})
+    .filter(([, g]) => g && g.mode === 'ami' && ((g.me === 'w' && g.result === '1-0') || (g.me === 'b' && g.result === '0-1')))
+    .sort((a, b) => (a[1].date || 0) - (b[1].date || 0))
+    .map(([k]) => k);
+}
+
+/** Badges qu'un joueur possède : selon son rôle, et Royal s'il a sa preuve de 10 victoires (ou s'il peut la donner). */
+export function ownedBadges({ role, royal }) {
+  const out = [];
+  if (role === 'fondateur') out.push('fondateur');
+  if (role === 'admin') out.push('admin');
+  if (royal) out.push('royal');
+  return out;
+}
+
+/** Badge réellement affichable (on ignore un badge qu'on ne possède plus, par exemple un ancien admin). */
+export function shownBadge(badge, role, hasRoyalProof) {
+  if (badge === 'fondateur' && role === 'fondateur') return badge;
+  if (badge === 'admin' && role === 'admin') return badge;
+  if (badge === 'royal' && hasRoyalProof) return badge;
+  return null;
+}
+
+/** Badge affiché par un joueur (vérifié : il le possède encore), ou null. */
+export async function badgeOf(uid) {
+  if (!uid) return null;
+  const val = (path) => get(ref(db, path)).then((x) => x.val()).catch(() => null);
+  const [badge, proof, role] = await Promise.all([val(`users/${uid}/badge`), val(`users/${uid}/royalProof`), val(`roles/${uid}`)]);
+  return shownBadge(badge, role, !!proof);
+}
+
+/** Choisit le badge affiché en partie (null = aucun). Pour Royal, on joint la preuve : 10 victoires de son historique. */
+export async function chooseBadge(id) {
+  if (!currentUser) return;
+  const uid = currentUser.id;
+  if (!id) return set(ref(db, `users/${uid}/badge`), null);
+  if (id === 'royal') {
+    const keys = winKeys((await get(ref(db, `history/${uid}`))).val()).slice(0, ROYAL_WINS);
+    if (keys.length < ROYAL_WINS) throw new Error(`Il te faut ${ROYAL_WINS} victoires en ligne pour ce badge (tu en as ${keys.length}).`);
+    return update(ref(db, `users/${uid}`), { royalProof: Object.fromEntries(keys.map((k, i) => ['p' + i, k])), badge: 'royal' });
+  }
+  return set(ref(db, `users/${uid}/badge`), id);
 }
 export const isBanActive = (ban) => !!ban && (!ban.until || ban.until > serverNow());
 
@@ -893,6 +958,8 @@ export async function loadProfile(uid) {
     createdAt: user.createdAt || 0,
     isPrivate: user.private === true,
     bio: typeof user.bio === 'string' ? user.bio : '',
+    badge: shownBadge(user.badge, role, !!user.royalProof),
+    hasRoyalProof: !!user.royalProof,
     avatar,
     online: !!status?.connections,
     playing: !!status?.playing,

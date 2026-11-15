@@ -1152,7 +1152,8 @@ a.person-link:hover { color: var(--accent-soft); }
 .pf-account .warn { color: #f2cf4d; }
 .pf-account .email-form { margin-top: 12px; }
 @media (max-width: 600px) { .pf-account { flex-direction: column; } }
-.badge.founder { color: #f2cf4d; border-color: rgba(242, 207, 77, 0.55); background: rgba(242, 207, 77, 0.12); }
+.badge.founder { color: var(--mint); border-color: rgba(60, 242, 163, 0.55); background: rgba(60, 242, 163, 0.12); }
+.badge.royal { color: #f0d88f; border-color: rgba(226, 182, 78, 0.6); background: linear-gradient(135deg, rgba(226, 182, 78, 0.22), rgba(150, 100, 20, 0.12)); }
 
 /* Bio du profil */
 .pf-bio { margin: 10px 0 0; max-width: 60ch; white-space: pre-line; overflow-wrap: anywhere; line-height: 1.5; color: var(--text); }
@@ -1439,3 +1440,32 @@ a.person-link:hover { color: var(--accent-soft); }
   box-shadow: 0 0 10px rgba(185, 166, 255, 0.8);
 }
 .fx-comet::after { content: ''; position: absolute; right: -3px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: #fff; box-shadow: 0 0 12px 4px rgba(185, 166, 255, 0.9); }
+
+/* Badges : profil (nom + emoji) et en partie (emoji seul à côté du pseudo) */
+.badge.founder, .badge.admin, .badge.royal { height: auto; padding: 3px 10px; font-size: 0.74rem; margin-right: 0; gap: 4px; }
+.badge-emoji { display: inline-grid; place-items: center; margin-left: 6px; font-size: 0.95em; line-height: 1; vertical-align: -1px; }
+.badge-emoji.founder { filter: drop-shadow(0 0 4px rgba(60, 242, 163, 0.65)); }
+.badge-emoji.royal { filter: drop-shadow(0 0 4px rgba(255, 210, 110, 0.75)); }
+.badge-emoji.admin { filter: drop-shadow(0 0 4px rgba(143, 107, 255, 0.65)); }
+.pf-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
+.pf-badge { display: inline-flex; align-items: center; gap: 6px; }
+.pf-badge small { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.pf-badge-card { display: flex; flex-direction: column; gap: 14px; padding: 16px 20px; }
+.pf-badge-card h2 { margin: 0 0 2px; font-size: 1.05rem; }
+.pf-badge-card p { margin: 0; font-size: 0.9rem; }
+.pf-badge-opts { display: flex; flex-wrap: wrap; gap: 10px; }
+.pf-badge-opt {
+  --c: var(--accent-soft); display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 12px; cursor: pointer;
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--text); font: 600 0.9rem var(--font); transition: border-color 0.15s, transform 0.15s;
+}
+.pf-badge-opt:hover:not(:disabled) { transform: translateY(-1px); border-color: var(--c); }
+.pf-badge-opt.founder { --c: var(--mint); }
+.pf-badge-opt.royal { --c: #e2b64e; }
+.pf-badge-opt.none { --c: var(--muted); }
+.pf-badge-opt.on { border-color: var(--c); box-shadow: 0 0 0 1px var(--c), 0 0 18px color-mix(in srgb, var(--c) 30%, transparent); }
+.pf-badge-opt.locked { opacity: 0.6; cursor: default; }
+.pf-badge-emoji { font-size: 1.2rem; line-height: 1; }
+.pf-badge-name { color: var(--c); }
+.pf-badge-state { font-size: 0.74rem; color: var(--muted); font-weight: 600; }
+.pf-badge-opt.on .pf-badge-state { color: var(--c); }
+.pf-badge-lock { font-size: 0.74rem; color: #f0d88f; }

@@ -21,9 +21,6 @@
   --radius: 14px;
   --shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
 
-  /* échiquier violet */
-  --sq-light: #ebe6fb;
-  --sq-dark: #8b78c9;
 
   /* couleurs des catégories de coups */
   --c-best: #3cf2a3;
@@ -123,8 +120,8 @@ p { margin: 0 0 0.6em; }
 cg-board square.move-dest { background: radial-gradient(rgba(40, 20, 90, 0.5) 19%, transparent 21%); }
 cg-board square.oc.move-dest { background: radial-gradient(transparent 0%, transparent 79%, rgba(40, 20, 90, 0.45) 80%); }
 cg-board square.move-dest:hover { background: rgba(60, 242, 163, 0.35); }
-cg-board square.last-move { background-color: rgba(60, 242, 163, 0.38); }
-cg-board square.selected { background-color: rgba(60, 242, 163, 0.5); }
+cg-board square.last-move { background-color: var(--sq-last); }
+cg-board square.selected { background-color: var(--sq-selected); }
 /* Cases marquées au clic droit (après last-move pour passer devant) */
 cg-board square.mark-red { background-color: rgba(235, 90, 74, 0.8); }
 cg-board square.mark-green { background-color: rgba(115, 180, 70, 0.8); }
@@ -516,6 +513,30 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 /* ==========================================================================
    Thème espace : échiquier violet, étoiles, planète, étoile filante
    ========================================================================== */
+/* Plateaux de l'inventaire (js/theme.js) : chaque plateau est un jeu de variables, posé par une classe
+   board-… sur <body> ou sur un aperçu. Astrea (violet) par défaut. */
+:root, .board-astrea {
+  --sq-light: #ebe6fb;
+  --sq-dark: #8b78c9;
+  --sq-last: rgba(60, 242, 163, 0.38);
+  --sq-selected: rgba(60, 242, 163, 0.5);
+  --coord-on-dark: #f6f3ff;
+  --coord-on-dark-shadow: 0 1px 2px rgba(40, 20, 100, 0.55);
+  --coord-on-light: #4b33a8;
+  --coord-on-light-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  --board-shadow: 0 0 0 1px rgba(143, 107, 255, 0.3), 0 18px 45px rgba(0, 0, 0, 0.5), 0 0 60px rgba(143, 107, 255, 0.14);
+}
+.board-classic {
+  --sq-light: #eeece4;
+  --sq-dark: #5d5f63;
+  --sq-last: rgba(214, 190, 80, 0.5);
+  --sq-selected: rgba(214, 190, 80, 0.62);
+  --coord-on-dark: #f4f2ec;
+  --coord-on-dark-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --coord-on-light: #3c3d40;
+  --coord-on-light-shadow: none;
+  --board-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 18px 45px rgba(0, 0, 0, 0.55);
+}
 /* Échiquier violet (remplace le thème bois) : damier en conic-gradient, a8 toujours clair */
 cg-board {
   background-color: var(--sq-light);
@@ -529,12 +550,12 @@ cg-board {
 .orientation-white .ranks :nth-child(odd),
 .orientation-white .files :nth-child(odd),
 .orientation-black .ranks :nth-child(even),
-.orientation-black .files :nth-child(even) { color: #f6f3ff; text-shadow: 0 1px 2px rgba(40, 20, 100, 0.55); }
+.orientation-black .files :nth-child(even) { color: var(--coord-on-dark); text-shadow: var(--coord-on-dark-shadow); }
 .orientation-white .ranks :nth-child(even),
 .orientation-white .files :nth-child(even),
 .orientation-black .ranks :nth-child(odd),
-.orientation-black .files :nth-child(odd) { color: #4b33a8; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5); }
-.board-frame { box-shadow: 0 0 0 1px rgba(143, 107, 255, 0.3), 0 18px 45px rgba(0, 0, 0, 0.5), 0 0 60px rgba(143, 107, 255, 0.14); }
+.orientation-black .files :nth-child(odd) { color: var(--coord-on-light); text-shadow: var(--coord-on-light-shadow); }
+.board-frame { box-shadow: var(--board-shadow); }
 
 /* Champ d'étoiles : trois couches discrètes (poussière fine, étoiles, quelques brillantes qui scintillent) */
 body::before, body::after, html::before {
@@ -727,18 +748,34 @@ body::after {
 /* ==========================================================================
    Pièces « Roque » (dessins originaux, public/img/pieces) : remplacent le jeu classique
    ========================================================================== */
-.cg-wrap piece.pawn.white { background-image: url('../img/pieces/wP.svg'); }
-.cg-wrap piece.knight.white { background-image: url('../img/pieces/wN.svg'); }
-.cg-wrap piece.bishop.white { background-image: url('../img/pieces/wB.svg'); }
-.cg-wrap piece.rook.white { background-image: url('../img/pieces/wR.svg'); }
-.cg-wrap piece.queen.white { background-image: url('../img/pieces/wQ.svg'); }
-.cg-wrap piece.king.white { background-image: url('../img/pieces/wK.svg'); }
-.cg-wrap piece.pawn.black { background-image: url('../img/pieces/bP.svg'); }
-.cg-wrap piece.knight.black { background-image: url('../img/pieces/bN.svg'); }
-.cg-wrap piece.bishop.black { background-image: url('../img/pieces/bB.svg'); }
-.cg-wrap piece.rook.black { background-image: url('../img/pieces/bR.svg'); }
-.cg-wrap piece.queen.black { background-image: url('../img/pieces/bQ.svg'); }
-.cg-wrap piece.king.black { background-image: url('../img/pieces/bK.svg'); }
+/* Chaque jeu de pièces est un ensemble de variables (--p-wP…) : l'inventaire (js/theme.js) choisit le jeu
+   avec une classe pieces-… sur <body> ou sur un aperçu. Astrea par défaut ; Classic dans vendor/…cburnett.css. */
+:root, .pieces-astrea {
+  --p-wP: url('../img/pieces/wP.svg');
+  --p-wN: url('../img/pieces/wN.svg');
+  --p-wB: url('../img/pieces/wB.svg');
+  --p-wR: url('../img/pieces/wR.svg');
+  --p-wQ: url('../img/pieces/wQ.svg');
+  --p-wK: url('../img/pieces/wK.svg');
+  --p-bP: url('../img/pieces/bP.svg');
+  --p-bN: url('../img/pieces/bN.svg');
+  --p-bB: url('../img/pieces/bB.svg');
+  --p-bR: url('../img/pieces/bR.svg');
+  --p-bQ: url('../img/pieces/bQ.svg');
+  --p-bK: url('../img/pieces/bK.svg');
+}
+.cg-wrap piece.pawn.white { background-image: var(--p-wP); }
+.cg-wrap piece.knight.white { background-image: var(--p-wN); }
+.cg-wrap piece.bishop.white { background-image: var(--p-wB); }
+.cg-wrap piece.rook.white { background-image: var(--p-wR); }
+.cg-wrap piece.queen.white { background-image: var(--p-wQ); }
+.cg-wrap piece.king.white { background-image: var(--p-wK); }
+.cg-wrap piece.pawn.black { background-image: var(--p-bP); }
+.cg-wrap piece.knight.black { background-image: var(--p-bN); }
+.cg-wrap piece.bishop.black { background-image: var(--p-bB); }
+.cg-wrap piece.rook.black { background-image: var(--p-bR); }
+.cg-wrap piece.queen.black { background-image: var(--p-bQ); }
+.cg-wrap piece.king.black { background-image: var(--p-bK); }
 
 /* Photos de profil */
 .account-initial img, .person-avatar img, .profile-avatar img, .toast-pic img {
@@ -1115,3 +1152,67 @@ a.person-link:hover { color: var(--accent-soft); }
 @media (max-width: 1000px) { .page-game .mode-label { display: none; } }
 .cg-wrap coords.files { left: 0; bottom: 3px; height: auto; } .cg-wrap coords.files coord { text-align: right; padding-right: 5px; } .cg-wrap coords.ranks { left: 5px; }
 .hero-caption { transition: opacity 0.3s; } .hero-caption.fade { opacity: 0; }
+
+/* --- Inventaire : variantes « Classic » des effets (js/fx.js) ------------- */
+.fx-mate-banner.classic .t {
+  background: none; color: #f6f4ee; -webkit-background-clip: border-box; background-clip: border-box;
+  font: 600 0.82em/1 Georgia, 'Times New Roman', serif; text-transform: none; letter-spacing: 0.02em;
+  filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.7)); animation: none;
+}
+.fx-mate-banner.classic .s, .fx-mate-banner.classic.win .s, .fx-mate-banner.classic.loss .s {
+  font: 500 0.24em Georgia, 'Times New Roman', serif; letter-spacing: 0.3em; color: #f6f4ee;
+  background: rgba(20, 20, 20, 0.72); border: 1px solid rgba(255, 255, 255, 0.25); backdrop-filter: none;
+}
+.fx-mate-banner.classic .rule { width: 2.4em; height: 1px; background: rgba(255, 255, 255, 0.55); margin: 0.12em 0 0.1em; }
+.fx-check-tag.classic {
+  background: rgba(20, 20, 20, 0.82); color: #f6f4ee; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  font: 600 0.9em Georgia, 'Times New Roman', serif; text-transform: none; letter-spacing: 0.03em; border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* ==========================================================================
+   Page Inventaire (js/inventaire.js)
+   ========================================================================== */
+.inv-page { max-width: 1100px; margin: 0 auto; padding: 28px clamp(16px, 4vw, 40px) 70px; }
+.inv-head h1 { font: 700 clamp(1.8rem, 4vw, 2.6rem) var(--serif); margin: 4px 0 6px; }
+.inv-head .lead { margin: 0; }
+.inv-where { margin: 10px 0 0; font-size: 0.9rem; }
+.inv-where a { color: var(--accent-soft); }
+.inv-section { margin-top: 34px; }
+.inv-section > h2 { font: 700 1.3rem var(--serif); margin: 0 0 4px; }
+.inv-note { margin: 0 0 10px; font-size: 0.9rem; }
+.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-top: 12px; }
+.inv-card { display: flex; flex-direction: column; gap: 12px; padding: 14px; position: relative; transition: border-color 0.15s, box-shadow 0.15s; }
+.inv-card.equipped { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 28px rgba(143, 107, 255, 0.22); }
+.inv-card.equipped::before {
+  content: '✓ Équipé'; position: absolute; top: 10px; right: 10px; z-index: 30;
+  font: 800 0.7rem var(--font); letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: 99px; background: var(--accent); color: var(--accent-ink);
+}
+.inv-body h3 { margin: 0 0 4px; font: 700 1.08rem var(--serif); display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.inv-from { font: 600 0.72rem var(--font); color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+.inv-body p { margin: 0; font-size: 0.9rem; }
+.inv-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.inv-actions .inv-equip { margin-left: auto; }
+.inv-preview { width: 100%; max-width: 300px; margin: 0 auto; }
+.inv-frame { border-radius: 5px; }
+.inv-packs { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.inv-pack .inv-preview { max-width: 320px; }
+.inv-pack-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 3px; font-size: 0.86rem; }
+.inv-pack-list span { display: inline-block; min-width: 7.5em; color: var(--muted); }
+/* Les 12 pièces, sur deux rangées, sur les couleurs du plateau équipé */
+.inv-preview-pieces {
+  display: grid; gap: 4px; padding: 8px; border-radius: 6px; aspect-ratio: 1; align-content: center;
+  background: linear-gradient(180deg, var(--sq-light) 0 50%, var(--sq-dark) 50% 100%); box-shadow: var(--board-shadow);
+}
+.cg-wrap.inv-pieces { display: grid; grid-template-columns: repeat(6, 1fr); }
+.cg-wrap.inv-pieces piece { position: static; width: 100%; height: auto; aspect-ratio: 1; display: block; will-change: auto; }
+/* Menu à 4 liens (avec Inventaire) : sur téléphone, liens plus serrés ; en partie, la recherche de joueurs
+   laisse sa place au bouton du son */
+@media (max-width: 420px) {
+  .topnav { gap: 9px; font-size: 0.82rem; }
+  .page-game .player-search { display: none; }
+}
+@media (max-width: 360px) {
+  .topnav { gap: 7px; font-size: 0.76rem; }
+  .topbar { padding-left: 12px; padding-right: 12px; gap: 8px; }
+}

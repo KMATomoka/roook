@@ -1,6 +1,8 @@
 // Effets visuels des coups : prises, échec, échec et mat.
 // Tout passe par l'API Web Animations : rien ne reste dans la page une fois l'effet terminé.
+// L'inventaire (js/theme.js) choisit la variante : « astrea » (éclats, confettis) ou « classic » (sobre).
 import { playSound } from './sound.js';
+import { getEquip } from './theme.js';
 
 const ROLE = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
 const COLOR = { w: 'white', b: 'black' };
@@ -143,6 +145,77 @@ export function createFx(frame, getOrientation) {
     ring(sq, { delay: impact, size: 1.2 + value * 0.06, duration: 460 });
     if (value >= 5) ring(sq, { delay: impact + 90, size: 1.9, width: 0.03, color: 'rgba(255,255,255,.6)', duration: 600 });
     setTimeout(() => shake(value >= 9 ? 4.5 : value >= 5 ? 3 : value >= 3 ? 1.6 : 0, 300), impact);
+  }
+
+  /** Prise « Classic » : la pièce prise s'efface rapidement, sans éclats ni secousse. */
+  function classicCaptureFx(move) {
+    const sq = move.flags.includes('e') ? move.to[0] + move.from[1] : move.to;
+    const victim = move.color === 'w' ? 'b' : 'w';
+    const { x, y, s } = at(sq);
+    const ghost = el(under, 'cg-wrap fx-ghost', { left: `${x - s / 2}px`, top: `${y - s / 2}px`, width: `${s}px`, height: `${s}px` }, `<piece class="${ROLE[move.captured]} ${COLOR[victim]}"></piece>`);
+    once(
+      ghost,
+      [
+        { transform: 'scale(1)', opacity: 1 },
+        { transform: 'scale(1)', opacity: 1, offset: 0.35 },
+        { transform: 'scale(.88)', opacity: 0 },
+      ],
+      { duration: 300, easing: 'ease-out' },
+    );
+  }
+
+  /** Échec « Classic » : un liseré rouge discret et une petite étiquette. */
+  function classicCheckFx(kingSq) {
+    const delay = 120;
+    ring(kingSq, { color: 'rgba(200,40,30,.75)', delay, size: 1.35, width: 0.04, duration: 650 });
+    const { x, y, s } = at(kingSq);
+    const above = y - s * 0.75 > s * 0.3;
+    const tag = el(over, 'fx-check-tag classic', { left: `${Math.min(Math.max(x, s * 0.9), frame.clientWidth - s * 0.9)}px`, top: `${above ? y - s * 0.7 : y + s * 0.7}px`, fontSize: `${Math.max(12, s * 0.24)}px` }, 'Échec');
+    once(
+      tag,
+      [
+        { opacity: 0, transform: 'translate(-50%,-40%)' },
+        { opacity: 1, transform: 'translate(-50%,-50%)', offset: 0.15 },
+        { opacity: 1, transform: 'translate(-50%,-50%)', offset: 0.8 },
+        { opacity: 0, transform: 'translate(-50%,-50%)' },
+      ],
+      { duration: 1200, delay, easing: 'ease-out', fill: 'backwards' },
+    );
+  }
+
+  /** Mat « Classic » : le roi se couche lentement, l'échiquier s'assombrit, un titre sobre apparaît. */
+  async function classicMateFx(move, kingSq, loser, outcome, gen) {
+    const { x, y, s } = at(kingSq);
+    const W = frame.clientWidth;
+    const calm = reduceMotion();
+    await wait(160);
+    if (gen !== generation) return;
+    frame.classList.add('mated-' + loser);
+    const king = el(over, 'cg-wrap fx-king', { left: `${x - s / 2}px`, top: `${y - s / 2}px`, width: `${s}px`, height: `${s}px` }, `<piece class="king ${COLOR[loser]}"></piece>`);
+    let dir = FILES.indexOf(move.to[0]) < FILES.indexOf(kingSq[0]) ? 1 : -1;
+    if (getOrientation() === 'b') dir = -dir;
+    king.animate(
+      calm
+        ? [{ filter: 'none' }, { filter: 'grayscale(.6) brightness(.8)' }]
+        : [
+            { transform: 'rotate(0deg)', filter: 'none' },
+            { transform: `translateY(12%) rotate(${dir * 90}deg)`, filter: 'brightness(.85) drop-shadow(0 3px 4px rgba(0,0,0,.45))' },
+          ],
+      { duration: 1100, easing: 'cubic-bezier(.5,0,.25,1)', fill: 'forwards' },
+    );
+    const vignette = el(over, 'fx-vignette');
+    vignette.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 900, fill: 'forwards' });
+    setTimeout(() => {
+      if (gen !== generation) return;
+      const sub = outcome === 'win' ? 'Victoire' : outcome === 'loss' ? 'Défaite' : `${loser === 'w' ? 'Les Noirs' : 'Les Blancs'} gagnent`;
+      const banner = el(over, 'fx-mate-banner classic ' + outcome, { fontSize: `${Math.max(26, W * 0.1)}px` }, `<div class="t">Échec et mat</div><div class="rule"></div><div class="s">${sub}</div>`);
+      banner.animate([{ opacity: 0, transform: 'translateY(4%)' }, { opacity: 1, transform: 'none' }], { duration: calm ? 200 : 800, easing: 'ease-out', fill: 'both' });
+      setTimeout(() => {
+        if (gen !== generation) return;
+        once(banner, [{ opacity: 1 }, { opacity: 0 }], { duration: 700, fill: 'forwards' });
+        once(vignette, [{ opacity: 1 }, { opacity: 0 }], { duration: 900, fill: 'forwards' });
+      }, 4200);
+    }, 700);
   }
 
   // -------------------------------------------------------------------------
@@ -295,20 +368,22 @@ export function createFx(frame, getOrientation) {
      * Joue le son et les effets d'un coup.
      * @param move   coup « verbose » de chess.js
      * @param chess  partie APRÈS le coup
-     * @param opts   { visual: bool, me: 'w'|'b'|null }
+     * @param opts   { visual: bool, me: 'w'|'b'|null, style: { capture, endAnim } (aperçus de l'inventaire) }
      */
-    move(move, chess, { visual = true, me = null } = {}) {
+    move(move, chess, { visual = true, me = null, style = null } = {}) {
       if (!move) return;
+      const eq = { ...getEquip(), ...(style || {}) };
+      const classicEnd = eq.endAnim === 'classic';
       const mated = move.san.includes('#');
       const loser = chess.turn();
       const outcome = !mated ? 'neutral' : !me ? 'neutral' : loser === me ? 'loss' : 'win';
-      playSound(move, outcome);
+      playSound(move, outcome, eq);
       if (!visual) return;
       const gen = generation;
-      if (move.captured) captureFx(move);
+      if (move.captured) (eq.capture === 'classic' ? classicCaptureFx : captureFx)(move);
       const kSq = move.san.includes('+') || mated ? kingSquare(chess, loser) : null;
-      if (mated && kSq) mateFx(move, kSq, loser, outcome, gen);
-      else if (kSq) checkFx(kSq);
+      if (mated && kSq) (classicEnd ? classicMateFx : mateFx)(move, kSq, loser, outcome, gen);
+      else if (kSq) (classicEnd ? classicCheckFx : checkFx)(kSq);
     },
     /** Efface tout (nouvelle partie). */
     reset() {

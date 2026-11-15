@@ -1,5 +1,9 @@
 // Bruitages synthétisés avec Web Audio (aucun fichier audio à télécharger).
 // Chaque son est fabriqué à partir de petits « tocs » de bruit filtré et de notes courtes.
+// Deux jeux de sons, choisis dans l'inventaire (js/theme.js) :
+// - « Prise et son » : déplacement, prise, roque, promotion, échec ;
+// - « Fin de partie » : le son de l'échec et mat.
+import { getEquip } from './theme.js';
 
 let ctx = null;
 let master = null;
@@ -138,23 +142,68 @@ function mate(outcome) {
   }
 }
 
+// --- Sons « Classic » : bois, feutre, rien de synthétique -----------------
+function wood(at = 0, { pitch = 1, vol = 1 } = {}) {
+  // Pièce de bois posée sur l'échiquier : un toc court et mat, sans résonance métallique
+  burst({ at, dur: 0.025, vol: 0.42 * vol, freq: 1300 * pitch, q: 3.5 });
+  burst({ at, dur: 0.05, vol: 0.3 * vol, type: 'lowpass', freq: 600 * pitch, q: 0.8 });
+  tone({ freq: 340 * pitch, endFreq: 230 * pitch, type: 'sine', at, dur: 0.05, vol: 0.18 * vol });
+}
+const classic = {
+  move: () => wood(),
+  capture: () => {
+    // Deux bois qui se touchent, puis la pièce posée
+    wood(0, { pitch: 0.85, vol: 1.1 });
+    wood(0.055, { pitch: 1.12, vol: 0.75 });
+  },
+  castle: () => {
+    wood(0);
+    wood(0.12, { pitch: 0.92 });
+  },
+  promote: () => {
+    wood(0);
+    tone({ freq: 880, type: 'sine', at: 0.06, dur: 0.35, vol: 0.05 });
+  },
+  check: () => {
+    // Petit « ding » discret
+    tone({ freq: 1175, type: 'sine', at: 0.05, dur: 0.4, vol: 0.07 });
+  },
+};
+function classicMate(outcome) {
+  // Le roi couché, puis un accord simple au piano (majeur si on gagne, mineur sinon)
+  wood(0, { pitch: 0.8, vol: 1.1 });
+  wood(0.42, { pitch: 0.7 });
+  const chord = outcome === 'loss' ? [220, 261.6, 329.6] : [261.6, 329.6, 392];
+  chord.forEach((f, i) => {
+    tone({ freq: f, type: 'triangle', at: 0.6 + i * 0.07, dur: 1.6, vol: 0.09 });
+    tone({ freq: f * 2, type: 'sine', at: 0.6 + i * 0.07, dur: 1.1, vol: 0.025 });
+  });
+}
+
+const astrea = { move: () => tok(), capture, castle, promote, check };
+const SETS = { astrea, classic };
+const MATES = { astrea: mate, classic: classicMate };
+
 /**
  * Son d'un coup (objet « verbose » de chess.js).
  * outcome : 'win' | 'loss' | 'neutral', utilisé pour l'échec et mat.
+ * style : { capture, endAnim } pour forcer un jeu de sons (aperçus de l'inventaire) ; sinon l'équipement du joueur.
  */
-export function playSound(move, outcome = 'neutral') {
+export function playSound(move, outcome = 'neutral', style = null) {
   if (!move || muted) return;
+  const eq = { ...getEquip(), ...(style || {}) };
+  const set = SETS[eq.capture] || astrea;
   if (move.san.includes('#')) {
-    if (move.captured) capture();
-    else tok();
-    mate(outcome);
+    if (move.captured) set.capture();
+    else set.move();
+    (MATES[eq.endAnim] || mate)(outcome);
     return;
   }
-  if (move.captured) capture();
-  else if (move.san.startsWith('O-O')) castle();
-  else if (move.promotion) promote();
-  else tok();
-  if (move.san.includes('+')) check();
+  if (move.captured) set.capture();
+  else if (move.san.startsWith('O-O')) set.castle();
+  else if (move.promotion) set.promote();
+  else set.move();
+  if (move.san.includes('+')) set.check();
 }
 
 /** Petit bip quand il reste peu de temps. */

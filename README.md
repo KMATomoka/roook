@@ -10,6 +10,7 @@ Site : **https://kmatomoka.github.io/roook/**
 - **Contre Noa** : l'IA, 8 niveaux, du débutant au grand maître (le moteur tourne dans le navigateur).
 - **Bilan** : Noa, le coach, note et explique chaque coup, avec précision en %, graphique et moments clés.
 - **Même écran** et **analyse d'un PGN** collé.
+- **Inventaire** (`inventaire.html`) : chacun choisit l'apparence de ses parties — plateau, pièces, animation de fin de partie, animation de prise avec ses sons — pack entier d'un clic ou éléments mélangés. Packs « Astrea chess » (l'apparence d'origine, équipée par défaut) et « Classic chess » (noir et blanc, pièces Staunton, sons de bois). Avec un compte, le choix est enregistré dans `users/{uid}/equip` ; sans compte, dans le navigateur. Il s'applique à la page de partie, au bilan et à l'échiquier de l'accueil (en partie entre amis, chacun voit son propre équipement).
 
 ## Comment c'est hébergé (gratuit)
 
@@ -50,7 +51,11 @@ Puis ouvre http://localhost:3000 (le site local utilise la même base Firebase q
 | `public/js/fb.js`, `js/firebase-config.js` | Connexion à Firebase |
 | `public/bilan.html`, `js/bilan.js`, `js/explain.js` | Bilan de partie et explications de Noa |
 | `public/js/engine.js` | IA (moteur dans le navigateur) et niveaux |
-| `public/css/style.css` | Le style (thème espace violet) |
+| `public/css/style.css` | Le style (thème espace violet, et plateaux / pièces de l'inventaire en variables CSS) |
+| `public/inventaire.html`, `js/inventaire.js` | Inventaire : choisir plateau, pièces, animations et sons |
+| `public/js/theme.js` | Équipement du joueur (compte ou navigateur) : classes `board-…`, `pieces-…` sur `<body>`, lu par `fx.js` et `sound.js` |
+| `public/js/fx.js`, `js/sound.js` | Effets visuels et sons des coups (variantes Astrea et Classic) |
+| `public/maquette-royale.html` | Maquette du futur pack « Royal » (liée nulle part, à valider) |
 | `database.rules.json`, `scripts/rules.js` | Règles de sécurité de la base Firebase (et leur générateur) |
 | `scripts/build.js` | Construit le site dans `dist/` |
 
@@ -75,4 +80,4 @@ Il n'y a pas de serveur : ce sont les **règles de la base** (`scripts/rules.js`
 - Les parties contre Noa se jouent dans le navigateur : elles ne comptent pas dans les statistiques (seules les parties en ligne contre des amis comptent).
 - Rien n'empêche quelqu'un de se faire aider par un logiciel d'échecs pendant une partie (comme partout).
 
-Crédits : moteur Stockfish (GPL, licence dans `vendor/stockfish/`), échiquier Chessground de Lichess (GPL), pièces originales dessinées pour ROOOK, avatar de Noa tiré de son overlay.
+Crédits : moteur Stockfish (GPL, licence dans `vendor/stockfish/`), échiquier Chessground de Lichess (GPL), pièces originales dessinées pour ROOOK (packs Astrea et Royal), pièces classiques « cburnett » du pack Classic chess (fournies avec Chessground, licence GPL ; transformées en variables CSS par `scripts/build.js`), avatar de Noa tiré de son overlay.

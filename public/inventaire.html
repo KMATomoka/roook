@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inventaire — ROOOK</title>
+  <meta name="description" content="Choisis l'apparence de tes parties : plateau, pièces, animations et sons.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="vendor/chessground-assets/chessground.base.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="vendor/chessground-assets/chessground.cburnett.css">
+</head>
+<body class="page-inventory">
+  <header class="topbar">
+    <a class="logo" href="./"><span class="logo-mark">♜</span> ROOOK</a>
+    <nav class="topnav">
+      <a href="jouer.html">Jouer</a>
+      <a href="amis.html">Amis</a>
+      <a href="bilan.html">Analyser</a>
+      <a href="inventaire.html">Inventaire</a>
+    </nav>
+  </header>
+
+  <main class="inv-page">
+    <div class="inv-head">
+      <p class="eyebrow">Ton apparence</p>
+      <h1>Inventaire</h1>
+      <p class="lead">Choisis le plateau, les pièces, l’animation de fin de partie et celle des prises. Équipe un pack entier d’un clic, ou mélange les éléments de packs différents.</p>
+      <p class="inv-where muted" id="inv-where">&nbsp;</p>
+    </div>
+
+    <section class="inv-section">
+      <h2>Packs</h2>
+      <div class="inv-grid inv-packs" id="inv-packs"></div>
+    </section>
+
+    <section class="inv-section">
+      <h2>Plateau</h2>
+      <div class="inv-grid" data-slot="board"></div>
+    </section>
+    <section class="inv-section">
+      <h2>Pièces</h2>
+      <div class="inv-grid" data-slot="pieces"></div>
+    </section>
+    <section class="inv-section">
+      <h2>Fin de partie</h2>
+      <p class="muted inv-note">L’animation de l’échec et mat, son son, et l’alerte d’échec.</p>
+      <div class="inv-grid" data-slot="endAnim"></div>
+    </section>
+    <section class="inv-section">
+      <h2>Prise et son</h2>
+      <p class="muted inv-note">L’animation quand une pièce est prise, et les sons des coups (déplacement, prise, échec).</p>
+      <div class="inv-grid" data-slot="capture"></div>
+    </section>
+    <p class="muted inv-note" id="inv-muted" hidden>Le son est coupé sur ce site : réactive-le avec le bouton 🔊 de la page de partie pour entendre les aperçus.</p>
+  </main>
+
+  <script type="module" src="js/inventaire.js"></script>
+</body>
+</html>

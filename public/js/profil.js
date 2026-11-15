@@ -191,6 +191,7 @@ function bioHtml(p, me) {
 function actions(p) {
   if (p.relation === 'me') {
     return `<a class="btn btn-ghost small" href="amis.html">👥 Mes amis</a>
+      <a class="btn btn-ghost small" href="inventaire.html">🎒 Inventaire</a>
       <button class="btn btn-ghost small" data-act="photo">📷 Changer ma photo</button>
       ${p.avatar ? '<button class="btn btn-ghost small" data-act="nophoto">Retirer la photo</button>' : ''}
       ${p.admin ? '<a class="btn btn-ghost small" href="admin.html">🛡 Administration</a>' : ''}

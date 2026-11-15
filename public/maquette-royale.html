@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pack Royal — maquette</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --night: #120c08;
+      --night-2: #1d140d;
+      --gold: #d8b04c;
+      --gold-soft: #f0d88f;
+      --cream: #f7eed6;
+      --ink: #efe3c4;
+      --muted: #b9a57c;
+      --line: rgba(216, 176, 76, 0.28);
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    html { overflow-x: clip; }
+    body {
+      margin: 0; color: var(--ink); background: var(--night);
+      background-image:
+        radial-gradient(900px 500px at 80% -10%, rgba(216, 176, 76, 0.16), transparent 65%),
+        radial-gradient(700px 500px at 0% 110%, rgba(142, 27, 44, 0.16), transparent 65%),
+        linear-gradient(180deg, #17100a, #0e0906);
+      background-attachment: fixed;
+      font: 500 1.12rem/1.6 'Cormorant Garamond', Georgia, serif;
+      min-height: 100vh;
+    }
+    main { max-width: 1120px; margin: 0 auto; padding: 40px 16px 80px; }
+    .eyebrow { font: 700 0.78rem 'Cinzel', serif; letter-spacing: 0.32em; color: var(--gold); text-transform: uppercase; margin: 0; }
+    h1 { font: 800 clamp(2.2rem, 6vw, 3.8rem)/1.05 'Cinzel', serif; margin: 10px 0 14px; letter-spacing: 0.04em;
+      background: linear-gradient(180deg, #fff3c8, #d8b04c 60%, #a87a23); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    h2 { font: 700 1.35rem 'Cinzel', serif; letter-spacing: 0.08em; color: var(--gold-soft); margin: 0 0 6px; }
+    .lead { max-width: 64ch; margin: 0; font-size: 1.22rem; }
+    .note { display: inline-block; margin-top: 16px; padding: 6px 14px; border: 1px solid var(--line); border-radius: 99px; color: var(--muted); font-size: 0.98rem; }
+    .rule { display: flex; align-items: center; gap: 14px; color: var(--gold); margin: 46px 0 18px; }
+    .rule::before, .rule::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--line), transparent); }
+    section > p.sub { margin: 0 0 18px; color: var(--muted); }
+
+    /* --- Plateau royal : ivoire, or et brun profond, cadre de bois sombre filé d'or --- */
+    .boards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px; }
+    figure { margin: 0; }
+    figcaption { text-align: center; margin-top: 10px; color: var(--muted); font-style: italic; }
+    .frame {
+      position: relative; padding: clamp(16px, 3.4vw, 26px); border-radius: 10px;
+      background: radial-gradient(120% 120% at 30% 20%, #4a2d16, #2a170b 60%, #1c0f07);
+      box-shadow:
+        inset 0 0 0 1.5px #e3c46a, inset 0 0 0 5px #2a170b, inset 0 0 0 6px rgba(227, 196, 106, 0.55),
+        0 24px 50px rgba(0, 0, 0, 0.6), 0 0 50px rgba(216, 176, 76, 0.1);
+    }
+    .frame::before { /* filet d'or autour des cases */
+      content: ''; position: absolute; inset: calc(clamp(16px, 3.4vw, 26px) - 4px); border: 1.5px solid #e3c46a; border-radius: 2px;
+      box-shadow: 0 0 0 2px #2a170b, 0 0 0 3px rgba(227, 196, 106, 0.45); pointer-events: none;
+    }
+    .corner { position: absolute; width: 18px; height: 18px; color: #e3c46a; font-size: 15px; line-height: 18px; text-align: center; }
+    .corner.tl { left: 3px; top: 2px; } .corner.tr { right: 3px; top: 2px; } .corner.bl { left: 3px; bottom: 2px; } .corner.br { right: 3px; bottom: 2px; }
+    .coords { position: absolute; display: flex; font: 700 clamp(8px, 1.4vw, 11px) 'Cinzel', serif; color: #e3c46a; opacity: 0.85; }
+    .coords.files { left: clamp(16px, 3.4vw, 26px); right: clamp(16px, 3.4vw, 26px); bottom: 0; height: clamp(16px, 3.4vw, 26px); }
+    .coords.files span { flex: 1; text-align: center; align-self: center; }
+    .coords.ranks { top: clamp(16px, 3.4vw, 26px); bottom: clamp(16px, 3.4vw, 26px); left: 0; width: clamp(16px, 3.4vw, 26px); flex-direction: column; }
+    .coords.ranks span { flex: 1; display: grid; place-items: center; }
+    .board { position: relative; display: grid; grid-template-columns: repeat(8, 1fr); aspect-ratio: 1; }
+    .sq { position: relative; }
+    .sq.l { background: linear-gradient(135deg, #f7efd8, #eadcb5); }
+    .sq.d { background: linear-gradient(135deg, #9b6b37, #7a4f24); box-shadow: inset 0 0 0 0.5px rgba(255, 220, 140, 0.15); }
+    .sq.last { box-shadow: inset 0 0 0 100px rgba(216, 176, 76, 0.42); }
+    .pc { position: absolute; inset: 0; background-size: 100% 100%; z-index: 2; will-change: transform; }
+
+    /* --- Les 12 pièces --- */
+    .pieces { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+    .tile { border-radius: 12px; padding: 8px 6px 10px; text-align: center; border: 1px solid var(--line); }
+    .tile.on-l { background: linear-gradient(135deg, #f7efd8, #e6d6aa); color: #4a2f12; }
+    .tile.on-d { background: linear-gradient(135deg, #8f6232, #6d461f); color: #f6e7bd; }
+    .tile .pcbig { width: 100%; aspect-ratio: 1; background-size: 100% 100%; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.28)); }
+    .tile span { font: 700 0.7rem 'Cinzel', serif; letter-spacing: 0.12em; text-transform: uppercase; }
+    @media (max-width: 640px) { .pieces { grid-template-columns: repeat(3, 1fr); } }
+
+    /* --- Démonstration --- */
+    .demo { display: grid; grid-template-columns: minmax(0, 420px) 1fr; gap: 28px; align-items: center; }
+    @media (max-width: 760px) { .demo { grid-template-columns: 1fr; } }
+    .btns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    button {
+      font: 700 0.82rem 'Cinzel', serif; letter-spacing: 0.08em; color: #2a1a08; cursor: pointer;
+      padding: 10px 16px; border-radius: 99px; border: 1px solid #f0d88f;
+      background: linear-gradient(180deg, #f6dc8c, #c99a2e); box-shadow: 0 6px 18px rgba(201, 154, 46, 0.25);
+    }
+    button.ghost { background: transparent; color: var(--gold-soft); border-color: var(--line); box-shadow: none; }
+    button:hover { filter: brightness(1.08); }
+    .fx { position: absolute; inset: 0; pointer-events: none; z-index: 5; overflow: visible; }
+    .fx-under { z-index: 1; }
+    .p { position: absolute; will-change: transform, opacity; }
+    .ringfx { position: absolute; border: 2px solid; border-radius: 50%; }
+    ul.facts { margin: 0; padding-left: 1.1em; }
+    ul.facts li { margin: 4px 0; }
+    ul.facts b { color: var(--gold-soft); font-weight: 600; }
+    footer { margin-top: 50px; text-align: center; color: var(--muted); font-size: 0.95rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">ROOOK · Inventaire · Maquette</p>
+    <h1>Pack Royal</h1>
+    <p class="lead">Un pack pour les grandes occasions, dans l’esprit des chevaliers et des cours royales. Le camp blanc est taillé dans l’<b>ivoire crème</b>, le camp noir coulé dans l’<b>or</b>. Couronnes ornées de perles et de pierres, mitre brodée, tour crénelée, cavalier caparaçonné sous son chanfrein d’armure, le tout posé sur un échiquier d’ivoire et de bois brun, dans un cadre filé d’or.</p>
+    <span class="note">Maquette à valider : ce pack n’est pas encore dans l’inventaire.</span>
+
+    <div class="rule">⚜</div>
+    <section>
+      <h2>Le plateau</h2>
+      <p class="sub">Cases ivoire et brun profond, cadre de bois sombre à double filet d’or, coordonnées gravées en capitales.</p>
+      <div class="boards">
+        <figure><div class="frame" data-board="start"></div><figcaption>Position de départ</figcaption></figure>
+        <figure><div class="frame" data-board="middle"></div><figcaption>En milieu de partie</figcaption></figure>
+      </div>
+    </section>
+
+    <div class="rule">⚜</div>
+    <section>
+      <h2>Les douze pièces</h2>
+      <p class="sub">Crème et or, cerclés de brun, rehaussés de rubis et de saphirs.</p>
+      <div class="pieces" id="pieces"></div>
+    </section>
+
+    <div class="rule">⚜</div>
+    <section>
+      <h2>La prise</h2>
+      <div class="demo">
+        <figure><div class="frame" id="demo-board"></div></figure>
+        <div>
+          <p>Mêmes animations que le pack de base : la pièce prise s’illumine puis éclate, avec l’onde et la secousse. En plus, une pluie de <b>particules dorées</b> quand une pièce d’or tombe, et de <b>particules crème</b> quand c’est une pièce ivoire.</p>
+          <div class="btns">
+            <button id="demo-gold">▶ Prise d’une pièce d’or</button>
+            <button id="demo-cream">▶ Prise d’une pièce crème</button>
+          </div>
+          <ul class="facts" style="margin-top:18px">
+            <li><b>Sons</b> : ceux du pack de base, sans changement (prise, échec, échec et mat).</li>
+            <li><b>Fin de partie</b> : l’animation de base, avec les mêmes particules or ou crème.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <footer>Maquette ROOOK — pièces dessinées pour ROOOK.</footer>
+  </main>
+
+  <script type="module">
+    import { playSound } from './js/sound.js';
+
+    // ------------------------------------------------------------------
+    // Pièces royales (SVG dessinés pour ROOOK). Deux palettes : crème (Blancs) et or (Noirs).
+    // ------------------------------------------------------------------
+    const PAL = {
+      w: { top: '#fffaf0', mid: '#f3e6c4', bot: '#dcc58f', shade: '#cdb27a', stroke: '#5a3b15', acc: '#c9982c', acc2: '#f2d27a', pearl: '#ffffff', ruby: '#8e1b2c', saph: '#1f4f8f' },
+      b: { top: '#ffe28a', mid: '#d29a1e', bot: '#82520a', shade: '#6e4708', stroke: '#2a1903', acc: '#fff3cf', acc2: '#fff8e2', pearl: '#fffdf4', ruby: '#a01d33', saph: '#24589c' },
+    };
+    const body = (d) => `<path d="${d}" fill="url(#g)"/>`;
+    const BASE = (c) => `
+      <path d="M22 92H78Q82 92 82 88Q82 84 78 84H22Q18 84 18 88Q18 92 22 92Z" fill="url(#g)"/>
+      <path d="M27 84H73Q74 79 70 77H30Q26 79 27 84Z" fill="url(#g)"/>
+      <path d="M23 88H77" stroke="${c.acc}" stroke-width="1.6" stroke-dasharray="0.1 3.4" stroke-linecap="round"/>`;
+    const COLLAR = (c, y = 57, rx = 13) => `<ellipse cx="50" cy="${y}" rx="${rx}" ry="3.8" fill="${c.acc}"/>`;
+    const gem = (x, y, r, col) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${col}" stroke-width="1.2"/>`;
+
+    const SHAPES = {
+      p: (c) => `${BASE(c)}
+        ${body('M33 77C35 68 41 62 43 58H57C59 62 65 68 67 77Z')}
+        ${COLLAR(c, 57, 12.5)}
+        <circle cx="50" cy="43" r="12" fill="url(#g)"/>
+        <path d="M38.6 40.5Q50 35.5 61.4 40.5" fill="none" stroke="${c.acc}" stroke-width="2.8"/>
+        ${gem(50, 37.6, 1.6, c.ruby)}
+        <circle cx="50" cy="29.6" r="2.6" fill="${c.acc}"/>`,
+      r: (c) => `${BASE(c)}
+        ${body('M32 77L35 44H65L68 77Z')}
+        <path d="M30 44H70L68 39H32Z" fill="${c.acc}"/>
+        <path d="M29 39V21H37V27H45V21H55V27H63V21H71V39Z" fill="url(#g)"/>
+        <path d="M29 34H71" fill="none" stroke="${c.shade}" stroke-width="1.2"/>
+        <path d="M33.5 70H66.5" fill="none" stroke="${c.acc}" stroke-width="2.2"/>
+        <path d="M34.5 56H65.5" fill="none" stroke="${c.shade}" stroke-width="1.1"/>
+        <path d="M44 77V66Q50 58 56 66V77Z" fill="${c.stroke}" opacity="0.85"/>
+        <path d="M50 46.5V52" fill="none" stroke="${c.stroke}" stroke-width="2.2"/>
+        ${gem(50, 30.5, 2.3, c.ruby)}`,
+      b: (c) => `${BASE(c)}
+        ${body('M34 77C37 68 42 62 44 58H56C58 62 63 68 66 77Z')}
+        ${COLLAR(c, 57, 12.5)}
+        <path d="M50 18C62 28 64 40 59.5 53.5H40.5C36 40 38 28 50 18Z" fill="url(#g)"/>
+        <path d="M40.5 48.5H59.5L59.5 53.5H40.5Z" fill="${c.acc}"/>
+        <path d="M50 21.5V48.5" fill="none" stroke="${c.acc}" stroke-width="2.2"/>
+        <path d="M57 29L48.5 41" fill="none" stroke="${c.stroke}" stroke-width="2.2"/>
+        ${gem(50, 51, 1.7, c.ruby)}
+        <path d="M48.3 6H51.7V9.6H55.3V13H51.7V18.5H48.3V13H44.7V9.6H48.3Z" fill="${c.acc}"/>`,
+      q: (c) => `${BASE(c)}
+        ${body('M31 77C35 66 40 60 41 56H59C60 60 65 66 69 77Z')}
+        ${COLLAR(c, 56, 14)}
+        <path d="M37.5 44.5L30.5 25.5L42 35.5L50 19L58 35.5L69.5 25.5L62.5 44.5Z" fill="url(#g)"/>
+        <path d="M36.5 52.5H63.5L62 44.5H38Z" fill="${c.acc}"/>
+        <path d="M50 28.5L53 34.5L50 40.5L47 34.5Z" fill="${c.ruby}" stroke-width="1.2"/>
+        ${gem(30.5, 23.5, 3, c.pearl)}${gem(50, 16.8, 3.2, c.pearl)}${gem(69.5, 23.5, 3, c.pearl)}
+        ${gem(43.5, 48.5, 1.9, c.saph)}${gem(50, 48.5, 2.1, c.ruby)}${gem(56.5, 48.5, 1.9, c.saph)}`,
+      k: (c) => `${BASE(c)}
+        ${body('M31 77C35 66 40 60 41 56H59C60 60 65 66 69 77Z')}
+        ${COLLAR(c, 56, 14)}
+        <path d="M37 45C33.5 34 40 26 50 26C60 26 66.5 34 63 45Z" fill="url(#g)"/>
+        <path d="M43.5 45C42 36.5 45 30 50 27.5C55 30 58 36.5 56.5 45" fill="none" stroke="${c.acc}" stroke-width="2"/>
+        <path d="M50 27.5V45" fill="none" stroke="${c.acc}" stroke-width="2"/>
+        <path d="M36 52.5H64L63 45H37Z" fill="${c.acc}"/>
+        ${gem(43, 48.8, 1.9, c.ruby)}${gem(50, 48.8, 2.1, c.saph)}${gem(57, 48.8, 1.9, c.ruby)}
+        <circle cx="50" cy="22.5" r="4.2" fill="${c.acc}"/>
+        <path d="M48 5H52V8.8H55.8V12.6H52V18.4H48V12.6H44.2V8.8H48Z" fill="${c.acc}"/>`,
+      // Cavalier : cheval caparaçonné, chanfrein d'armure sur le front, panache sur la crinière
+      n: (c) => `${BASE(c)}
+        <path d="M70 77C74 60 72 37 58.5 22.5L57.5 11L49.5 19C41 20.5 33.5 26.5 29.5 34L21.5 49.5C19.5 54.5 23 59.5 29 58L39 53C43 52 46 54.5 45 58C41 64 36.5 70.5 34.5 77Z" fill="url(#g)"/>
+        <path d="M58.5 22.5Q66.5 21.5 64.5 29Q72 29.5 68.8 37.5Q75.5 39.5 71.3 46.5Q77 50.5 72.2 56Q77.2 61 72.2 65.5Q76.2 70.5 71 74.5L70 77C74 60 72 37 58.5 22.5Z" fill="${c.acc}"/>
+        <path d="M51 21.5C43 23.5 35.5 29.5 31.5 37.5L25 50.5L31.5 52.5L37.5 41.5C41.5 34.5 47 29.5 53.5 27Z" fill="${c.acc}"/>
+        <path d="M40.5 34.6L45 32.2" fill="none" stroke="${c.stroke}" stroke-width="2.6" stroke-linecap="round"/>
+        ${gem(33.2, 45.6, 1.5, c.ruby)}
+        <path d="M45.5 58C49 62 53 64 58 64.5M41 66.5C46 69.5 52 70.5 58 70" fill="none" stroke="${c.acc}" stroke-width="2"/>
+        <path d="M29 57.5L45 54.5" fill="none" stroke="${c.stroke}" stroke-width="1.4"/>
+        <path d="M57.5 11C61 7 66 6.5 69 9C65.5 9.5 63 11.5 61.5 15Z" fill="${c.ruby}"/>`,
+    };
+
+    function pieceSvg(color, type) {
+      const c = PAL[color];
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <defs><linearGradient id="g" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="${c.top}"/><stop offset="0.45" stop-color="${c.mid}"/><stop offset="1" stop-color="${c.bot}"/></linearGradient></defs>
+        <g stroke="${c.stroke}" stroke-width="2.4" stroke-linejoin="round">${SHAPES[type](c)}</g></svg>`;
+      return `url("data:image/svg+xml,${encodeURIComponent(svg.replace(/\s+/g, ' '))}")`;
+    }
+    const IMG = {};
+    for (const col of ['w', 'b']) for (const t of 'pnbrqk') IMG[col + t] = pieceSvg(col, t);
+
+    // ------------------------------------------------------------------
+    // Échiquiers
+    // ------------------------------------------------------------------
+    const FILES = 'abcdefgh';
+    function drawBoard(frame, fen) {
+      frame.innerHTML = `<span class="corner tl">⚜</span><span class="corner tr">⚜</span><span class="corner bl">⚜</span><span class="corner br">⚜</span>
+        <div class="coords files">${[...FILES].map((f) => `<span>${f.toUpperCase()}</span>`).join('')}</div>
+        <div class="coords ranks">${[8, 7, 6, 5, 4, 3, 2, 1].map((r) => `<span>${r}</span>`).join('')}</div>
+        <div class="board"></div>`;
+      const board = frame.querySelector('.board');
+      const rows = fen.split(' ')[0].split('/');
+      rows.forEach((row, ri) => {
+        let fi = 0;
+        for (const ch of row) {
+          if (/\d/.test(ch)) {
+            for (let k = 0; k < +ch; k++) addSq(board, ri, fi++, null);
+          } else addSq(board, ri, fi++, ch);
+        }
+      });
+      return board;
+    }
+    function addSq(board, ri, fi, ch) {
+      const sq = document.createElement('div');
+      sq.className = 'sq ' + ((ri + fi) % 2 ? 'd' : 'l');
+      sq.dataset.sq = FILES[fi] + (8 - ri);
+      if (ch) sq.appendChild(pieceEl(ch));
+      board.appendChild(sq);
+    }
+    function pieceEl(ch) {
+      const p = document.createElement('div');
+      p.className = 'pc';
+      const col = ch === ch.toUpperCase() ? 'w' : 'b';
+      p.dataset.p = col + ch.toLowerCase();
+      p.style.backgroundImage = IMG[p.dataset.p];
+      return p;
+    }
+    drawBoard(document.querySelector('[data-board="start"]'), 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR');
+    drawBoard(document.querySelector('[data-board="middle"]'), 'r2q1rk1/pb1nbppp/1p2pn2/2pp4/2PP4/1PNBPN2/PB3PPP/R2Q1RK1');
+
+    // Les 12 pièces en grand
+    const NAMES = { k: 'Roi', q: 'Dame', r: 'Tour', b: 'Fou', n: 'Cavalier', p: 'Pion' };
+    document.getElementById('pieces').innerHTML = ['w', 'b']
+      .flatMap((col) => [...'kqrbnp'].map((t) => `<div class="tile ${col === 'w' ? 'on-d' : 'on-l'}"><div class="pcbig" style='background-image:${IMG[col + t]}'></div><span>${NAMES[t]} ${col === 'w' ? 'crème' : 'or'}</span></div>`))
+      .join('');
+
+    // ------------------------------------------------------------------
+    // Démonstration de prise : animation de base + particules or ou crème
+    // ------------------------------------------------------------------
+    const DEMOS = {
+      gold: { fen: 'r1b1k2r/ppp2ppp/2n5/3q4/8/2N5/PPP2PPP/R1BQK2R', from: 'c3', to: 'd5', san: 'Nxd5', captured: 'q', victim: 'b' },
+      cream: { fen: '4r1k1/ppp2ppp/2n5/8/8/4B3/PPP2PPP/4R1K1', from: 'e8', to: 'e3', san: 'Rxe3', captured: 'b', victim: 'w' },
+    };
+    const VALUE = { p: 1, n: 3, b: 3, r: 5, q: 9 };
+    const demoFrame = document.getElementById('demo-board');
+    const rand = (a, b) => a + Math.random() * (b - a);
+    const pick = (a) => a[Math.floor(Math.random() * a.length)];
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let timer = null;
+
+    function setup(name) {
+      const d = DEMOS[name];
+      const board = drawBoard(demoFrame, d.fen);
+      const fxU = document.createElement('div'); fxU.className = 'fx fx-under'; board.appendChild(fxU);
+      const fx = document.createElement('div'); fx.className = 'fx'; board.appendChild(fx);
+      return { board, fx, fxU, d };
+    }
+    function center(board, sq) {
+      const s = board.clientWidth / 8;
+      return { x: (FILES.indexOf(sq[0]) + 0.5) * s, y: (8 - +sq[1] + 0.5) * s, s };
+    }
+    function once(node, frames, opts) {
+      const a = node.animate(frames, opts);
+      a.finished.then(() => node.remove(), () => node.remove());
+    }
+    function dot(parent, style) {
+      const e = document.createElement('div');
+      e.className = 'p';
+      Object.assign(e.style, style);
+      parent.appendChild(e);
+      return e;
+    }
+
+    function play(name, withSound) {
+      clearTimeout(timer);
+      const { board, fx, fxU, d } = setup(name);
+      const from = board.querySelector(`[data-sq="${d.from}"]`);
+      const to = board.querySelector(`[data-sq="${d.to}"]`);
+      const mover = from.querySelector('.pc');
+      const victim = to.querySelector('.pc');
+      const a = center(board, d.from);
+      const b = center(board, d.to);
+      const { s } = b;
+      const value = VALUE[d.captured];
+      const impact = 160;
+      timer = setTimeout(() => {
+        // la pièce qui prend glisse vers la case
+        mover.animate([{ transform: 'none' }, { transform: `translate(${b.x - a.x}px, ${b.y - a.y}px)` }], { duration: impact, easing: 'cubic-bezier(.3,.6,.4,1)', fill: 'forwards' });
+        mover.style.zIndex = 4;
+        // la pièce prise : un instant, puis elle s'illumine et éclate (animation de base)
+        victim.remove();
+        const ghost = dot(fxU, { left: `${b.x - s / 2}px`, top: `${b.y - s / 2}px`, width: `${s}px`, height: `${s}px`, backgroundImage: IMG[d.victim + d.captured], backgroundSize: '100% 100%' });
+        const tilt = rand(-28, 28);
+        once(ghost, [
+          { transform: 'scale(1) rotate(0deg)', opacity: 1, filter: 'brightness(1)' },
+          { transform: 'scale(1) rotate(0deg)', opacity: 1, filter: 'brightness(1)', offset: 0.22 },
+          { transform: `scale(1.22) rotate(${tilt}deg) translateY(-8%)`, opacity: 0, filter: 'brightness(2.2) blur(2px)' },
+        ], { duration: 560, easing: 'cubic-bezier(.2,.7,.3,1)' });
+        if (withSound) playSound({ san: d.san, captured: d.captured, flags: 'c' }, 'neutral', { capture: 'astrea', endAnim: 'astrea' });
+        setTimeout(() => {
+          board.querySelectorAll('.last').forEach((e) => e.classList.remove('last'));
+          from.classList.add('last'); to.classList.add('last');
+          burst(fx, b, d.victim, value);
+        }, impact);
+      }, 350);
+    }
+
+    function burst(fx, { x, y, s }, victim, value) {
+      const gold = ['#fff3c0', '#f6d77a', '#e3b440', '#c9982c', '#a87a1c'];
+      const cream = ['#ffffff', '#fffaf0', '#f7eed6', '#efe0bb', '#e3cf9c'];
+      const cols = victim === 'b' ? gold : cream;
+      const glow = victim === 'b' ? 'rgba(246, 205, 100, .95)' : 'rgba(255, 248, 230, .95)';
+      // éclair sur la case
+      const flash = dot(fx, { left: `${x}px`, top: `${y}px`, width: `${s * 1.5}px`, height: `${s * 1.5}px`, borderRadius: '50%', background: `radial-gradient(circle, ${glow} 0%, transparent 65%)`, mixBlendMode: 'screen' });
+      once(flash, [{ transform: 'translate(-50%,-50%) scale(.4)', opacity: 0.95 }, { transform: 'translate(-50%,-50%) scale(1.15)', opacity: 0 }], { duration: 320, easing: 'ease-out' });
+      // onde
+      for (const [delay, size, w] of [[0, 1.25 + value * 0.06, 0.05], ...(value >= 5 ? [[90, 1.9, 0.03]] : [])]) {
+        const r = dot(fx, { left: `${x}px`, top: `${y}px`, width: `${s}px`, height: `${s}px`, border: `${Math.max(2, s * w)}px solid ${glow}`, borderRadius: '50%' });
+        once(r, [{ transform: 'translate(-50%,-50%) scale(.25)', opacity: 0.95 }, { transform: `translate(-50%,-50%) scale(${size})`, opacity: 0 }], { duration: 480, delay, easing: 'cubic-bezier(.15,.75,.35,1)', fill: 'backwards' });
+      }
+      if (reduce) return;
+      // éclats de la pièce (comme le pack de base)
+      for (let i = 0; i < 8 + value * 2; i++) {
+        const w = s * rand(0.06, 0.12);
+        const e = dot(fx, { left: `${x}px`, top: `${y}px`, width: `${w}px`, height: `${w * rand(0.6, 1.4)}px`, background: pick(cols), borderRadius: '2px', boxShadow: '0 0 0 1px rgba(60,35,5,.35)' });
+        const ang = rand(0, Math.PI * 2), dist = s * rand(0.45, 1.1), dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist, rot = rand(-540, 540);
+        once(e, [
+          { transform: 'translate(-50%,-50%)', opacity: 1 },
+          { transform: `translate(calc(-50% + ${dx * 0.75}px), calc(-50% + ${dy * 0.75}px)) rotate(${rot * 0.6}deg)`, opacity: 1, offset: 0.55 },
+          { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy + s * 0.35}px)) rotate(${rot}deg) scale(.4)`, opacity: 0 },
+        ], { duration: rand(520, 760), easing: 'cubic-bezier(.12,.75,.35,1)' });
+      }
+      // EN PLUS : particules scintillantes or ou crème, qui montent puis retombent lentement
+      for (let i = 0; i < 30 + value * 3; i++) {
+        const size = s * rand(0.06, 0.13);
+        const col = pick(cols);
+        const star = Math.random() < 0.4;
+        const e = dot(fx, {
+          left: `${x}px`, top: `${y}px`, width: `${size}px`, height: `${size}px`, background: col,
+          borderRadius: star ? '0' : '50%', clipPath: star ? 'polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%)' : 'none',
+          boxShadow: star ? 'none' : `0 0 ${size * 1.2}px ${size * 0.3}px ${glow}`, filter: star ? `drop-shadow(0 0 ${size * 0.5}px ${glow})` : 'none',
+        });
+        const ang = rand(0, Math.PI * 2), dist = s * rand(0.3, 1.5);
+        const dx = Math.cos(ang) * dist, up = Math.sin(ang) * dist - s * rand(0.2, 0.7);
+        once(e, [
+          { transform: 'translate(-50%,-50%) scale(.3)', opacity: 0 },
+          { transform: `translate(calc(-50% + ${dx * 0.7}px), calc(-50% + ${up * 0.7}px)) scale(1.1)`, opacity: 1, offset: 0.25 },
+          { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${up + s * rand(0.5, 1)}px)) scale(.5) rotate(${rand(-180, 180)}deg)`, opacity: 0 },
+        ], { duration: rand(1100, 1800), delay: rand(0, 160), easing: 'cubic-bezier(.2,.7,.4,1)', fill: 'backwards' });
+      }
+      // secousse
+      const k = value >= 9 ? 4.5 : value >= 5 ? 3 : value >= 3 ? 1.6 : 0;
+      if (k) {
+        const frames = [];
+        for (let i = 0; i <= 9; i++) { const p = k * (1 - i / 9); frames.push({ transform: i === 9 ? 'none' : `translate(${rand(-p, p).toFixed(1)}px, ${rand(-p, p).toFixed(1)}px)` }); }
+        demoFrame.animate(frames, { duration: 300 });
+      }
+    }
+
+    // Démo en boucle (sans son), et boutons (avec le son de base)
+    let turn = 'gold';
+    function loop() {
+      play(turn, false);
+      turn = turn === 'gold' ? 'cream' : 'gold';
+      loopTimer = setTimeout(loop, 3200);
+    }
+    let loopTimer = null;
+    setup('gold');
+    loopTimer = setTimeout(loop, 600);
+    document.getElementById('demo-gold').addEventListener('click', () => { clearTimeout(loopTimer); play('gold', true); });
+    document.getElementById('demo-cream').addEventListener('click', () => { clearTimeout(loopTimer); play('cream', true); });
+  </script>
+</body>
+</html>

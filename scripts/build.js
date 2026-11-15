@@ -22,6 +22,20 @@ for (const [from, to] of copies) {
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.copyFileSync(from, dest);
 }
+// Pièces classiques « cburnett » (Chessground, GPL) pour le pack « Classic chess » de l'inventaire.
+// Le fichier d'origine pose les images directement sur les pièces ; on le transforme en variables
+// (--p-wP, --p-bK…) rangées sous .pieces-classic, pour que chaque joueur choisisse ses pièces.
+{
+  const src = fs.readFileSync(nm('@lichess-org/chessground/assets/chessground.cburnett.css'), 'utf8');
+  const ROLE = { pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', king: 'K' };
+  const vars = [];
+  for (const m of src.matchAll(/\.cg-wrap piece\.(\w+)\.(white|black)\s*\{\s*background-image:\s*(url\([^)]*\))/g)) {
+    vars.push(`  --p-${m[2][0]}${ROLE[m[1]]}: ${m[3]};`);
+  }
+  if (vars.length !== 12) throw new Error(`cburnett : ${vars.length} pièces trouvées au lieu de 12`);
+  const dest = path.join(dist, 'vendor/chessground-assets/chessground.cburnett.css');
+  fs.writeFileSync(dest, `/* Pièces « cburnett » de Chessground (lichess, licence GPL), transformées pour ROOOK par scripts/build.js */\n.pieces-classic {\n${vars.join('\n')}\n}\n`);
+}
 // Licence du moteur (GPL) distribuée avec lui
 fs.copyFileSync(nm('stockfish/Copying.txt'), path.join(dist, 'vendor/stockfish/LICENCE.txt'));
 // GitHub Pages : pas de traitement Jekyll

@@ -4,6 +4,7 @@
 // - présence en ligne, amis, demandes d'amis
 // - défis en direct : notification où qu'on soit sur le site, fenêtre « Défier »
 import { escapeHtml, getPref, setPref } from './common.js';
+import './theme.js'; // apparence choisie dans l'inventaire (plateau, pièces…)
 import {
   auth, db, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   sendPasswordResetEmail, verifyBeforeUpdateEmail, deleteUser,

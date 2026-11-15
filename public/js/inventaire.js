@@ -3,9 +3,12 @@
 import { Chessground } from '../vendor/chessground/chessground.min.js';
 import { $, $$, Chess, escapeHtml } from './common.js';
 import { toast } from './compte.js';
-import { PACKS, SLOTS, SLOT_NAMES, getEquip, setEquip, equipPack, onEquipChange, themeClasses, ready } from './theme.js';
+import { PACKS, SLOTS, SLOT_NAMES, getEquip, setEquip, equipPack, onEquipChange, themeClasses, ready, isUnlocked, unlockProgress } from './theme.js';
 import { createFx } from './fx.js';
 import { playSound, isMuted } from './sound.js';
+
+/** Bloc « verrouillé » : cadenas, condition et barre de progression (rempli par refresh()). */
+const lockBlock = (p) => (p.unlock ? '<div class="inv-lock" data-lock hidden></div>' : '');
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const MIDDLE = 'r1bq1rk1/pp2bppp/2n1pn2/3p4/2PP4/2N1PN2/PP3PPP/R2QKB1R w KQ - 0 8';
@@ -51,6 +54,7 @@ packsEl.innerHTML = PACKS.map(
     <div class="inv-body">
       <h3>${escapeHtml(p.name)}</h3>
       <p class="muted">${escapeHtml(p.desc)}</p>
+      ${lockBlock(p)}
       <ul class="inv-pack-list">${SLOTS.map((s) => `<li><span>${SLOT_NAMES[s]}</span> ${escapeHtml(p.items[s].name)}</li>`).join('')}</ul>
       <div class="inv-actions"><button class="btn btn-primary small inv-equip" data-equip-pack="${p.id}">Tout équiper</button></div>
     </div>
@@ -71,6 +75,7 @@ for (const grid of $$('.inv-grid[data-slot]')) {
       <div class="inv-body">
         <h3>${escapeHtml(it.name)} <span class="inv-from">${escapeHtml(p.name)}</span></h3>
         <p class="muted">${escapeHtml(it.desc)}</p>
+        ${lockBlock(p)}
         <div class="inv-actions">${buttons}${equipButton(`data-equip-slot="${slot}" data-equip-id="${p.id}"`)}</div>
       </div>
     </article>`;
@@ -113,6 +118,12 @@ $('main').addEventListener('click', async (e) => {
   if (demo) return playDemo(demo.closest('.inv-card'), demo.dataset.demo);
   const btn = e.target.closest('.inv-equip');
   if (!btn || btn.disabled) return;
+  const packId = btn.dataset.equipPack || btn.dataset.equipId;
+  if (!isUnlocked(packId)) {
+    const pr = unlockProgress(packId);
+    toast(`🔒 Encore <b>${pr.need - pr.wins}</b> victoire${pr.need - pr.wins > 1 ? 's' : ''} en ligne pour débloquer ce pack.`, { cls: 'info' });
+    return;
+  }
   try {
     if (btn.dataset.equipPack) {
       await equipPack(btn.dataset.equipPack);
@@ -128,7 +139,27 @@ $('main').addEventListener('click', async (e) => {
 });
 
 // --- État « équipé » -------------------------------------------------------------
+/** Met à jour les cadenas et les barres de progression des packs à débloquer. */
+function refreshLocks() {
+  for (const card of $$('.inv-card')) {
+    const id = card.dataset.pack || card.dataset.id;
+    const box = card.querySelector('[data-lock]');
+    const locked = !isUnlocked(id);
+    card.classList.toggle('locked', locked);
+    if (!box) continue;
+    const pr = unlockProgress(id);
+    box.hidden = false;
+    box.classList.toggle('done', pr.unlocked);
+    box.innerHTML = pr.unlocked
+      ? '<div class="inv-lock-head">🏆 Débloqué avec tes victoires en ligne !</div>'
+      : `<div class="inv-lock-head">🔒 Se débloque avec <b>${pr.need} victoires</b> en ligne contre tes amis</div>
+         <div class="inv-progress" role="progressbar" aria-valuemin="0" aria-valuemax="${pr.need}" aria-valuenow="${pr.wins}"><i style="width:${Math.min(100, (pr.wins / pr.need) * 100)}%"></i></div>
+         <div class="inv-lock-count">${pr.wins} / ${pr.need} victoires</div>`;
+  }
+}
+
 function refresh() {
+  refreshLocks();
   const eq = getEquip();
   for (const b of boards) {
     for (const cls of [...b.node.classList]) if (/^(board|pieces|end|capture)-[a-z]+$/.test(cls)) b.node.classList.remove(cls);
@@ -138,6 +169,13 @@ function refresh() {
     const on = eq[card.dataset.slot] === card.dataset.id;
     card.classList.toggle('equipped', on);
     const btn = card.querySelector('.inv-equip');
+    if (!isUnlocked(card.dataset.id)) {
+      btn.disabled = false; // le clic explique ce qu'il manque
+      btn.textContent = '🔒 Verrouillé';
+      btn.classList.remove('btn-primary');
+      btn.classList.add('btn-ghost');
+      continue;
+    }
     btn.disabled = on;
     btn.textContent = on ? '✓ Équipé' : 'Équiper';
     btn.classList.toggle('btn-primary', !on);
@@ -148,6 +186,13 @@ function refresh() {
     const some = SLOTS.some((s) => eq[s] === card.dataset.pack);
     card.classList.toggle('equipped', on);
     const btn = card.querySelector('.inv-equip');
+    if (!isUnlocked(card.dataset.pack)) {
+      btn.disabled = false;
+      btn.textContent = '🔒 Verrouillé';
+      btn.classList.remove('btn-primary');
+      btn.classList.add('btn-ghost');
+      continue;
+    }
     btn.disabled = on;
     btn.textContent = on ? '✓ Pack équipé' : some ? 'Tout équiper' : 'Équiper le pack';
     btn.classList.toggle('btn-primary', !on);
@@ -159,6 +204,7 @@ refresh();
 $('#inv-muted').hidden = !isMuted();
 
 ready.then(({ signedIn }) => {
+  refresh();
   $('#inv-where').innerHTML = signedIn
     ? '✓ Enregistré sur ton compte : tu retrouves ton apparence sur tous tes appareils.'
     : 'Enregistré dans ce navigateur. <a href="connexion.html?retour=inventaire.html">Connecte-toi</a> pour retrouver ton apparence partout.';

@@ -537,6 +537,18 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   --coord-on-light-shadow: none;
   --board-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 18px 45px rgba(0, 0, 0, 0.55);
 }
+/* Pack Royal : ivoire et brun profond, liseré d'or autour du plateau (comme la maquette) */
+.board-royal {
+  --sq-light: #f3e8cb;
+  --sq-dark: #8b5d2e;
+  --sq-last: rgba(216, 176, 76, 0.5);
+  --sq-selected: rgba(240, 216, 143, 0.62);
+  --coord-on-dark: #f7eed6;
+  --coord-on-dark-shadow: 0 1px 2px rgba(40, 20, 5, 0.6);
+  --coord-on-light: #6b4519;
+  --coord-on-light-shadow: 0 1px 0 rgba(255, 250, 235, 0.6);
+  --board-shadow: 0 0 0 2px #d8b04c, 0 0 0 5px #2a170b, 0 0 0 6px rgba(227, 196, 106, 0.55), 0 18px 45px rgba(0, 0, 0, 0.55), 0 0 50px rgba(216, 176, 76, 0.16);
+}
 /* Échiquier violet (remplace le thème bois) : damier en conic-gradient, a8 toujours clair */
 cg-board {
   background-color: var(--sq-light);
@@ -763,6 +775,21 @@ body::after {
   --p-bR: url('../img/pieces/bR.svg');
   --p-bQ: url('../img/pieces/bQ.svg');
   --p-bK: url('../img/pieces/bK.svg');
+}
+/* Pack Royal : pièces crème (Blancs) et or (Noirs), générées depuis la maquette (scripts/pieces-royal.js) */
+.pieces-royal {
+  --p-wP: url('../img/pieces-royal/wP.svg');
+  --p-wN: url('../img/pieces-royal/wN.svg');
+  --p-wB: url('../img/pieces-royal/wB.svg');
+  --p-wR: url('../img/pieces-royal/wR.svg');
+  --p-wQ: url('../img/pieces-royal/wQ.svg');
+  --p-wK: url('../img/pieces-royal/wK.svg');
+  --p-bP: url('../img/pieces-royal/bP.svg');
+  --p-bN: url('../img/pieces-royal/bN.svg');
+  --p-bB: url('../img/pieces-royal/bB.svg');
+  --p-bR: url('../img/pieces-royal/bR.svg');
+  --p-bQ: url('../img/pieces-royal/bQ.svg');
+  --p-bK: url('../img/pieces-royal/bK.svg');
 }
 .cg-wrap piece.pawn.white { background-image: var(--p-wP); }
 .cg-wrap piece.knight.white { background-image: var(--p-wN); }
@@ -1216,3 +1243,19 @@ a.person-link:hover { color: var(--accent-soft); }
   .topnav { gap: 7px; font-size: 0.76rem; }
   .topbar { padding-left: 12px; padding-right: 12px; gap: 8px; }
 }
+
+/* Particules dorées / crème du pack Royal (prise et échec et mat) */
+.fx-mote { position: absolute; border-radius: 50%; pointer-events: none; will-change: transform, opacity; z-index: 3; }
+
+/* Inventaire : packs verrouillés (grisés) et barre de progression vers le déblocage */
+.inv-card.locked .inv-preview { filter: grayscale(0.85) brightness(0.62); }
+.inv-card.locked h3, .inv-card.locked > .inv-body > p { opacity: 0.7; }
+.inv-card.locked { border-style: dashed; }
+.inv-lock { margin: 10px 0 4px; padding: 10px 12px; border-radius: 12px; background: rgba(216, 176, 76, 0.07); border: 1px solid rgba(216, 176, 76, 0.28); display: flex; flex-direction: column; gap: 7px; }
+.inv-lock-head { font-size: 0.86rem; color: #f0d88f; }
+.inv-lock-head b { color: #ffe28a; }
+.inv-progress { height: 9px; border-radius: 99px; background: rgba(0, 0, 0, 0.35); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(216, 176, 76, 0.25); }
+.inv-progress i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #b47b16, #ffe28a); box-shadow: 0 0 10px rgba(255, 210, 110, 0.55); transition: width 0.6s ease; min-width: 2px; }
+.inv-lock-count { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.inv-lock.done { background: rgba(60, 242, 163, 0.07); border-color: rgba(60, 242, 163, 0.3); }
+.inv-lock.done .inv-lock-head { color: var(--mint); }

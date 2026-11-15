@@ -181,8 +181,9 @@ function classicMate(outcome) {
 }
 
 const astrea = { move: () => tok(), capture, castle, promote, check };
-const SETS = { astrea, classic };
-const MATES = { astrea: mate, classic: classicMate };
+// Royal : mêmes sons qu'Astrea (prises, échec, échec et mat inchangés)
+const SETS = { astrea, classic, royal: astrea };
+const MATES = { astrea: mate, classic: classicMate, royal: mate };
 
 /**
  * Son d'un coup (objet « verbose » de chess.js).

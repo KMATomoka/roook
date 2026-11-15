@@ -1,6 +1,7 @@
 // Effets visuels des coups : prises, échec, échec et mat.
 // Tout passe par l'API Web Animations : rien ne reste dans la page une fois l'effet terminé.
-// L'inventaire (js/theme.js) choisit la variante : « astrea » (éclats, confettis) ou « classic » (sobre).
+// L'inventaire (js/theme.js) choisit la variante : « astrea » (éclats, confettis), « classic » (sobre)
+// ou « royal » (comme Astrea, avec des particules dorées pour les pièces noires et crème pour les blanches).
 import { playSound } from './sound.js';
 import { getEquip } from './theme.js';
 
@@ -12,6 +13,12 @@ const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matche
 const rand = (a, b) => a + Math.random() * (b - a);
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+// Pack Royal : or pour les pièces noires, crème pour les blanches
+const ROYAL = {
+  b: ['#ffe28a', '#f0d88f', '#d29a1e', '#b47b16'],
+  w: ['#fffaf0', '#f7eed6', '#f3e6c4', '#ffffff'],
+  glow: { b: 'rgba(255, 210, 110, .95)', w: 'rgba(255, 246, 220, .95)' },
+};
 
 /**
  * @param {HTMLElement} frame  conteneur .board-frame de l'échiquier
@@ -115,10 +122,38 @@ export function createFx(frame, getOrientation) {
     }
   }
 
+  /** Particules du pack Royal : petites lueurs qui jaillissent, flottent vers le haut et scintillent. */
+  function motes(sq, side, { count = 16, delay = 0, spread = 1, rise = 1 } = {}) {
+    if (reduceMotion()) return;
+    const { x, y, s } = at(sq);
+    const colors = ROYAL[side];
+    for (let i = 0; i < count; i++) {
+      const r = s * rand(0.035, 0.085);
+      const c = pick(colors);
+      const d = el(over, 'fx-mote', { left: `${x}px`, top: `${y}px`, width: `${r}px`, height: `${r}px`, background: c, boxShadow: `0 0 ${r * 1.6}px ${r * 0.5}px ${ROYAL.glow[side]}` });
+      const ang = rand(0, Math.PI * 2);
+      const dist = s * rand(0.25, 0.85) * spread;
+      const dx = Math.cos(ang) * dist;
+      const dy = Math.sin(ang) * dist * 0.6;
+      const up = -s * rand(0.5, 1.3) * rise;
+      once(
+        d,
+        [
+          { transform: 'translate(-50%,-50%) scale(.2)', opacity: 0 },
+          { transform: `translate(calc(-50% + ${dx * 0.6}px), calc(-50% + ${dy * 0.6}px)) scale(1.15)`, opacity: 1, offset: 0.18 },
+          { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy + up * 0.55}px)) scale(.8)`, opacity: 0.55, offset: 0.55 },
+          { transform: `translate(calc(-50% + ${dx * 1.1}px), calc(-50% + ${dy + up * 0.75}px)) scale(1)`, opacity: 0.9, offset: 0.7 },
+          { transform: `translate(calc(-50% + ${dx * 1.2}px), calc(-50% + ${dy + up}px)) scale(.3)`, opacity: 0 },
+        ],
+        { duration: rand(900, 1500), delay: delay + rand(0, 120), easing: 'cubic-bezier(.2,.7,.35,1)', fill: 'backwards' },
+      );
+    }
+  }
+
   // -------------------------------------------------------------------------
   // Prise
   // -------------------------------------------------------------------------
-  function captureFx(move) {
+  function captureFx(move, royal = false) {
     // En passant : le pion pris n'est pas sur la case d'arrivée
     const sq = move.flags.includes('e') ? move.to[0] + move.from[1] : move.to;
     const victim = move.color === 'w' ? 'b' : 'w';
@@ -139,10 +174,12 @@ export function createFx(frame, getOrientation) {
       { duration: 560, easing: 'cubic-bezier(.2,.7,.3,1)' },
     );
 
-    const pieceColors = victim === 'w' ? ['#fbf8ee', '#e9e4d3', '#ffffff'] : ['#2b2b29', '#45443f', '#151514'];
-    flashSquare(sq, 'rgba(225,215,255,.9)', impact, 280);
-    shards(sq, { count: 8 + value * 2, colors: [...pieceColors, ...pieceColors, '#b9a6ff', '#3cf2a3'], delay: impact });
-    ring(sq, { delay: impact, size: 1.2 + value * 0.06, duration: 460 });
+    const pieceColors = royal ? ROYAL[victim] : victim === 'w' ? ['#fbf8ee', '#e9e4d3', '#ffffff'] : ['#2b2b29', '#45443f', '#151514'];
+    const accents = royal ? ['#f0d88f', '#ffffff'] : ['#b9a6ff', '#3cf2a3'];
+    flashSquare(sq, royal ? ROYAL.glow[victim] : 'rgba(225,215,255,.9)', impact, 280);
+    shards(sq, { count: 8 + value * 2, colors: [...pieceColors, ...pieceColors, ...accents], delay: impact });
+    ring(sq, { delay: impact, size: 1.2 + value * 0.06, duration: 460, ...(royal ? { color: 'rgba(240,216,143,.95)' } : {}) });
+    if (royal) motes(sq, victim, { count: 10 + value * 2, delay: impact });
     if (value >= 5) ring(sq, { delay: impact + 90, size: 1.9, width: 0.03, color: 'rgba(255,255,255,.6)', duration: 600 });
     setTimeout(() => shake(value >= 9 ? 4.5 : value >= 5 ? 3 : value >= 3 ? 1.6 : 0, 300), impact);
   }
@@ -248,7 +285,7 @@ export function createFx(frame, getOrientation) {
   // -------------------------------------------------------------------------
   // Échec et mat
   // -------------------------------------------------------------------------
-  async function mateFx(move, kingSq, loser, outcome, gen) {
+  async function mateFx(move, kingSq, loser, outcome, gen, royal = false) {
     const { x, y, s } = at(kingSq);
     const W = frame.clientWidth;
     const calm = reduceMotion();
@@ -287,8 +324,8 @@ export function createFx(frame, getOrientation) {
 
     // Ondes de choc et secousse
     ring(kingSq, { color: 'rgba(235,70,60,1)', size: 2.4, width: 0.07, duration: 700 });
-    ring(kingSq, { color: 'rgba(143,107,255,.95)', delay: 120, size: 4, width: 0.05, duration: 900 });
-    ring(kingSq, { color: 'rgba(60,242,163,.8)', delay: 200, size: 5, width: 0.03, duration: 1000 });
+    ring(kingSq, { color: royal ? 'rgba(240,216,143,.95)' : 'rgba(143,107,255,.95)', delay: 120, size: 4, width: 0.05, duration: 900 });
+    ring(kingSq, { color: royal ? 'rgba(255,246,220,.85)' : 'rgba(60,242,163,.8)', delay: 200, size: 5, width: 0.03, duration: 1000 });
     ring(kingSq, { color: 'rgba(255,255,255,.7)', delay: 260, size: 6, width: 0.03, duration: 1100 });
     flashSquare(kingSq, 'rgba(255,60,50,.95)', 0, 700);
     shake(10, 750);
@@ -300,11 +337,15 @@ export function createFx(frame, getOrientation) {
     // Explosion : confettis pour une victoire, éclats sombres pour une défaite
     setTimeout(() => {
       if (gen !== generation || calm) return;
-      const winColors = ['#8f6bff', '#b9a6ff', '#cdbeff', '#3cf2a3', '#ffffff', '#ff8a95'];
+      const winColors = royal ? [...ROYAL.b, ...ROYAL.w] : ['#8f6bff', '#b9a6ff', '#cdbeff', '#3cf2a3', '#ffffff', '#ff8a95'];
       const lossColors = ['#2b2b29', '#45443f', '#8a1f17', '#e0584c', '#6b6a63'];
       const colors = outcome === 'loss' ? lossColors : winColors;
       confetti(x, y, s, W, colors, outcome === 'loss' ? 45 : 90);
-      shards(kingSq, { count: 18, colors: loser === 'w' ? ['#fbf8ee', '#e9e4d3'] : ['#2b2b29', '#45443f'], spread: [0.6, 1.6], delay: 0 });
+      shards(kingSq, { count: 18, colors: royal ? ROYAL[loser] : loser === 'w' ? ['#fbf8ee', '#e9e4d3'] : ['#2b2b29', '#45443f'], spread: [0.6, 1.6], delay: 0 });
+      if (royal) {
+        motes(kingSq, loser, { count: 26, spread: 1.8, rise: 1.6 });
+        motes(kingSq, loser === 'w' ? 'b' : 'w', { count: 22, spread: 2.4, rise: 2, delay: 180 });
+      }
     }, 380);
 
     // Grand titre
@@ -380,9 +421,9 @@ export function createFx(frame, getOrientation) {
       playSound(move, outcome, eq);
       if (!visual) return;
       const gen = generation;
-      if (move.captured) (eq.capture === 'classic' ? classicCaptureFx : captureFx)(move);
+      if (move.captured) eq.capture === 'classic' ? classicCaptureFx(move) : captureFx(move, eq.capture === 'royal');
       const kSq = move.san.includes('+') || mated ? kingSquare(chess, loser) : null;
-      if (mated && kSq) (classicEnd ? classicMateFx : mateFx)(move, kSq, loser, outcome, gen);
+      if (mated && kSq) classicEnd ? classicMateFx(move, kSq, loser, outcome, gen) : mateFx(move, kSq, loser, outcome, gen, eq.endAnim === 'royal');
       else if (kSq) (classicEnd ? classicCheckFx : checkFx)(kSq);
     },
     /** Efface tout (nouvelle partie). */

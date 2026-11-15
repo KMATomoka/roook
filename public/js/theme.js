@@ -32,17 +32,61 @@ export const PACKS = [
       capture: { name: 'Prise classique', desc: 'La pièce s’efface ; petits bruits de bois.' },
     },
   },
+  {
+    id: 'royal',
+    name: 'Royal chess',
+    desc: 'Or et crème, esprit chevalier : plateau ivoire et brun liseré d’or, pièces couronnées et joyaux.',
+    // Se débloque avec 10 victoires en ligne contre des amis (parties vérifiées par l'arbitre)
+    unlock: { wins: 10 },
+    items: {
+      board: { name: 'Damier royal', desc: 'Ivoire et brun profond, liseré d’or.' },
+      pieces: { name: 'Pièces royales', desc: 'Crème pour les Blancs, or pour les Noirs : couronnes, joyaux, cavalier en armure.' },
+      endAnim: { name: 'Mat royal', desc: 'Comme Astrea, avec une pluie de particules d’or et de crème.' },
+      capture: { name: 'Prise royale', desc: 'Comme Astrea, avec des particules d’or ou de crème selon la pièce prise ; mêmes sons.' },
+    },
+  },
 ];
 export const DEFAULT = 'astrea';
 const IDS = new Set(PACKS.map((p) => p.id));
 
 const LOCAL = 'roque:equip'; // sans compte
 const CACHE = 'roque:equip-dernier'; // dernier équipement affiché (pour éviter un « flash » au chargement)
+const WINS_CACHE = 'roque:victoires'; // dernier nombre de victoires connu (même raison)
+
+// Victoires en ligne du joueur (parties entre amis, vérifiées par l'arbitre) : débloquent des packs
+let wins = Number(readLocal(WINS_CACHE)) || 0;
+const packById = (id) => PACKS.find((p) => p.id === id);
+/** Un pack est-il débloqué pour ce joueur ? */
+export const isUnlocked = (id) => {
+  const p = packById(id);
+  return !!p && (!p.unlock || wins >= p.unlock.wins);
+};
+/** Progression vers un pack verrouillé : { wins, need, unlocked }. */
+export const unlockProgress = (id) => {
+  const need = packById(id)?.unlock?.wins || 0;
+  return { wins, need, unlocked: wins >= need };
+};
 
 function clean(e) {
   const out = {};
-  for (const s of SLOTS) out[s] = e && IDS.has(e[s]) ? e[s] : DEFAULT;
+  for (const s of SLOTS) out[s] = e && IDS.has(e[s]) && isUnlocked(e[s]) ? e[s] : DEFAULT;
   return out;
+}
+
+/** Compte les victoires en ligne dans l'historique du joueur (les parties contre Noa ne comptent pas). */
+async function loadWins(u) {
+  try {
+    const snap = await get(ref(db, `history/${u}`));
+    let n = 0;
+    for (const g of Object.values(snap.val() || {})) {
+      if (g.mode === 'ia') continue;
+      if ((g.result === '1-0' && g.me === 'w') || (g.result === '0-1' && g.me === 'b')) n++;
+    }
+    wins = n;
+    writeLocal(WINS_CACHE, n);
+  } catch {
+    // hors ligne : on garde le dernier nombre connu
+  }
 }
 function readLocal(key) {
   try {
@@ -89,12 +133,13 @@ export const ready = new Promise((resolve) => {
     uid = u ? u.uid : null;
     if (u) {
       try {
-        const snap = await get(ref(db, `users/${u.uid}/equip`));
+        const [snap] = await Promise.all([get(ref(db, `users/${u.uid}/equip`)), loadWins(u.uid)]);
         equip = clean(snap.val());
       } catch {
         // hors ligne ou base injoignable : on garde le dernier équipement connu
       }
     } else {
+      wins = 0; // sans compte, pas de victoires en ligne
       equip = clean(readLocal(LOCAL));
     }
     changed();
@@ -107,6 +152,9 @@ export const ready = new Promise((resolve) => {
 
 /** Équipe un ou plusieurs éléments, par ex. { pieces: 'classic' } ou un pack entier. */
 export async function setEquip(partial) {
+  for (const id of Object.values(partial)) {
+    if (!isUnlocked(id)) throw new Error('Ce pack est encore verrouillé.');
+  }
   const next = clean({ ...equip, ...partial });
   equip = next;
   changed();

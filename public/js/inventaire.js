@@ -6,9 +6,12 @@
 import { Chessground } from '../vendor/chessground/chessground.min.js';
 import { $, $$, Chess, escapeHtml } from './common.js';
 import { toast } from './compte.js';
-import { PACKS, SLOTS, SLOT_NAMES, getEquip, setEquip, equipPack, onEquipChange, themeClasses, ready, isUnlocked, unlockProgress } from './theme.js';
+import { PACKS, SLOTS, SLOT_NAMES, getEquip, setEquip, equipPack, onEquipChange, themeClasses, ready, isUnlocked, unlockProgress, loadPackFont } from './theme.js';
 import { createFx } from './fx.js';
 import { playSound, isMuted } from './sound.js';
+
+// Les aperçus montrent les animations de tous les packs : on charge leurs polices une fois la page affichée
+addEventListener('load', () => PACKS.forEach((p) => loadPackFont(p.id)));
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const MIDDLE = 'r1bq1rk1/pp2bppp/2n1pn2/3p4/2PP4/2N1PN2/PP3PPP/R2QKB1R w KQ - 0 8';

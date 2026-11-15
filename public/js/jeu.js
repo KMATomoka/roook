@@ -239,10 +239,13 @@ setInterval(() => {
       lowTimeBeep();
     }
   }
+  // On ne touche à la page que si l'affichage change (sinon le navigateur recalcule la mise en page 10 fois par seconde)
   for (const el of $$('[data-clock]')) {
     const ms = liveClock(el.dataset.clock);
-    el.textContent = formatClock(ms);
-    el.classList.toggle('low', ms < 20000);
+    const txt = formatClock(ms);
+    if (el.textContent !== txt) el.textContent = txt;
+    const low = ms < 20000;
+    if (el.classList.contains('low') !== low) el.classList.toggle('low', low);
   }
 }, 100);
 

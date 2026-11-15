@@ -624,6 +624,9 @@ html::before {
     radial-gradient(0.7px 0.7px at 182px 196px, rgba(200, 190, 255, 0.45), transparent 70%);
   background-size: 210px 210px;
   opacity: 0.55;
+  /* la couche déborde de l'écran et glisse (transform) : la carte graphique la déplace sans tout redessiner */
+  inset: -420px -210px 0 0;
+  will-change: transform;
   animation: drift 160s linear infinite;
 }
 body::before {
@@ -645,10 +648,11 @@ body::after {
     radial-gradient(1px 1px at 200px 430px, rgba(255, 255, 255, 0.75), transparent 60%),
     radial-gradient(1.8px 1.8px at 520px 260px, rgba(255, 255, 255, 0.9), transparent 60%);
   background-size: 610px 610px;
+  will-change: opacity;
   animation: twinkle 7s ease-in-out infinite;
 }
 @keyframes twinkle { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.8; } }
-@keyframes drift { from { background-position: 0 0; } to { background-position: -210px 420px; } }
+@keyframes drift { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-210px, 420px, 0); } }
 @media (prefers-reduced-motion: reduce) { html::before, body::after { animation: none; } }
 
 /* Petites touches */
@@ -1996,3 +2000,21 @@ body { padding-bottom: env(safe-area-inset-bottom); }
 .inapp-banner p { margin: 0; color: var(--text); line-height: 1.45; }
 .inapp-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .inapp-actions .btn { flex: 1 1 auto; }
+
+/* ==========================================================================
+   Fluidité sur téléphone et tablette
+   ========================================================================== */
+@media (max-width: 900px), (pointer: coarse) {
+  /* Étoiles immobiles : pas d'animation plein écran qui tourne en continu */
+  html::before, body::after { animation: none; will-change: auto; }
+  body::after { opacity: 0.5; }
+  /* Pas de flou derrière la barre du haut (recalculé à chaque image pendant le défilement) */
+  .topbar { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(14, 11, 28, 0.94); }
+  .topbar .topnav { backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .modal::backdrop { backdrop-filter: none; background: rgba(0, 0, 0, 0.7); }
+  .ban-screen { backdrop-filter: none; }
+  .planet { filter: none; }
+  .moon { animation: none; }
+}
+/* Sections du bas de l'accueil : dessinées seulement quand elles arrivent à l'écran */
+.explore, .how, .footer { content-visibility: auto; contain-intrinsic-size: auto 600px; }

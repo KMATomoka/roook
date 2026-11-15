@@ -11,6 +11,9 @@ const COLOR = { w: 'white', b: 'black' };
 const VALUE = { p: 1, n: 3, b: 3, r: 5, q: 9 };
 const FILES = 'abcdefgh';
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Téléphone et tablette : moins de particules et pas de lueur floutée sur chacune (sinon ça saccade)
+const LITE = matchMedia('(max-width: 900px), (pointer: coarse)').matches;
+const lite = (n) => (LITE ? Math.ceil(n * 0.55) : n);
 const rand = (a, b) => a + Math.random() * (b - a);
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -109,7 +112,7 @@ export function createFx(frame, getOrientation) {
   function shards(sq, { count = 12, colors, spread = [0.45, 1.1], size = [0.06, 0.12], delay = 0, gravity = 0.35, duration = [520, 760] } = {}) {
     if (reduceMotion()) return;
     const { x, y, s } = at(sq);
-    for (let i = 0; i < count; i++) {
+    for (let i = 0, n = lite(count); i < n; i++) {
       const w = s * rand(size[0], size[1]);
       const h = w * rand(0.6, 1.4);
       const d = el(over, 'fx-shard', { left: `${x}px`, top: `${y}px`, width: `${w}px`, height: `${h}px`, background: pick(colors) });
@@ -135,7 +138,7 @@ export function createFx(frame, getOrientation) {
     if (reduceMotion()) return;
     const { x, y, s } = at(sq);
     const colors = ROYAL[side];
-    for (let i = 0; i < count; i++) {
+    for (let i = 0, n = lite(count); i < n; i++) {
       const r = s * rand(0.035, 0.085);
       const c = pick(colors);
       const d = el(over, 'fx-mote', { left: `${x}px`, top: `${y}px`, width: `${r}px`, height: `${r}px`, background: c, boxShadow: `0 0 ${r * 1.6}px ${r * 0.5}px ${ROYAL.glow[side]}` });
@@ -320,7 +323,7 @@ export function createFx(frame, getOrientation) {
   function goldDust(count, gen) {
     const W = frame.clientWidth;
     const H = frame.clientHeight;
-    for (let i = 0; i < count; i++) {
+    for (let i = 0, n = lite(count); i < n; i++) {
       const side = Math.random() < 0.6 ? 'b' : 'w';
       const r = rand(2, 4.5) * (W / 520);
       const d = el(over, 'fx-mote', { left: `${rand(0, W)}px`, top: `${-10}px`, width: `${r}px`, height: `${r}px`, background: pick(ROYAL[side]), boxShadow: `0 0 ${r * 2}px ${r * 0.6}px ${ROYAL.glow[side]}` });
@@ -442,10 +445,10 @@ export function createFx(frame, getOrientation) {
   /** Petites étoiles à 4 branches qui jaillissent d'un point (avec une traînée). */
   function starBurst(x, y, s, { count = 14, colors = SPACE, spread = [0.5, 1.4], size = [0.09, 0.2], delay = 0, duration = [600, 1000] } = {}) {
     if (reduceMotion()) return;
-    for (let i = 0; i < count; i++) {
+    for (let i = 0, n = lite(count); i < n; i++) {
       const w = s * rand(size[0], size[1]);
       const c = pick(colors);
-      const d = el(over, 'fx-star', { left: `${x}px`, top: `${y}px`, width: `${w}px`, height: `${w}px`, background: c, filter: `drop-shadow(0 0 ${w * 0.5}px ${c})` });
+      const d = el(over, 'fx-star', { left: `${x}px`, top: `${y}px`, width: `${w}px`, height: `${w}px`, background: c, filter: LITE ? 'none' : `drop-shadow(0 0 ${w * 0.5}px ${c})` });
       const ang = rand(0, Math.PI * 2);
       const dist = s * rand(spread[0], spread[1]);
       once(
@@ -516,7 +519,7 @@ export function createFx(frame, getOrientation) {
   /** Traînées d'hyperespace qui partent d'un point. */
   function warpStreaks(x, y, W, { count = 26, delay = 0 } = {}) {
     if (reduceMotion()) return;
-    for (let i = 0; i < count; i++) {
+    for (let i = 0, n = lite(count); i < n; i++) {
       const ang = rand(0, 360);
       const len = W * rand(0.12, 0.3);
       const d = el(over, 'fx-streak', { left: `${x}px`, top: `${y}px`, width: `${len}px`, transform: `rotate(${ang}deg)` });
@@ -693,7 +696,7 @@ export function createFx(frame, getOrientation) {
   }
 
   function confetti(x, y, s, W, colors, count) {
-    for (let i = 0; i < count; i++) {
+    for (let i = 0, n = lite(count); i < n; i++) {
       const w = rand(5, 10) * (W / 600);
       const d = el(over, 'fx-confetti', { left: `${x}px`, top: `${y}px`, width: `${w}px`, height: `${w * rand(1.2, 2.2)}px`, background: pick(colors), borderRadius: Math.random() < 0.3 ? '50%' : '2px' });
       const dx = rand(-4.5, 4.5) * s;
@@ -721,7 +724,7 @@ export function createFx(frame, getOrientation) {
   /** Pétales qui jaillissent d'un point puis retombent en se balançant. */
   function petals(px, py, s, { count = 12, spread = 1, delay = 0, colors = SAKURA, rise = 0.7, fall = 2.4, dur = [1500, 2600] } = {}) {
     if (reduceMotion()) return;
-    for (let i = 0; i < count; i++) {
+    for (let i = 0, n = lite(count); i < n; i++) {
       const w = s * rand(0.1, 0.17);
       const d = el(over, 'fx-petal', { left: `${px}px`, top: `${py}px`, width: `${w}px`, height: `${w * 0.8}px`, background: pick(colors) });
       const ang = rand(0, Math.PI * 2);
@@ -751,7 +754,7 @@ export function createFx(frame, getOrientation) {
     const W = frame.clientWidth;
     const H = frame.clientHeight;
     const s = W / 8;
-    for (let i = 0; i < count; i++) {
+    for (let i = 0, n = lite(count); i < n; i++) {
       const start = delay + (i / count) * duration * 0.75 + rand(0, 200);
       setTimeout(() => {
         if (gen !== generation) return;
@@ -1024,7 +1027,7 @@ export function createFx(frame, getOrientation) {
   /** Nuages de poussière qui s'étalent et retombent. */
   function dust(x, y, s, { count = 8, spread = 1, delay = 0, rise = 0.3 } = {}) {
     if (reduceMotion()) return;
-    for (let i = 0; i < count; i++) {
+    for (let i = 0, n = lite(count); i < n; i++) {
       const r = s * rand(0.25, 0.5);
       const d = el(over, 'fx-dust', { left: `${x}px`, top: `${y + s * 0.3}px`, width: `${r}px`, height: `${r}px` });
       const ang = rand(Math.PI, Math.PI * 2);

@@ -151,9 +151,31 @@ export function themeClasses(e) {
   for (const s of SLOTS) c[s] = e && IDS.has(e[s]) ? e[s] : DEFAULT;
   return [`board-${c.board}`, `pieces-${c.pieces}`, `end-${c.endAnim}`, `capture-${c.capture}`];
 }
+// Polices des animations de packs (bannières de fin, « échec ») : chargées seulement si le pack équipé en a
+// besoin. Elles pesaient 115 Ko de CSS bloquant sur chaque page (surtout la police japonaise).
+// Yuji Syuku : seulement les caractères utilisés (勝 負 王 手 et le français), grâce à « text= ».
+const FR = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÉÈÀÂÇéèêëàâîïôûùç’!?.,- ';
+const PACK_FONTS = {
+  royal: 'family=Cinzel:wght@600;700',
+  japon: `family=Yuji+Syuku&text=${encodeURIComponent('勝負王手' + FR)}`,
+  western: 'family=Rye',
+};
+const fontsLoaded = new Set();
+/** Charge la police d'un pack (une seule fois). */
+export function loadPackFont(id) {
+  if (!PACK_FONTS[id] || fontsLoaded.has(id) || !document.head) return;
+  fontsLoaded.add(id);
+  const l = document.createElement('link');
+  l.rel = 'stylesheet';
+  l.href = `https://fonts.googleapis.com/css2?${PACK_FONTS[id]}&display=swap`;
+  document.head.appendChild(l);
+}
+
 function apply() {
   const b = document.body;
   if (!b) return;
+  loadPackFont(equip.endAnim);
+  loadPackFont(equip.capture);
   for (const cls of [...b.classList]) if (/^(board|pieces|end|capture)-[a-z]+$/.test(cls)) b.classList.remove(cls);
   b.classList.add(...themeClasses(equip));
 }

@@ -208,7 +208,8 @@ function badgesRow(p, me) {
 function badgeCard(p) {
   const owned = badgesOf(p, true);
   const wins = myWins(p);
-  const options = Object.entries(BADGES).map(([id, b]) => {
+  // Les badges qu'on possède d'abord, puis « Aucun », puis ceux à débloquer
+  const option = ([id, b]) => {
     const has = owned.includes(id);
     if (!has && id !== 'royal') return ''; // les badges de rôle ne s'affichent que si on les a
     const on = p.badge === id;
@@ -216,15 +217,19 @@ function badgeCard(p) {
     return `<button type="button" class="pf-badge-opt ${b.cls} ${on ? 'on' : ''} ${has ? '' : 'locked'}" data-badge="${id}" ${has ? '' : 'disabled'} aria-pressed="${on}">
       <span class="pf-badge-emoji">${b.emoji}</span><span class="pf-badge-name">${b.name}</span>${lock || `<span class="pf-badge-state">${on ? '✓ Affiché' : 'Afficher'}</span>`}
     </button>`;
-  }).join('');
+  };
+  const all = Object.entries(BADGES);
+  const mine = all.filter(([id]) => owned.includes(id)).map(option).join('');
+  const locked = all.filter(([id]) => !owned.includes(id)).map(option).join('');
   return `<section class="card pf-badge-card">
     <div>
       <h2>🏅 Badge affiché en partie</h2>
       <p class="muted">Tu peux en porter un seul : son emoji s’affiche à côté de ton pseudo pendant tes parties.</p>
     </div>
     <div class="pf-badge-opts">
-      ${options}
+      ${mine}
       <button type="button" class="pf-badge-opt none ${p.badge ? '' : 'on'}" data-badge="" aria-pressed="${!p.badge}"><span class="pf-badge-emoji">∅</span><span class="pf-badge-name">Aucun</span><span class="pf-badge-state">${p.badge ? 'Choisir' : '✓ Choisi'}</span></button>
+      ${locked}
     </div>
   </section>`;
 }

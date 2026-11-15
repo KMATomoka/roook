@@ -139,10 +139,10 @@ function render(p) {
         : `<div class="pf-pic">${picHtml(p.username, p.avatar, 'profile-avatar', `<i class="presence ${presence}"></i>`)}</div>`}
       <div class="pf-id">
         <h1>${escapeHtml(p.username)}
+          ${badgesRow(p, me)}
           ${p.isPrivate ? '<span class="badge">🔒 privé</span>' : ''}
           ${p.relation === 'friend' ? '<span class="badge me">ami</span>' : ''}
         </h1>
-        ${badgesRow(p, me)}
         <p class="pf-meta">${presenceTxt}<span>Membre depuis ${date(p.createdAt, { month: 'long', year: 'numeric' })}</span>${p.friends ? `<span>${plural(p.friends.length, 'ami')}</span>` : ''}</p>
         ${bioHtml(p, me)}
         ${s ? `<p class="pf-headline">${s.all.n ? `<b>${s.all.rate}%</b> de victoires sur ${plural(s.all.n, 'partie')} en ligne` : 'Pas encore de partie en ligne'}</p>` : ''}
@@ -198,9 +198,9 @@ const badgesOf = (p, me) => ownedBadges({ role: p.role, royal: p.hasRoyalProof |
 function badgesRow(p, me) {
   const owned = badgesOf(p, me);
   if (!owned.length) return '';
-  return `<div class="pf-badges">${owned
-    .map((id) => `<span class="pf-badge ${id === p.badge ? 'worn' : ''}" title="${id === p.badge ? 'Affiché en partie' : ''}">${badgeHtml(id)}${id === p.badge ? '<small>en partie</small>' : ''}</span>`)
-    .join('')}</div>`;
+  return `<span class="pf-badges">${owned
+    .map((id) => `<span class="pf-badge ${id === p.badge ? 'worn' : ''}" title="${id === p.badge ? 'Badge affiché en partie' : ''}">${badgeHtml(id)}</span>`)
+    .join('')}</span>`;
 }
 
 /** Mon profil : choisir LE badge affiché à côté de mon pseudo en partie. */

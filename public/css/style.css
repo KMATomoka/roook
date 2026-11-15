@@ -1447,9 +1447,10 @@ a.person-link:hover { color: var(--accent-soft); }
 .badge-emoji.founder { filter: drop-shadow(0 0 4px rgba(60, 242, 163, 0.65)); }
 .badge-emoji.royal { filter: drop-shadow(0 0 4px rgba(255, 210, 110, 0.75)); }
 .badge-emoji.admin { filter: drop-shadow(0 0 4px rgba(143, 107, 255, 0.65)); }
-.pf-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
+.pf-badges { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; font-family: var(--font); }
+.pf-id h1 .badge { font-family: var(--font); font-size: 0.82rem; padding: 4px 11px; }
 .pf-badge { display: inline-flex; align-items: center; gap: 6px; }
-.pf-badge small { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.pf-badge.worn .badge { box-shadow: 0 0 0 2px var(--bg, #0d0b1a), 0 0 0 3.5px currentColor; }
 .pf-badge-card { display: flex; flex-direction: column; gap: 14px; padding: 16px 20px; }
 .pf-badge-card h2 { margin: 0 0 2px; font-size: 1.05rem; }
 .pf-badge-card p { margin: 0; font-size: 0.9rem; }

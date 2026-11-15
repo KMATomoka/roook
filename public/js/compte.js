@@ -334,6 +334,7 @@ export const BADGES = {
   // Badge du pack Sakura chess : ouvert à tous pour l'instant (free) ; il ne s'affiche sur le profil que si on le porte
   sakura: { name: 'Sakura', emoji: '🌸', cls: 'sakura', free: true, how: 'Le badge du pack Sakura chess, ouvert à tous.' },
   western: { name: 'Western', emoji: '⭐', cls: 'western', free: true, how: 'Le badge du pack Western chess (l’étoile du shérif), ouvert à tous.' },
+  ocean: { name: 'Océan', emoji: '🌊', cls: 'ocean', free: true, how: 'Le badge du pack Océan (la vague), ouvert à tous.' },
 };
 export const ROYAL_WINS = 100;
 

@@ -784,9 +784,173 @@ function westernMate(outcome) {
   twang(164.8, 3.19, 0.05, 2.0);
 }
 
+// --- Sons « Océan » : sous l'eau (bulles, tourbillon, battements graves, baleine) ----------------
+let seaBus = null;
+/** Sortie « sous l'eau » : un peu étouffée, avec un écho qui se répète (créée une seule fois). */
+function sea() {
+  const a = audio();
+  if (!a) return null;
+  if (!seaBus) {
+    seaBus = a.createGain();
+    const lp = a.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 2600;
+    const delay = a.createDelay();
+    delay.delayTime.value = 0.22;
+    const fb = a.createGain();
+    fb.gain.value = 0.36;
+    const wet = a.createGain();
+    wet.gain.value = 0.32;
+    seaBus.connect(lp);
+    lp.connect(master);
+    lp.connect(delay);
+    delay.connect(fb).connect(delay);
+    delay.connect(wet).connect(master);
+  }
+  return a;
+}
+/** Note douce envoyée sous l'eau. */
+function seaTone(type, f0, f1, at, dur, vol, attack = 0.01) {
+  const a = sea();
+  if (!a) return;
+  const t = a.currentTime + at;
+  const o = a.createOscillator();
+  const g = a.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(f0, t);
+  if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.9);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(seaBus);
+  o.start(t);
+  o.stop(t + dur + 0.05);
+}
+const bubble = (at, f = 500, vol = 0.12) => seaTone('sine', f, f * 2.4, at, 0.09, vol, 0.005);
+const bubbles = (at, n = 8, span = 0.8, vol = 0.1) => {
+  for (let i = 0; i < n; i++) bubble(at + Math.random() * span, 380 + Math.random() * 720, vol * (0.5 + Math.random() * 0.5));
+};
+/** « Bloup » : une pièce posée sous l'eau. */
+const bloop = (at = 0, pitch = 1) => {
+  seaTone('sine', 260 * pitch, 120 * pitch, at, 0.16, 0.34, 0.005);
+  bubble(at + 0.05, 700 * pitch, 0.06);
+};
+/** L'eau qui tourbillonne et s'engouffre (bruit qui boucle, filtre qui descend). */
+function swirl(at = 0, dur = 1.1, vol = 0.32) {
+  const a = sea();
+  if (!a) return;
+  const t = a.currentTime + at;
+  const src = a.createBufferSource();
+  src.buffer = noiseBuf;
+  src.loop = true;
+  const fl = a.createBiquadFilter();
+  fl.type = 'bandpass';
+  fl.Q.value = 2.2;
+  fl.frequency.setValueAtTime(1500, t);
+  fl.frequency.exponentialRampToValueAtTime(200, t + dur);
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + dur * 0.25);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(fl).connect(g).connect(seaBus);
+  src.start(t, Math.random() * 0.5);
+  src.stop(t + dur + 0.05);
+}
+const thump = (at = 0, vol = 0.55) => seaTone('sine', 90, 38, at, 0.45, vol, 0.005);
+const heartbeat = (at = 0) => {
+  thump(at, 0.5);
+  thump(at + 0.24, 0.38);
+};
+/** Chant de baleine : deux longues plaintes qui glissent, avec un léger vibrato. */
+function whale(at = 0, vol = 0.15) {
+  const a = sea();
+  if (!a) return;
+  for (const [d, f0, f1, f2, len] of [[0, 220, 470, 300, 2.4], [1.9, 330, 260, 410, 2]]) {
+    const t = a.currentTime + at + d;
+    const o = a.createOscillator();
+    const g = a.createGain();
+    const lfo = a.createOscillator();
+    const lg = a.createGain();
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(f1, t + len * 0.45);
+    o.frequency.exponentialRampToValueAtTime(f2, t + len);
+    lfo.frequency.value = 5.5;
+    lg.gain.value = 7;
+    lfo.connect(lg).connect(o.frequency);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + len * 0.35);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(g).connect(seaBus);
+    o.start(t);
+    lfo.start(t);
+    o.stop(t + len + 0.05);
+    lfo.stop(t + len + 0.05);
+  }
+}
+/** Notes cristallines qui montent (la nacre). */
+const chimes = (at = 0, n = 6) =>
+  [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98].slice(0, n).forEach((f, i) => {
+    seaTone('sine', f, f, at + i * 0.11, 1.6, 0.07);
+    seaTone('triangle', f * 2, f * 2, at + i * 0.11, 0.6, 0.02);
+  });
+/** Grondement des profondeurs qui descend. */
+function drone(at = 0, dur = 3.5, vol = 0.18) {
+  const a = sea();
+  if (!a) return;
+  const t = a.currentTime + at;
+  for (const det of [0, 7]) {
+    const o = a.createOscillator();
+    const fl = a.createBiquadFilter();
+    const g = a.createGain();
+    o.type = 'sawtooth';
+    o.detune.value = det;
+    o.frequency.setValueAtTime(98, t);
+    o.frequency.exponentialRampToValueAtTime(41, t + dur);
+    fl.type = 'lowpass';
+    fl.frequency.value = 320;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.6);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(fl).connect(g).connect(seaBus);
+    o.start(t);
+    o.stop(t + dur + 0.05);
+  }
+}
+const ocean = {
+  move: () => bloop(),
+  capture: () => {
+    swirl(0, 1.1);
+    bubbles(0.3, 6, 0.7, 0.08);
+    bloop(0.62, 0.9);
+  },
+  castle: () => {
+    bloop(0);
+    bloop(0.15, 0.9);
+  },
+  promote: () => {
+    bloop(0);
+    chimes(0.08, 4);
+  },
+  check: () => heartbeat(0.05),
+};
+/** Mat « Les Abysses ». Victoire : notes de nacre, chant de baleine, bulles. Défaite : grondement, cœur qui bat, bulles lentes. */
+function oceanMate(outcome) {
+  if (outcome === 'loss') {
+    thump(0.3, 0.6);
+    drone(0.3, 4.5);
+    heartbeat(1.2);
+    heartbeat(2.2);
+    bubbles(2.4, 10, 2, 0.07);
+    return;
+  }
+  chimes(0.4);
+  whale(0.8);
+  bubbles(0.9, 14, 2.5, 0.08);
+}
+
 const royalSet = { move: () => tok(), capture, castle, promote, check };
-const SETS = { astrea: space, classic, royal: royalSet, japon: sakura, western };
-const MATES = { astrea: spaceMate, classic: classicMate, royal: royalMate, japon: sakuraMate, western: westernMate };
+const SETS = { astrea: space, classic, royal: royalSet, japon: sakura, western, ocean };
+const MATES = { astrea: spaceMate, classic: classicMate, royal: royalMate, japon: sakuraMate, western: westernMate, ocean: oceanMate };
 
 /**
  * Son d'un coup (objet « verbose » de chess.js).

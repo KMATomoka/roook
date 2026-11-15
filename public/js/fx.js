@@ -2,7 +2,7 @@
 // Tout passe par l'API Web Animations : rien ne reste dans la page une fois l'effet terminé.
 // L'inventaire (js/theme.js) choisit la variante : « astrea » (espace), « classic » (sobre), « royal » (couronnement,
 // particules d'or), « japon » (Sakura : coup de sabre, pétales de cerisier, soleil rouge, sceaux 勝 / 負)
-// ou « western » (coups de feu, viseur, virevoltant, pancarte de saloon).
+// « western » (coups de feu, viseur, virevoltant, pancarte de saloon) ou « ocean » (siphon, aileron, baleine, kraken).
 import { playSound } from './sound.js';
 import { getEquip } from './theme.js';
 
@@ -1249,6 +1249,276 @@ export function createFx(frame, getOrientation) {
   }
 
   // -------------------------------------------------------------------------
+  // Pack Océan : siphon, aileron, Les Abysses
+  // -------------------------------------------------------------------------
+  /** Tourbillon vu de dessus : un centre sombre et des bras en spirale. */
+  const WHIRL = (() => {
+    const arm = (a0, w, col, op) => {
+      const pts = [];
+      for (let i = 0; i <= 44; i++) {
+        const t = i / 44;
+        const r = 47 - 42 * t;
+        const a = a0 + t * Math.PI * 1.7;
+        pts.push(`${(Math.cos(a) * r).toFixed(1)} ${(Math.sin(a) * r).toFixed(1)}`);
+      }
+      return `<path d="M${pts.join(' L')}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" opacity="${op}"/>`;
+    };
+    const arms = [0, 1, 2, 3].map((k) => arm((k * Math.PI) / 2, 3, '#e6fbff', 0.8)).join('') + [0, 1, 2, 3].map((k) => arm((k * Math.PI) / 2 + 0.7, 1.5, '#6fe3ea', 0.75)).join('');
+    return `<svg viewBox="-50 -50 100 100"><defs><radialGradient id="fx-wp" r=".5"><stop offset="0" stop-color="#01070f" stop-opacity=".95"/><stop offset=".28" stop-color="#05223a" stop-opacity=".8"/><stop offset=".7" stop-color="#1d6f8f" stop-opacity=".35"/><stop offset="1" stop-color="#6fe3ea" stop-opacity="0"/></radialGradient></defs><circle r="49" fill="url(#fx-wp)"/>${arms}</svg>`;
+  })();
+  const FIN = `<svg viewBox="0 0 40 32" style="overflow:visible"><path d="M6 27 C12 22.5 16 14 16 3 C23 6.5 31 15 34 27Z" fill="#35576b" stroke="#0b1d29" stroke-width="1.6" stroke-linejoin="round"/><path d="M18 7 C21 11 25 17 27 24" fill="none" stroke="#7ea9bf" stroke-width="1.4" opacity=".7"/><path d="M-4 28 Q4 25 12 28 T28 28 T44 28" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" opacity=".9"/></svg>`;
+  const WHALE = `<svg viewBox="0 0 200 90"><g fill="rgba(3,26,46,.8)"><path d="M196 46 C194 34 176 24 150 21 C112 16 66 22 46 40 C40 44 34 46 24 46 L10 32 C7 38 9 44 14 49 C9 54 6 60 9 66 L24 53 C34 53 42 56 50 60 C72 70 120 72 150 68 C176 64 196 58 196 46Z"/><path d="M128 66 C126 76 118 84 106 86 C112 78 114 72 114 67Z"/></g><path d="M150 56 C165 58 180 56 192 52 M146 61 C162 63.5 178 61.5 189 57" stroke="rgba(150,220,255,.3)" stroke-width="1.6" fill="none"/><circle cx="172" cy="41" r="2.2" fill="rgba(170,235,255,.6)"/></svg>`;
+  const FISH = (col) => `<svg viewBox="0 0 30 14"><path d="M2 7 C7 1 17 1 23 7 C17 13 7 13 2 7Z M22 7 L29 2 L27.5 7 L29 12Z" fill="${col}"/><circle cx="7" cy="6" r="1.1" fill="#04192c"/></svg>`;
+  const EYE = `<svg viewBox="0 0 120 60" style="overflow:visible"><defs><radialGradient id="fx-iris" cx=".5" cy=".5" r=".55"><stop offset="0" stop-color="#fff4a8"/><stop offset=".5" stop-color="#ffaa2a"/><stop offset="1" stop-color="#8f2a0c"/></radialGradient></defs><path d="M4 30 Q60 -6 116 30 Q60 66 4 30Z" fill="url(#fx-iris)" stroke="#2b0716" stroke-width="3"/><path d="M30 22 Q60 30 90 22 M28 38 Q60 31 92 38" fill="none" stroke="#7a2510" stroke-width="1.2" opacity=".6"/><ellipse class="pupil" cx="60" cy="30" rx="5" ry="21" fill="#0c0206"/><ellipse cx="51" cy="21" rx="5" ry="2.6" fill="#fff" opacity=".7"/><path d="M0 30 Q60 -12 120 30" fill="none" stroke="#3a0f2a" stroke-width="6" stroke-linecap="round"/></svg>`;
+  // Tentacule : pointe enroulée vers la droite (flip = vers la gauche)
+  const TENTACLE = (flip) => `<svg viewBox="0 0 40 120" preserveAspectRatio="none" style="transform:scaleX(${flip ? -1 : 1})"><defs><linearGradient id="fx-tg" x1="0" x2="1"><stop offset="0" stop-color="#2a0b2c"/><stop offset=".5" stop-color="#5c1a4f"/><stop offset="1" stop-color="#1f0820"/></linearGradient></defs><path d="M9 122 C5 92 23 74 16.5 50 C10.5 30 18 11 30 6.5 C36.5 4.5 38.5 11 33.5 13 C25.5 17 21 31 27 48 C35 72 24 94 26.5 122Z" fill="url(#fx-tg)" stroke="#0d0310" stroke-width="1.6"/><g fill="#c86fa8" stroke="#3a0d38" stroke-width=".8"><circle cx="30.5" cy="17" r="1.2"/><circle cx="26.5" cy="26" r="1.5"/><circle cx="25.5" cy="36" r="1.8"/><circle cx="27.5" cy="47" r="2"/><circle cx="30" cy="59" r="2.2"/><circle cx="30.5" cy="72" r="2.3"/><circle cx="28.5" cy="85" r="2.4"/><circle cx="27" cy="99" r="2.5"/><circle cx="26.8" cy="112" r="2.6"/></g></svg>`;
+
+  /** Le carré de l'échiquier réel dans le cadre : { ox, oy, W }. */
+  function boardBox() {
+    const fr = frame.getBoundingClientRect();
+    const board = frame.querySelector('cg-board');
+    const br = board ? board.getBoundingClientRect() : fr;
+    return { ox: br.left - fr.left, oy: br.top - fr.top, W: br.width };
+  }
+
+  /** Bulles qui remontent en ondulant. */
+  function seaBubbles(parent, x, y, s, count, { delay = 0, spread = 0.6, rise = 1.6, span = 400, size = 1 } = {}) {
+    if (reduceMotion()) return;
+    for (let i = 0, n = lite(count); i < n; i++) {
+      const r = s * rand(0.06, 0.16) * size;
+      const b = el(parent, 'fx-bubble', { left: `${x + rand(-spread, spread) * s}px`, top: `${y + rand(-0.2, 0.2) * s}px`, width: `${r}px`, height: `${r}px` });
+      const h = s * rand(rise * 0.6, rise);
+      const wob = s * rand(0.06, 0.18);
+      once(
+        b,
+        [
+          { transform: 'translate(-50%,-50%) scale(.3)', opacity: 0 },
+          { transform: `translate(calc(-50% + ${wob}px), calc(-50% - ${h * 0.35}px)) scale(1)`, opacity: 1, offset: 0.3 },
+          { transform: `translate(calc(-50% - ${wob}px), calc(-50% - ${h * 0.7}px)) scale(1)`, opacity: 0.9, offset: 0.65 },
+          { transform: `translate(-50%, calc(-50% - ${h}px)) scale(1.15)`, opacity: 0 },
+        ],
+        { duration: rand(1000, 1600), delay: delay + rand(0, span), easing: 'ease-out', fill: 'backwards' },
+      );
+    }
+  }
+
+  /** Prise « Siphon » : un tourbillon s'ouvre sous la case, la pièce prise y tourne et disparaît. */
+  function oceanCaptureFx(move) {
+    const sq = move.flags.includes('e') ? move.to[0] + move.from[1] : move.to;
+    const victim = move.color === 'w' ? 'b' : 'w';
+    const { x, y, s } = at(sq);
+    const ghost = el(over, 'cg-wrap fx-ghost', { left: `${x - s / 2}px`, top: `${y - s / 2}px`, width: `${s}px`, height: `${s}px` }, `<piece class="${ROLE[move.captured]} ${COLOR[victim]}"></piece>`);
+    if (reduceMotion()) {
+      once(ghost, [{ opacity: 1 }, { opacity: 0 }], { duration: 300 });
+      return;
+    }
+    const wp = el(under, 'fx-whirl', { left: `${x}px`, top: `${y}px`, width: `${s * 1.45}px`, height: `${s * 1.45}px` }, WHIRL);
+    once(
+      wp,
+      [
+        { transform: 'translate(-50%,-50%) rotate(0deg) scale(.2)', opacity: 0 },
+        { transform: 'translate(-50%,-50%) rotate(-160deg) scale(1)', opacity: 1, offset: 0.3 },
+        { transform: 'translate(-50%,-50%) rotate(-480deg) scale(.95)', opacity: 0.9, offset: 0.72 },
+        { transform: 'translate(-50%,-50%) rotate(-680deg) scale(.25)', opacity: 0 },
+      ],
+      { duration: 1150, easing: 'linear' },
+    );
+    once(
+      ghost,
+      [
+        { transform: 'rotate(0deg) scale(1)', opacity: 1, filter: 'none' },
+        { transform: 'rotate(-80deg) scale(.88)', opacity: 1, filter: 'none', offset: 0.3 },
+        { transform: 'rotate(-460deg) scale(0)', opacity: 0, filter: 'brightness(.35)' },
+      ],
+      { duration: 820, delay: 60, easing: 'cubic-bezier(.5,0,.85,.55)', fill: 'backwards' },
+    );
+    seaBubbles(over, x, y, s, 6, { delay: 520, spread: 0.3, rise: 1.3, span: 300, size: 0.9 });
+  }
+
+  /** Échec « Océan » : un aileron de requin tourne autour du roi menacé, ondes, étiquette « Échec ! ». */
+  function oceanCheckFx(kingSq) {
+    const { x, y, s } = at(kingSq);
+    const above = y - s * 0.75 > s * 0.3;
+    const tag = el(over, 'fx-check-tag ocean', { left: `${Math.min(Math.max(x, s * 0.9), frame.clientWidth - s * 0.9)}px`, top: `${above ? y - s * 0.95 : y + s * 0.95}px`, fontSize: `${Math.max(12, s * 0.26)}px` }, 'Échec !');
+    once(
+      tag,
+      [
+        { transform: 'translate(-50%,-50%) scale(.4)', opacity: 0 },
+        { transform: 'translate(-50%,-50%) scale(1.1)', opacity: 1, offset: 0.12 },
+        { transform: 'translate(-50%,-50%) scale(1)', opacity: 1, offset: 0.85 },
+        { transform: 'translate(-50%,-80%) scale(1)', opacity: 0 },
+      ],
+      { duration: 1800, delay: 80, fill: 'backwards' },
+    );
+    if (reduceMotion()) return;
+    for (let i = 0; i < 3; i++) {
+      const r = el(over, 'fx-ocean-ripple', { left: `${x}px`, top: `${y + s * 0.3}px`, width: `${s}px`, height: `${s * 0.5}px` });
+      once(r, [{ transform: 'translate(-50%,-50%) scale(.4)', opacity: 0.9 }, { transform: 'translate(-50%,-50%) scale(2.2)', opacity: 0 }], { duration: 1200, delay: i * 380, easing: 'ease-out', fill: 'backwards' });
+    }
+    // L'aileron fait un tour et demi autour du roi, puis plonge
+    const fin = el(over, 'fx-ocean-fin', { left: `${x}px`, top: `${y + s * 0.35}px`, width: `${s * 0.62}px`, height: `${s * 0.5}px` }, FIN);
+    const R = s * 1.1;
+    const N = 48;
+    const frames = [];
+    for (let i = 0; i <= N; i++) {
+      const th = Math.PI / 2 + (i / N) * 1.4 * Math.PI * 2;
+      const dx = Math.cos(th) * R;
+      const dy = Math.sin(th) * R * 0.45;
+      const v = -Math.sin(th);
+      const sx = (v >= 0 ? 1 : -1) * Math.max(0.3, Math.abs(v));
+      const up = i < 4 ? i / 4 : i > N - 4 ? (N - i) / 4 : 1;
+      frames.push({ transform: `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) translate(-50%, -100%) scale(${sx.toFixed(2)}, ${up})`, opacity: up * (dy < 0 ? 0.55 : 1) });
+    }
+    once(fin, frames, { duration: 2300, easing: 'linear' });
+  }
+
+  /**
+   * Mat « Les Abysses ». Victoire : la lumière descend de la surface, une baleine passe, un banc de poissons,
+   * le roi vaincu s'enfonce dans sa case et ton roi brille comme une perle.
+   * Défaite : le noir se referme autour de ton roi, l'œil du kraken s'ouvre et ses tentacules l'entraînent.
+   */
+  async function oceanMateFx(move, kingSq, loser, outcome, gen, winSq) {
+    const { x, y, s } = at(kingSq);
+    const calm = reduceMotion();
+    const lose = outcome === 'loss';
+    await wait(140);
+    if (gen !== generation) return;
+    frame.classList.add('mated-' + loser);
+    const { ox, oy, W } = boardBox();
+    // Tout se passe dans le carré de l'échiquier (rien ne dépasse du plateau)
+    const clip = el(over, 'fx-ocean-clip', { left: `${ox}px`, top: `${oy}px`, width: `${W}px`, height: `${W}px` });
+    const kx = x - ox;
+    const ky = y - oy;
+    const king = el(clip, 'cg-wrap fx-king', { left: `${kx - s / 2}px`, top: `${ky - s / 2}px`, width: `${s}px`, height: `${s}px`, zIndex: 6 }, `<piece class="king ${COLOR[loser]}"></piece>`);
+    const later = (fn, ms) => setTimeout(() => gen === generation && fn(), ms);
+    const fades = [];
+
+    if (calm) {
+      king.animate([{ filter: 'none' }, { filter: 'grayscale(.7) brightness(.6)' }], { duration: 500, fill: 'forwards' });
+    } else if (!lose) {
+      // L'eau s'assombrit un peu, la lumière descend de la surface
+      const deep = el(clip, 'fx-ocean-deep', {});
+      deep.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1000, fill: 'forwards' });
+      fades.push(deep);
+      for (let i = 0; i < 5; i++) {
+        const ray = el(clip, 'fx-ocean-ray', { left: `${W * (0.04 + i * 0.21)}px`, top: `${-W * 0.15}px`, width: `${W * rand(0.08, 0.14)}px`, height: `${W * 1.3}px`, transform: 'rotate(14deg)' });
+        ray.animate([{ opacity: 0 }, { opacity: 0.85, offset: 0.25 }, { opacity: 0.35, offset: 0.6 }, { opacity: 0.7 }], { duration: 2600, delay: 200 + i * 140, fill: 'forwards', easing: 'ease-in-out' });
+        fades.push(ray);
+      }
+      // La baleine passe au loin
+      const wh = el(clip, 'fx-ocean-whale', { left: `${-W * 0.75}px`, top: `${W * 0.08}px`, width: `${W * 0.7}px`, height: `${W * 0.315}px`, opacity: '.5', filter: 'blur(1px)' }, WHALE);
+      once(wh, [{ transform: 'translate(0,0) rotate(2deg)' }, { transform: `translate(${W * 0.9}px, ${-W * 0.03}px) rotate(-2deg)`, offset: 0.5 }, { transform: `translate(${W * 1.85}px, ${W * 0.01}px) rotate(2deg)` }], { duration: 7000, easing: 'linear' });
+      // Le roi vaincu s'enfonce lentement dans sa case, dans ses bulles
+      king.animate(
+        [
+          { transform: 'none', clipPath: 'inset(-30% -30% 0 -30%)', filter: 'none' },
+          { transform: 'translateY(-6%) rotate(-8deg)', clipPath: 'inset(-30% -30% 0 -30%)', filter: 'none', offset: 0.12 },
+          { transform: 'translateY(30%) rotate(18deg)', clipPath: 'inset(-30% -30% 30% -30%)', filter: 'brightness(.7) saturate(.7)', offset: 0.6 },
+          { transform: 'translateY(55%) rotate(24deg)', clipPath: 'inset(-30% -30% 55% -30%)', filter: 'brightness(.55) saturate(.6)' },
+        ],
+        { duration: 3200, delay: 300, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'forwards' },
+      );
+      for (let k = 0; k < 5; k++) later(() => seaBubbles(clip, kx, ky + s * 0.2, s, 4, { spread: 0.3, rise: 1.4 }), 400 + k * 450);
+      // Ton roi (ou celui du vainqueur) brille comme une perle
+      if (winSq) {
+        const w = at(winSq);
+        const halo = el(clip, 'fx-ocean-halo', { left: `${w.x - ox}px`, top: `${w.y - oy}px`, width: `${s * 2.2}px`, height: `${s * 2.2}px` });
+        halo.animate([{ transform: 'translate(-50%,-50%) scale(.3)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1)', opacity: 1, offset: 0.4 }, { transform: 'translate(-50%,-50%) scale(.85)', opacity: 0.75 }], { duration: 1600, delay: 900, fill: 'forwards' });
+        fades.push(halo);
+      }
+      // Un banc de poissons traverse le plateau
+      const cols = ['#e8fbff', '#bfeff6', '#f3c4d6', '#9fe7ef'];
+      for (let i = 0, n = lite(16); i < n; i++) {
+        const fsh = el(clip, 'fx-ocean-fish', { left: `${-s}px`, top: `${W * 0.55 + rand(-0.12, 0.12) * W}px`, width: `${s * 0.42}px`, height: `${s * 0.2}px`, zIndex: 7 }, FISH(cols[i % 4]));
+        const dy = rand(-0.08, 0.08) * W;
+        once(
+          fsh,
+          [
+            { transform: 'translate(0,0) scaleX(-1)' },
+            { transform: `translate(${W * 0.5}px, ${dy - W * 0.06}px) scaleX(-1)`, offset: 0.45 },
+            { transform: `translate(${W * 1.2}px, ${dy + W * 0.04}px) scaleX(-1)` },
+          ],
+          { duration: rand(2600, 3200), delay: 1300 + i * rand(40, 90), easing: 'ease-in-out', fill: 'backwards' },
+        );
+      }
+      for (let i = 0; i < 4; i++) later(() => seaBubbles(clip, W * rand(0.1, 0.9), W * 1.02, s, 6, { spread: 0.6, rise: 4.5, size: 1.1 }), 600 + i * 500);
+    } else {
+      // Le noir se referme autour de ton roi
+      const dark = el(clip, 'fx-ocean-dark', { left: `${kx}px`, top: `${ky}px`, width: `${s * 1.7}px`, height: `${s * 1.7}px`, boxShadow: `0 0 0 ${W * 2.2}px rgba(1,6,14,.9), inset 0 0 ${s * 0.5}px ${s * 0.35}px rgba(1,6,14,.9)` });
+      dark.animate([{ transform: 'translate(-50%,-50%) scale(7)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 }], { duration: 1500, easing: 'cubic-bezier(.3,0,.3,1)', fill: 'forwards' });
+      fades.push(dark);
+      // Des lueurs des profondeurs qui dérivent
+      for (let i = 0, n = lite(20); i < n; i++) {
+        const r = rand(2, 4.5);
+        const sp = el(clip, 'fx-ocean-speck', { left: `${rand(0.03, 0.97) * W}px`, top: `${rand(0.1, 1) * W}px`, width: `${r}px`, height: `${r}px` });
+        once(sp, [{ opacity: 0, transform: 'translate(0,0)' }, { opacity: rand(0.5, 1), offset: 0.3 }, { opacity: 0, transform: `translate(${rand(-0.3, 0.3) * s}px, ${-rand(0.5, 1.5) * s}px)` }], { duration: rand(2500, 4000), delay: 700 + rand(0, 1200), fill: 'both' });
+      }
+      // L'œil du kraken s'ouvre loin du roi, cligne, puis le fixe
+      const eyeY = ky > W / 2 ? W * 0.22 : W * 0.78;
+      const eye = el(clip, 'fx-ocean-eye', { left: `${W * 0.5}px`, top: `${eyeY}px`, width: `${W * 0.36}px`, height: `${W * 0.18}px`, zIndex: 7 }, EYE);
+      eye.animate(
+        [
+          { transform: 'translate(-50%,-50%) scaleY(0)', opacity: 0 },
+          { transform: 'translate(-50%,-50%) scaleY(0)', opacity: 1, offset: 0.2 },
+          { transform: 'translate(-50%,-50%) scaleY(1)', opacity: 1, offset: 0.36 },
+          { transform: 'translate(-50%,-50%) scaleY(1)', opacity: 1, offset: 0.55 },
+          { transform: 'translate(-50%,-50%) scaleY(.08)', opacity: 1, offset: 0.6 },
+          { transform: 'translate(-50%,-50%) scaleY(1)', opacity: 1, offset: 0.66 },
+          { transform: 'translate(-50%,-50%) scaleY(1)', opacity: 0.85 },
+        ],
+        { duration: 3600, delay: 500, easing: 'ease-in-out', fill: 'forwards' },
+      );
+      fades.push(eye);
+      const look = (kx - W * 0.5) / W;
+      eye.querySelector('.pupil').animate([{ transform: 'translateX(0)' }, { transform: 'translateX(0)', offset: 0.7 }, { transform: `translate(${(look * 30).toFixed(1)}px, ${ky > eyeY ? 5 : -5}px)` }], { duration: 3600, delay: 500, fill: 'forwards' });
+      // Les tentacules sortent de la case et entraînent ton roi
+      const T = 1900;
+      for (const [off, h, flip, i] of [[-0.62, 1.5, false, 0], [-0.2, 1.25, false, 1], [0.2, 1.35, true, 2], [0.62, 1.6, true, 3]]) {
+        const box = el(clip, 'fx-ocean-tentacle-box', { left: `${kx - s}px`, top: `${ky + s / 2 - s * 1.7}px`, width: `${s * 2}px`, height: `${s * 1.7}px`, overflow: 'hidden', zIndex: 8 });
+        const t = el(box, 'fx-ocean-tentacle', { left: `${s + off * s - s * 0.27}px`, bottom: '0', width: `${s * 0.55}px`, height: `${h * s}px`, transformOrigin: '50% 100%' }, TENTACLE(flip));
+        t.animate(
+          [
+            { transform: 'translateY(100%) rotate(0deg)' },
+            { transform: `translateY(8%) rotate(${flip ? 6 : -6}deg)`, offset: 0.35 },
+            { transform: `translateY(0) rotate(${flip ? -5 : 5}deg)`, offset: 0.55 },
+            { transform: `translateY(4%) rotate(${flip ? 3 : -3}deg)`, offset: 0.7 },
+            { transform: 'translateY(100%) rotate(0deg)' },
+          ],
+          { duration: 2900, delay: T - 900 + i * 90, easing: 'cubic-bezier(.45,0,.55,1)', fill: 'both' },
+        );
+      }
+      king.animate(
+        [
+          { transform: 'none', clipPath: 'inset(-30% -30% 0 -30%)', filter: 'none' },
+          { transform: 'translateX(-4%) rotate(-5deg)', clipPath: 'inset(-30% -30% 0 -30%)', offset: 0.18 },
+          { transform: 'translateX(4%) rotate(5deg)', clipPath: 'inset(-30% -30% 0 -30%)', offset: 0.3 },
+          { transform: 'translateX(-3%) rotate(-3deg)', clipPath: 'inset(-30% -30% 0 -30%)', filter: 'brightness(.8)', offset: 0.42 },
+          { transform: 'translateY(0)', clipPath: 'inset(-30% -30% 0 -30%)', filter: 'brightness(.7)', offset: 0.52 },
+          { transform: 'translateY(70%) rotate(-12deg)', clipPath: 'inset(-30% -30% 70% -30%)', filter: 'brightness(.35)' },
+        ],
+        { duration: 2400, delay: T - 300, easing: 'cubic-bezier(.5,0,.7,1)', fill: 'forwards' },
+      );
+      later(() => seaBubbles(clip, kx, ky + s * 0.2, s, 18, { spread: 0.5, rise: 2.6, span: 900 }), T + 900);
+    }
+
+    // Le titre
+    later(() => {
+      const sub = outcome === 'win' ? 'Victoire' : lose ? 'Défaite' : `${loser === 'w' ? 'Les Noirs' : 'Les Blancs'} gagnent`;
+      const banner = el(over, 'fx-mate-banner ocean ' + outcome, { fontSize: `${Math.max(24, W * 0.1)}px` }, `<div class="t">Échec et mat</div><div class="s">${sub}</div>`);
+      banner.animate(
+        calm
+          ? [{ opacity: 0 }, { opacity: 1 }]
+          : [{ opacity: 0, transform: 'translateY(8%) scale(.85)', filter: 'blur(6px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' }],
+        { duration: calm ? 300 : 1100, easing: 'cubic-bezier(.2,.8,.3,1.1)', fill: 'both' },
+      );
+      later(() => {
+        once(banner, [{ opacity: 1 }, { opacity: 0 }], { duration: 900, fill: 'forwards' });
+        for (const f of fades) once(f, [{ opacity: getComputedStyle(f).opacity }, { opacity: 0 }], { duration: 1100, fill: 'forwards' });
+      }, 5200);
+    }, calm ? 300 : lose ? 3400 : 1300);
+  }
+
+  // -------------------------------------------------------------------------
   // API
   // -------------------------------------------------------------------------
   function kingSquare(chess, color) {
@@ -1279,6 +1549,7 @@ export function createFx(frame, getOrientation) {
         else if (eq.capture === 'royal') captureFx(move, true); // l'ancienne prise (éclats) avec les particules d'or
         else if (eq.capture === 'japon') japonCaptureFx(move);
         else if (eq.capture === 'western') westernCaptureFx(move);
+        else if (eq.capture === 'ocean') oceanCaptureFx(move);
         else spaceCaptureFx(move);
       }
       const kSq = move.san.includes('+') || mated ? kingSquare(chess, loser) : null;
@@ -1287,9 +1558,10 @@ export function createFx(frame, getOrientation) {
         else if (eq.endAnim === 'royal') royalMateFx(move, kSq, kingSquare(chess, loser === 'w' ? 'b' : 'w'), loser, outcome, gen);
         else if (eq.endAnim === 'japon') japonMateFx(move, kSq, loser, outcome, gen, kingSquare(chess, loser === 'w' ? 'b' : 'w'));
         else if (eq.endAnim === 'western') westernMateFx(move, kSq, loser, outcome, gen);
+        else if (eq.endAnim === 'ocean') oceanMateFx(move, kSq, loser, outcome, gen, kingSquare(chess, loser === 'w' ? 'b' : 'w'));
         else spaceMateFx(move, kSq, loser, outcome, gen, kingSquare(chess, loser === 'w' ? 'b' : 'w'));
       }
-      else if (kSq) (classicEnd ? classicCheckFx : eq.endAnim === 'japon' ? japonCheckFx : eq.endAnim === 'western' ? westernCheckFx : checkFx)(kSq);
+      else if (kSq) (classicEnd ? classicCheckFx : eq.endAnim === 'japon' ? japonCheckFx : eq.endAnim === 'western' ? westernCheckFx : eq.endAnim === 'ocean' ? oceanCheckFx : checkFx)(kSq);
     },
     /** Efface tout (nouvelle partie). */
     reset() {

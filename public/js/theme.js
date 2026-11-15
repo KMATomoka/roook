@@ -55,6 +55,17 @@ export const PACKS = [
     },
   },
   {
+    id: 'ocean',
+    name: 'Océan',
+    desc: 'Une partie au fond de la mer : eau claire et eau profonde, pièces de nacre et des abysses, siphon, aileron de requin, baleine et kraken.',
+    items: {
+      board: { name: 'Grand Bleu', desc: 'Eau claire traversée de reflets et eau profonde, des reflets de lumière qui ondulent ; cadre bleu nuit cerclé de nacre.' },
+      pieces: { name: 'Nacre et Abysses', desc: 'Nacre irisée pour les Blancs, bleu des abysses aux contours qui luisent pour les Noirs : perle, corail, coquillage, hippocampe mythique, couronne de perles, trident.' },
+      endAnim: { name: 'Les Abysses', desc: 'Victoire : la lumière descend de la surface, une baleine passe en chantant, un banc de poissons, le roi vaincu coule. Défaite : le noir se referme, l’œil du kraken s’ouvre et ses tentacules entraînent ton roi.' },
+      capture: { name: 'Siphon', desc: 'Un petit tourbillon s’ouvre sur la case et aspire la pièce prise, quelques bulles remontent ; un aileron de requin tourne autour du roi à l’échec.' },
+    },
+  },
+  {
     id: 'royal',
     name: 'Royal chess',
     desc: 'Or et crème, esprit chevalier : plateau ivoire et brun liseré d’or, pièces couronnées et joyaux.',
@@ -159,6 +170,7 @@ const PACK_FONTS = {
   royal: 'family=Cinzel:wght@600;700',
   japon: `family=Yuji+Syuku&text=${encodeURIComponent('勝負王手' + FR)}`,
   western: 'family=Rye',
+  ocean: 'family=Cinzel:wght@700;900',
 };
 const fontsLoaded = new Set();
 /** Charge la police d'un pack (une seule fois). */

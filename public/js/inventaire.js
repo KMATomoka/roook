@@ -23,7 +23,7 @@ const DEMOS = {
 const ICONS = { packs: '◆', board: '▦', pieces: '♞', endAnim: '♚', capture: '✦' };
 const TABS = [{ id: 'packs', name: 'Packs' }, ...SLOTS.map((s) => ({ id: s, name: SLOT_NAMES[s] }))];
 // Couleur de chaque pack (comme la rareté d'un objet)
-const TIER = { astrea: '#9b7bff', classic: '#c4c8d0', japon: '#e8553f', western: '#3fb3a3', royal: '#e2b64e' };
+const TIER = { astrea: '#9b7bff', classic: '#c4c8d0', japon: '#e8553f', western: '#3fb3a3', ocean: '#46e6d4', royal: '#e2b64e' };
 const packById = (id) => PACKS.find((p) => p.id === id);
 const whole = (id) => Object.fromEntries(SLOTS.map((s) => [s, id]));
 

@@ -549,7 +549,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   --coord-on-light-shadow: 0 1px 0 rgba(255, 250, 235, 0.6);
   --board-shadow: 0 0 0 2px #d8b04c, 0 0 0 5px #2a170b, 0 0 0 6px rgba(227, 196, 106, 0.55), 0 18px 45px rgba(0, 0, 0, 0.55), 0 0 50px rgba(216, 176, 76, 0.16);
 }
-/* Pack Sakura : papier washi rose sakura et indigo (ai), vagues seigaiha discrètes sur les cases sombres, cadre de laque vermillon */
+/* Pack Sakura : rose sakura et indigo (ai) ; étoiles asanoha sur les cases roses, vagues seigaiha sur les indigo (scripts/damier-japon.js), cadre de laque vermillon */
 .board-japon {
   --sq-light: #f5c4d0;
   --sq-dark: #5266a0;
@@ -562,7 +562,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   --board-shadow: 0 0 0 3px #c8372d, 0 0 0 6px #1b1414, 0 0 0 7px rgba(200, 55, 45, 0.45), 0 18px 45px rgba(0, 0, 0, 0.55), 0 0 50px rgba(200, 55, 45, 0.14);
 }
 .board-japon cg-board {
-  background-image: url('../img/seigaiha.svg'), conic-gradient(var(--sq-dark) 0 25%, transparent 0 50%, var(--sq-dark) 0 75%, transparent 0);
+  background-image: url('../img/damier-japon.svg'), conic-gradient(var(--sq-dark) 0 25%, transparent 0 50%, var(--sq-dark) 0 75%, transparent 0);
   background-size: 25% 25%, 25% 25%;
 }
 /* Échiquier violet (remplace le thème bois) : damier en conic-gradient, a8 toujours clair */

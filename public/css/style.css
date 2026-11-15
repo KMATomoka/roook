@@ -1114,3 +1114,4 @@ a.person-link:hover { color: var(--accent-soft); }
 }
 @media (max-width: 1000px) { .page-game .mode-label { display: none; } }
 .cg-wrap coords.files { left: 0; bottom: 3px; height: auto; } .cg-wrap coords.files coord { text-align: right; padding-right: 5px; } .cg-wrap coords.ranks { left: 5px; }
+.hero-caption { transition: opacity 0.3s; } .hero-caption.fade { opacity: 0; }

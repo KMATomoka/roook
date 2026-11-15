@@ -1,6 +1,6 @@
 // Génère les pièces du pack « Western chess » (public/img/pieces-western/*.svg).
 // Couleurs du Sud-Ouest : Blancs turquoise (bijoux navajos), Noirs terre cuite (roches rouges des canyons).
-// Pion à foulard, fou à étoile, tour en façade de saloon, cavalier géométrique (style navajo), dame à couronne de balles, roi couronné de l'étoile du shérif.
+// Pion à foulard, fou à étoile, tour en coffre-fort, cavalier géométrique (style navajo), dame à couronne de balles, roi couronné de l'étoile du shérif.
 // Utilisation : node scripts/pieces-western.js
 const fs = require('fs');
 const path = require('path');
@@ -75,19 +75,18 @@ const PIECES = {
   ${sheriffStar(50, 15.5, 5.2, c)}
   <circle cx="50" cy="75" r="2.3" fill="${c.stud}" stroke-width="1"/>`,
 
-  // Tour : façade de saloon (grand fronton en bois, enseigne à étoile, fenêtres, portes battantes)
+  // Tour : coffre-fort de la banque (cadran, poignée, rivets, signe $)
   r: (c) => `${base(c)}
-  <path d="M33 85V50H67V85Z" fill="url(#g)"/>
-  <path d="M30 51.5V31.5Q30 28 33.5 27.5Q37 21.5 43 23.5Q46.5 17.5 50 17.5Q53.5 17.5 57 23.5Q63 21.5 66.5 27.5Q70 28 70 31.5V51.5Z" fill="url(#g)"/>
-  <path d="M29 51.5H71V55.5H29Z" fill="url(#g)"/>
-  <path d="M35 32.5H65V44.5H35Z" fill="${c.mane}" stroke-width="1.6"/>
-  ${sheriffStar(50, 38.5, 4.6, c, c.brass)}
-  <path d="M38 38.5H43M57 38.5H62" stroke="${c.metal}" stroke-width="1.3" stroke-linecap="round"/>
-  <path d="M33.5 59.5H41.5V67.5H33.5ZM58.5 59.5H66.5V67.5H58.5Z" fill="${c.stud}" stroke-width="1.5"/>
-  <path d="M37.5 59.5V67.5M62.5 59.5V67.5" stroke="${c.ink}" stroke-width="1"/>
-  <path d="M44 85V64H56V85Z" fill="${c.mane}" stroke-width="1.6"/>
-  <path d="M44.5 69H49.6V79H44.5ZM50.4 69H55.5V79H50.4Z" fill="url(#g)" stroke-width="1.2"/>
-  <path d="M33 72.5H42M58 72.5H67" stroke="${c.line}" stroke-width="0.9" opacity="0.6"/>`,
+  <path d="M31 85V80H69V85Z" fill="url(#g)"/>
+  <path d="M29 80V27Q29 23 33 23H67Q71 23 71 27V80Z" fill="url(#g)"/>
+  <path d="M34 75V31Q34 28 37 28H63Q66 28 66 31V75Z" fill="none" stroke="${c.line}" stroke-width="1.6"/>
+  <circle cx="50" cy="45" r="9" fill="${c.metal}" stroke-width="1.8"/>
+  <circle cx="50" cy="45" r="3" fill="${c.stud}" stroke-width="1"/>
+  <path d="M50 36.5V39M50 51V53.5M41.5 45H44M56 45H58.5" stroke="${c.ink}" stroke-width="1.2"/>
+  <path d="M44 62H56" stroke="${c.ink}" stroke-width="5" stroke-linecap="round"/>
+  <path d="M44 62H56" stroke="${c.brass}" stroke-width="3" stroke-linecap="round"/>
+  <g fill="${c.ink}" stroke="none"><circle cx="32" cy="26" r="1"/><circle cx="68" cy="26" r="1"/><circle cx="32" cy="77" r="1"/><circle cx="68" cy="77" r="1"/></g>
+  <text x="50" y="72.5" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="8" fill="${c.brass}" stroke="none">$</text>`,
 
   // Dame : couronne de balles (douilles en laiton, ogives en cuivre), plus grande que les autres pièces
   q: (c) => {

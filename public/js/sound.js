@@ -498,9 +498,197 @@ function sakuraMate(outcome) {
   shakuhachi(880, 2.0, 1.7, 0.045);
 }
 
+// --- Sons « Western » : bottes et éperons, revolver, ricochet, douille, sifflement, guitare, harmonica, vent ---
+/** Pas de botte sur le plancher du saloon, avec le tintement de l'éperon. */
+function boot(at = 0, { pitch = 1, vol = 1, spur = true } = {}) {
+  burst({ at, dur: 0.035, vol: 0.5 * vol, freq: 750 * pitch, q: 1.8 });
+  burst({ at, dur: 0.07, vol: 0.32 * vol, type: 'lowpass', freq: 320 * pitch, q: 0.8 });
+  tone({ freq: 180 * pitch, endFreq: 120 * pitch, at, dur: 0.08, vol: 0.18 * vol });
+  if (spur) [4180, 5260, 6320].forEach((f, i) => tone({ freq: f, type: 'sine', at: at + 0.03 + i * 0.025, dur: 0.12, vol: 0.018 * vol, attack: 0.002 }));
+}
+
+/** Coup de revolver : claquement sec, souffle grave, puis l'écho du canyon. */
+function gunshot(at = 0, vol = 1) {
+  burst({ at, dur: 0.05, vol: 0.95 * vol, type: 'highpass', freq: 1800, q: 0.7 });
+  burst({ at, dur: 0.12, vol: 0.85 * vol, freq: 1100, q: 0.6 });
+  burst({ at, dur: 0.38, vol: 0.6 * vol, type: 'lowpass', freq: 520, endFreq: 140, q: 0.7 });
+  tone({ freq: 95, endFreq: 38, at, dur: 0.32, vol: 0.55 * vol, attack: 0.002 });
+  // Écho
+  burst({ at: at + 0.24, dur: 0.3, vol: 0.18 * vol, type: 'lowpass', freq: 700, endFreq: 220, q: 0.6 });
+  burst({ at: at + 0.5, dur: 0.35, vol: 0.08 * vol, type: 'lowpass', freq: 520, endFreq: 180, q: 0.6 });
+}
+
+/** Ricochet : la balle qui siffle en s'éloignant. */
+function ricochet(at = 0, vol = 1) {
+  tone({ freq: 3600, endFreq: 1150, type: 'sine', at, dur: 0.55, vol: 0.045 * vol, attack: 0.004 });
+  tone({ freq: 3640, endFreq: 1180, type: 'sine', at: at + 0.005, dur: 0.5, vol: 0.03 * vol, attack: 0.004 });
+}
+
+/** Le chien du revolver qu'on arme : deux déclics métalliques. */
+function hammer(at = 0, vol = 1) {
+  burst({ at, dur: 0.018, vol: 0.55 * vol, freq: 3200, q: 6 });
+  tone({ freq: 2400, type: 'square', at, dur: 0.015, vol: 0.03 * vol });
+  burst({ at: at + 0.11, dur: 0.022, vol: 0.7 * vol, freq: 4300, q: 7 });
+  tone({ freq: 3100, type: 'square', at: at + 0.11, dur: 0.02, vol: 0.035 * vol });
+}
+
+/** Douille qui tombe et rebondit sur le plancher. */
+function shell(at = 0, vol = 1) {
+  [[0, 1], [0.11, 0.6], [0.18, 0.35], [0.22, 0.2]].forEach(([dt, v]) => {
+    tone({ freq: 5200, type: 'sine', at: at + dt, dur: 0.07, vol: 0.03 * v * vol, attack: 0.001 });
+    tone({ freq: 6900, type: 'sine', at: at + dt, dur: 0.05, vol: 0.02 * v * vol, attack: 0.001 });
+  });
+}
+
+/** Sifflement à la western : sinusoïde pure, petit glissé et vibrato. */
+function whistle(freq, at, dur, vol = 0.05, from = null) {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + at;
+  const o = a.createOscillator();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(from || freq * 0.94, t);
+  o.frequency.exponentialRampToValueAtTime(freq, t + 0.07);
+  const lfo = a.createOscillator();
+  lfo.frequency.value = 6;
+  const depth = a.createGain();
+  depth.gain.setValueAtTime(0, t);
+  depth.gain.linearRampToValueAtTime(freq * 0.015, t + dur * 0.7);
+  lfo.connect(depth).connect(o.frequency);
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.05);
+  g.gain.setValueAtTime(vol, t + dur * 0.75);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(master);
+  o.start(t);
+  o.stop(t + dur + 0.05);
+  lfo.start(t);
+  lfo.stop(t + dur + 0.05);
+}
+
+/** Guitare « twang » : corde pincée, brillante, qui glisse un peu vers la note. */
+function twang(freq, at = 0, vol = 0.07, dur = 1.2) {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + at;
+  const fl = a.createBiquadFilter();
+  fl.type = 'lowpass';
+  fl.frequency.setValueAtTime(4200, t);
+  fl.frequency.exponentialRampToValueAtTime(700, t + dur);
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  fl.connect(g).connect(master);
+  for (const [type, m, v] of [['sawtooth', 1, 1], ['triangle', 2, 0.5]]) {
+    const o = a.createOscillator();
+    o.type = type;
+    o.frequency.setValueAtTime(freq * m * 0.97, t);
+    o.frequency.exponentialRampToValueAtTime(freq * m, t + 0.06);
+    const og = a.createGain();
+    og.gain.value = v;
+    o.connect(og).connect(fl);
+    o.start(t);
+    o.stop(t + dur + 0.05);
+  }
+}
+
+/** Harmonica : anche un peu nasillarde (dents de scie filtrées) et vibrato. */
+function harmonica(freq, at, dur, vol = 0.05, bend = null) {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + at;
+  const fl = a.createBiquadFilter();
+  fl.type = 'bandpass';
+  fl.frequency.value = freq * 2.2;
+  fl.Q.value = 1.2;
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.08);
+  g.gain.setValueAtTime(vol, t + dur * 0.7);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  fl.connect(g).connect(master);
+  const lfo = a.createOscillator();
+  lfo.frequency.value = 5;
+  const depth = a.createGain();
+  depth.gain.value = freq * 0.012;
+  lfo.connect(depth);
+  for (const det of [-6, 6]) {
+    const o = a.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(freq, t);
+    if (bend) o.frequency.exponentialRampToValueAtTime(bend, t + dur);
+    o.detune.value = det;
+    depth.connect(o.frequency);
+    o.connect(fl);
+    o.start(t);
+    o.stop(t + dur + 0.05);
+  }
+  lfo.start(t);
+  lfo.stop(t + dur + 0.05);
+}
+
+/** Vent du désert : souffle filtré qui monte et retombe. */
+function desertWind(at = 0, dur = 2.6, vol = 0.12) {
+  noiseSweep({ at, dur, f: [260, 900, 380], q: 7, vol, peak: 0.45 });
+  noiseSweep({ at: at + 0.4, dur: dur * 0.8, f: [500, 1300, 600], q: 9, vol: vol * 0.5, peak: 0.5 });
+}
+
+const western = {
+  move: () => boot(),
+  // Le coup de feu (au moment où l'éclair du canon apparaît), parfois un ricochet, puis la douille
+  capture: () => {
+    gunshot(0.1);
+    if (Math.random() < 0.35) ricochet(0.2);
+    shell(0.45);
+  },
+  castle: () => {
+    boot(0);
+    boot(0.16, { pitch: 0.92, spur: false });
+  },
+  promote: () => {
+    boot(0, { spur: false });
+    whistle(1760, 0.08, 0.16, 0.04, 1300);
+    whistle(2350, 0.26, 0.35, 0.045, 1760);
+  },
+  check: () => hammer(0.06),
+};
+
+/**
+ * Mat « Règlement de comptes ». Victoire : on arme le chien, BANG (avec ricochet), la douille tombe,
+ * puis un sifflement de western sur une guitare « twang ». Défaite : BANG, le vent du désert et un harmonica triste.
+ */
+function westernMate(outcome) {
+  hammer(0.18);
+  gunshot(1.0, 1.2);
+  shell(1.5);
+  if (outcome === 'loss') {
+    desertWind(1.3, 3.2, 0.11);
+    [[392, 0.7], [349.2, 0.6], [293.7, 0.6], [261.6, 1.5, 246.9]].reduce((t, [f, d, b]) => {
+      harmonica(f, t, d, 0.045, b || null);
+      return t + d * 0.92;
+    }, 1.9);
+    twang(98, 1.9, 0.06, 2.4);
+    return;
+  }
+  ricochet(1.12);
+  // Sifflement : petite mélodie en la mineur qui finit en majeur, sur des accords de guitare
+  [[880, 0.22], [1174.7, 0.22], [880, 0.22], [1174.7, 0.5], [1318.5, 0.3], [1108.7, 0.9]].reduce((t, [f, d]) => {
+    whistle(f, t, d, 0.05);
+    return t + d + 0.03;
+  }, 1.75);
+  twang(110, 1.7, 0.07, 1.4);
+  twang(164.8, 1.72, 0.05, 1.3);
+  twang(146.8, 2.45, 0.07, 1.3);
+  twang(110, 3.15, 0.08, 2.2);
+  twang(138.6, 3.17, 0.06, 2.1);
+  twang(164.8, 3.19, 0.05, 2.0);
+}
+
 const royalSet = { move: () => tok(), capture, castle, promote, check };
-const SETS = { astrea: space, classic, royal: royalSet, japon: sakura };
-const MATES = { astrea: spaceMate, classic: classicMate, royal: royalMate, japon: sakuraMate };
+const SETS = { astrea: space, classic, royal: royalSet, japon: sakura, western };
+const MATES = { astrea: spaceMate, classic: classicMate, royal: royalMate, japon: sakuraMate, western: westernMate };
 
 /**
  * Son d'un coup (objet « verbose » de chess.js).

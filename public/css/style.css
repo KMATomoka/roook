@@ -565,6 +565,23 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   background-image: url('../img/damier-japon.svg'), conic-gradient(var(--sq-dark) 0 25%, transparent 0 50%, var(--sq-dark) 0 75%, transparent 0);
   background-size: 25% 25%, 25% 25%;
 }
+/* Pack Western : sable du désert et cuir de selle ; planches de saloon et grains de sable (scripts/damier-western.js),
+   cadre de cuir liseré de laiton */
+.board-western {
+  --sq-light: #ecd3a3;
+  --sq-dark: #a86d3c;
+  --sq-last: rgba(226, 128, 52, 0.45);
+  --sq-selected: rgba(250, 214, 120, 0.6);
+  --coord-on-dark: #fcedcf;
+  --coord-on-dark-shadow: 0 1px 2px rgba(40, 18, 4, 0.6);
+  --coord-on-light: #6b3f1d;
+  --coord-on-light-shadow: 0 1px 0 rgba(255, 248, 230, 0.6);
+  --board-shadow: 0 0 0 3px #c8943e, 0 0 0 7px #3b2212, 0 0 0 8px rgba(200, 148, 62, 0.5), 0 18px 45px rgba(0, 0, 0, 0.55), 0 0 50px rgba(220, 140, 60, 0.14);
+}
+.board-western cg-board {
+  background-image: url('../img/damier-western.svg'), conic-gradient(var(--sq-dark) 0 25%, transparent 0 50%, var(--sq-dark) 0 75%, transparent 0);
+  background-size: 25% 25%, 25% 25%;
+}
 /* Échiquier violet (remplace le thème bois) : damier en conic-gradient, a8 toujours clair */
 cg-board {
   background-color: var(--sq-light);
@@ -821,6 +838,21 @@ body::after {
   --p-bR: url('../img/pieces-japon/bR.svg');
   --p-bQ: url('../img/pieces-japon/bQ.svg');
   --p-bK: url('../img/pieces-japon/bK.svg');
+}
+/* Pack Western : sable (Blancs) et cuir de selle (Noirs), générées par scripts/pieces-western.js */
+.pieces-western {
+  --p-wP: url('../img/pieces-western/wP.svg');
+  --p-wN: url('../img/pieces-western/wN.svg');
+  --p-wB: url('../img/pieces-western/wB.svg');
+  --p-wR: url('../img/pieces-western/wR.svg');
+  --p-wQ: url('../img/pieces-western/wQ.svg');
+  --p-wK: url('../img/pieces-western/wK.svg');
+  --p-bP: url('../img/pieces-western/bP.svg');
+  --p-bN: url('../img/pieces-western/bN.svg');
+  --p-bB: url('../img/pieces-western/bB.svg');
+  --p-bR: url('../img/pieces-western/bR.svg');
+  --p-bQ: url('../img/pieces-western/bQ.svg');
+  --p-bK: url('../img/pieces-western/bK.svg');
 }
 .cg-wrap piece.pawn.white { background-image: var(--p-wP); }
 .cg-wrap piece.knight.white { background-image: var(--p-wN); }
@@ -1556,3 +1588,69 @@ a.person-link:hover { color: var(--accent-soft); }
   background: rgba(24, 14, 16, 0.72); border: 1px solid rgba(232, 85, 63, 0.65); border-radius: 0.2em;
 }
 .fx-mate-banner.japon.loss .s { border-color: rgba(232, 221, 203, 0.35); color: #e8ddcb; }
+
+/* ==========================================================================
+   Pack Western : effets de js/fx.js (westernCaptureFx, westernCheckFx, westernMateFx)
+   ========================================================================== */
+.fx-muzzle {
+  position: absolute; z-index: 5; mix-blend-mode: screen; will-change: transform, opacity;
+  background: radial-gradient(circle, #fffbe6 0%, #ffe07a 22%, #ff9a2e 48%, rgba(255, 110, 20, 0) 70%);
+  clip-path: polygon(50% 0, 58% 36%, 92% 18%, 66% 46%, 100% 54%, 64% 60%, 82% 92%, 54% 66%, 44% 100%, 40% 64%, 10% 84%, 32% 56%, 0 46%, 34% 40%, 16% 10%, 44% 34%);
+}
+.fx-bullethole {
+  position: absolute; z-index: 4; border-radius: 50%;
+  background:
+    radial-gradient(circle, #0d0703 0 30%, #2e1b0d 38%, rgba(46, 27, 13, 0.55) 48%, rgba(46, 27, 13, 0) 62%),
+    repeating-conic-gradient(rgba(30, 15, 5, 0.55) 0 5deg, transparent 5deg 47deg);
+  -webkit-mask: radial-gradient(circle, #000 45%, transparent 72%); mask: radial-gradient(circle, #000 45%, transparent 72%);
+}
+.fx-dust { position: absolute; z-index: 3; border-radius: 50%; filter: blur(1.5px); background: radial-gradient(circle, rgba(205, 160, 105, 0.8), rgba(205, 160, 105, 0) 70%); }
+.fx-casing {
+  position: absolute; z-index: 5; border-radius: 1px 40% 40% 1px;
+  background: linear-gradient(180deg, #ffe9a6, #c9982f 60%, #8a6220); box-shadow: 0 0 0 0.5px rgba(60, 40, 10, 0.7);
+}
+.fx-crosshair {
+  position: absolute; z-index: 5; border-radius: 50%; box-sizing: border-box;
+  border: 2px solid rgba(214, 38, 24, 0.95); box-shadow: 0 0 8px rgba(255, 80, 40, 0.55), inset 0 0 6px rgba(255, 80, 40, 0.35);
+}
+.fx-crosshair::before, .fx-crosshair::after { content: ''; position: absolute; background: rgba(214, 38, 24, 0.95); }
+.fx-crosshair::before { left: 50%; top: -22%; bottom: -22%; width: 2px; transform: translateX(-50%); -webkit-mask: linear-gradient(#000 0 36%, transparent 36% 64%, #000 64%); mask: linear-gradient(#000 0 36%, transparent 36% 64%, #000 64%); }
+.fx-crosshair::after { top: 50%; left: -22%; right: -22%; height: 2px; transform: translateY(-50%); -webkit-mask: linear-gradient(90deg, #000 0 36%, transparent 36% 64%, #000 64%); mask: linear-gradient(90deg, #000 0 36%, transparent 36% 64%, #000 64%); }
+.fx-tumbleweed { position: absolute; z-index: 4; filter: drop-shadow(0 4px 3px rgba(40, 20, 5, 0.45)); }
+.fx-tumbleweed svg { width: 100%; height: 100%; display: block; }
+.fx-western-flash { background: #fff3d6; }
+.fx-western-vignette { background: radial-gradient(ellipse at center, rgba(150, 70, 15, 0.12) 30%, rgba(70, 26, 6, 0.75) 100%); }
+.fx-western-vignette.loss { background: radial-gradient(ellipse at center, rgba(30, 16, 8, 0.25) 30%, rgba(16, 9, 4, 0.85) 100%); }
+.fx-check-tag.western {
+  font: 400 1em/1 'Rye', serif; letter-spacing: 0.04em; text-transform: none; color: #fbe7c2;
+  padding: 0.35em 0.75em 0.3em; border-radius: 0.12em; border: 2px solid #2e1a0c;
+  background: linear-gradient(180deg, #b97a44, #7a4724 60%, #5a321a);
+  box-shadow: inset 0 0 0 1px rgba(255, 220, 160, 0.3), 0 6px 16px rgba(30, 12, 2, 0.6);
+}
+.fx-mate-banner.western .sign {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.12em;
+  padding: 0.4em 0.95em 0.45em; border-radius: 0.08em; transform-origin: 50% -0.9em;
+  background: linear-gradient(180deg, #c08048, #7a4724 55%, #5a321a);
+  border: 0.06em solid #2e1a0c;
+  box-shadow: inset 0 0 0 0.04em rgba(255, 220, 160, 0.35), inset 0 -0.3em 0.5em rgba(40, 18, 4, 0.35), 0 0.3em 0.7em rgba(0, 0, 0, 0.6);
+}
+.fx-mate-banner.western .sign::before, .fx-mate-banner.western .sign::after {
+  content: ''; position: absolute; top: -0.9em; width: 0.06em; height: 0.9em; background: linear-gradient(#e2c38c, #a07a42);
+}
+.fx-mate-banner.western .sign::before { left: 16%; }
+.fx-mate-banner.western .sign::after { right: 16%; }
+.fx-mate-banner.western .star { font-size: 0.62em; line-height: 1; color: #f6cf6a; text-shadow: 0 0 10px rgba(255, 200, 90, 0.8), 0 2px 0 #6b4512; }
+.fx-mate-banner.western .t {
+  font: 400 0.6em/1.05 'Rye', serif; text-transform: none; letter-spacing: 0.02em;
+  color: #fbe7c2; background: none; -webkit-background-clip: border-box; background-clip: border-box; animation: none;
+  filter: drop-shadow(0 2px 0 rgba(40, 18, 4, 0.8));
+}
+.fx-mate-banner.western .s, .fx-mate-banner.western.win .s, .fx-mate-banner.western.loss .s {
+  font: 400 0.24em 'Rye', serif; letter-spacing: 0.14em; text-transform: none; color: #2e1a0c;
+  background: #f0c27a; border: 0; border-radius: 0.15em; padding: 0.35em 1em; backdrop-filter: none;
+}
+.fx-mate-banner.western.loss .s { background: #cbb9a0; }
+.fx-mate-banner.western .hole {
+  position: absolute; right: 12%; top: 18%; width: 0.34em; height: 0.34em; border-radius: 50%;
+  background: radial-gradient(circle, #0d0703 0 34%, #2e1b0d 42%, rgba(46, 27, 13, 0) 66%);
+}

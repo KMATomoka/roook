@@ -1,7 +1,8 @@
 // Effets visuels des coups : prises, échec, échec et mat.
 // Tout passe par l'API Web Animations : rien ne reste dans la page une fois l'effet terminé.
 // L'inventaire (js/theme.js) choisit la variante : « astrea » (espace), « classic » (sobre), « royal » (couronnement,
-// particules d'or) ou « japon » (Sakura : coup de sabre, pétales de cerisier, soleil rouge, sceaux 勝 / 負).
+// particules d'or), « japon » (Sakura : coup de sabre, pétales de cerisier, soleil rouge, sceaux 勝 / 負)
+// ou « western » (coups de feu, viseur, virevoltant, pancarte de saloon).
 import { playSound } from './sound.js';
 import { getEquip } from './theme.js';
 
@@ -988,6 +989,263 @@ export function createFx(frame, getOrientation) {
   }
 
   // -------------------------------------------------------------------------
+  // Western : coup de feu (éclair du canon, impact, douille), viseur, virevoltant, pancarte de saloon
+  // -------------------------------------------------------------------------
+  /** Éclair du canon : une étoile de feu très brève. */
+  function muzzle(x, y, s, { delay = 0, size = 1 } = {}) {
+    const d = el(over, 'fx-muzzle', { left: `${x}px`, top: `${y}px`, width: `${s * 1.1 * size}px`, height: `${s * 1.1 * size}px` });
+    once(
+      d,
+      [
+        { transform: 'translate(-50%,-50%) scale(.3) rotate(0deg)', opacity: 1 },
+        { transform: `translate(-50%,-50%) scale(1.15) rotate(${rand(-20, 20)}deg)`, opacity: 1, offset: 0.35 },
+        { transform: 'translate(-50%,-50%) scale(1.3)', opacity: 0 },
+      ],
+      { duration: 200, delay, easing: 'ease-out', fill: 'backwards' },
+    );
+  }
+
+  /** Impact de balle (trou et fêlures) qui reste un moment puis s'efface. */
+  function bulletHole(x, y, s, { delay = 0, life = 1100, size = 0.3 } = {}) {
+    const w = s * size;
+    const d = el(over, 'fx-bullethole', { left: `${x}px`, top: `${y}px`, width: `${w}px`, height: `${w}px` });
+    once(
+      d,
+      [
+        { transform: 'translate(-50%,-50%) scale(.2)', opacity: 0 },
+        { transform: 'translate(-50%,-50%) scale(1)', opacity: 1, offset: 0.05 },
+        { transform: 'translate(-50%,-50%) scale(1)', opacity: 1, offset: 0.75 },
+        { transform: 'translate(-50%,-50%) scale(1)', opacity: 0 },
+      ],
+      { duration: life, delay, easing: 'ease-out', fill: 'backwards' },
+    );
+  }
+
+  /** Nuages de poussière qui s'étalent et retombent. */
+  function dust(x, y, s, { count = 8, spread = 1, delay = 0, rise = 0.3 } = {}) {
+    if (reduceMotion()) return;
+    for (let i = 0; i < count; i++) {
+      const r = s * rand(0.25, 0.5);
+      const d = el(over, 'fx-dust', { left: `${x}px`, top: `${y + s * 0.3}px`, width: `${r}px`, height: `${r}px` });
+      const ang = rand(Math.PI, Math.PI * 2);
+      const dist = s * rand(0.3, 0.9) * spread;
+      once(
+        d,
+        [
+          { transform: 'translate(-50%,-50%) scale(.3)', opacity: 0 },
+          { transform: `translate(calc(-50% + ${Math.cos(ang) * dist * 0.5}px), calc(-50% + ${Math.sin(ang) * dist * 0.3}px)) scale(1)`, opacity: 0.85, offset: 0.25 },
+          { transform: `translate(calc(-50% + ${Math.cos(ang) * dist}px), calc(-50% + ${Math.sin(ang) * dist * 0.5 - s * rise}px)) scale(1.8)`, opacity: 0 },
+        ],
+        { duration: rand(700, 1200), delay: delay + rand(0, 100), easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'backwards' },
+      );
+    }
+  }
+
+  /** Douille éjectée : elle saute, tourne et rebondit. */
+  function casing(x, y, s, { delay = 0 } = {}) {
+    if (reduceMotion()) return;
+    const d = el(over, 'fx-casing', { left: `${x}px`, top: `${y}px`, width: `${s * 0.13}px`, height: `${s * 0.06}px` });
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    const dx = dir * s * rand(0.5, 0.9);
+    const up = -s * rand(0.6, 0.9);
+    const floor = s * rand(0.25, 0.4);
+    once(
+      d,
+      [
+        { transform: 'translate(-50%,-50%) rotate(0deg)', opacity: 1, easing: 'cubic-bezier(.2,.6,.4,1)' },
+        { transform: `translate(calc(-50% + ${dx * 0.5}px), calc(-50% + ${up}px)) rotate(${dir * 400}deg)`, opacity: 1, offset: 0.4, easing: 'cubic-bezier(.6,0,.9,.5)' },
+        { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${floor}px)) rotate(${dir * 820}deg)`, opacity: 1, offset: 0.75, easing: 'ease-out' },
+        { transform: `translate(calc(-50% + ${dx * 1.15}px), calc(-50% + ${floor - s * 0.1}px)) rotate(${dir * 900}deg)`, opacity: 1, offset: 0.86, easing: 'ease-in' },
+        { transform: `translate(calc(-50% + ${dx * 1.25}px), calc(-50% + ${floor}px)) rotate(${dir * 960}deg)`, opacity: 0 },
+      ],
+      { duration: 1000, delay, fill: 'backwards' },
+    );
+  }
+
+  /** Viseur rouge qui se resserre sur une case. */
+  function crosshair(sq, { delay = 0, duration = 900, hold = 0.5 } = {}) {
+    const { x, y, s } = at(sq);
+    const d = el(over, 'fx-crosshair', { left: `${x}px`, top: `${y}px`, width: `${s * 0.95}px`, height: `${s * 0.95}px` });
+    once(
+      d,
+      [
+        { transform: 'translate(-50%,-50%) scale(2.4) rotate(90deg)', opacity: 0 },
+        { transform: 'translate(-50%,-50%) scale(1) rotate(0deg)', opacity: 1, offset: 1 - hold },
+        { transform: 'translate(-50%,-50%) scale(.92) rotate(0deg)', opacity: 1, offset: 1 - hold * 0.4 },
+        { transform: 'translate(-50%,-50%) scale(.92) rotate(0deg)', opacity: 0 },
+      ],
+      { duration, delay, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'backwards' },
+    );
+    return d;
+  }
+
+  /** Virevoltant (tumbleweed) qui traverse l'échiquier en roulant et en rebondissant. */
+  function tumbleweed(gen, { delay = 0, duration = 3200, y = 0.75 } = {}) {
+    if (reduceMotion()) return;
+    setTimeout(() => {
+      if (gen !== generation) return;
+      const W = frame.clientWidth;
+      const H = frame.clientHeight;
+      const size = W / 8 * 0.9;
+      const fromLeft = Math.random() < 0.5;
+      const x0 = fromLeft ? -size : W + size;
+      const x1 = fromLeft ? W + size : -size;
+      const d = el(over, 'fx-tumbleweed', { left: `${x0}px`, top: `${H * y}px`, width: `${size}px`, height: `${size}px` }, tumbleweedSvg());
+      const frames = [];
+      const n = 8;
+      for (let i = 0; i <= n; i++) {
+        const t = i / n;
+        const hop = i % 2 ? -size * (0.55 - t * 0.25) : 0;
+        frames.push({ transform: `translate(calc(-50% + ${(x1 - x0) * t}px), calc(-50% + ${hop}px)) rotate(${(fromLeft ? 1 : -1) * 900 * t}deg)`, offset: t });
+      }
+      once(d, frames, { duration, easing: 'linear' });
+    }, delay);
+  }
+  const tumbleweedSvg = () => {
+    let d = '';
+    for (let i = 0; i < 9; i++) {
+      const a = rand(0, Math.PI * 2);
+      const r1 = rand(18, 44);
+      const a2 = a + rand(1.4, 3.2);
+      d += `M${(50 + Math.cos(a) * r1).toFixed(1)} ${(50 + Math.sin(a) * r1).toFixed(1)}Q${(50 + rand(-30, 30)).toFixed(1)} ${(50 + rand(-30, 30)).toFixed(1)} ${(50 + Math.cos(a2) * rand(20, 46)).toFixed(1)} ${(50 + Math.sin(a2) * rand(20, 46)).toFixed(1)}`;
+    }
+    return `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="none" stroke="#8a6436" stroke-width="3" stroke-dasharray="14 6 22 8"/><path d="${d}" fill="none" stroke="#a87c45" stroke-width="2.6" stroke-linecap="round"/><circle cx="50" cy="50" r="32" fill="none" stroke="#6e4c26" stroke-width="2" stroke-dasharray="9 7"/></svg>`;
+  };
+
+  /** Prise « Duel » : coup de feu sur la pièce prise, impact, la pièce est projetée, poussière et douille. */
+  function westernCaptureFx(move) {
+    const sq = move.flags.includes('e') ? move.to[0] + move.from[1] : move.to;
+    const victim = move.color === 'w' ? 'b' : 'w';
+    const { x, y, s } = at(sq);
+    const value = VALUE[move.captured] || 1;
+    const impact = 110;
+    const ghost = el(over, 'cg-wrap fx-ghost', { left: `${x - s / 2}px`, top: `${y - s / 2}px`, width: `${s}px`, height: `${s}px` }, `<piece class="${ROLE[move.captured]} ${COLOR[victim]}"></piece>`);
+    if (reduceMotion()) {
+      once(ghost, [{ opacity: 1 }, { opacity: 0 }], { duration: 300 });
+      return;
+    }
+    // La pièce est projetée à l'opposé du tireur, en tournoyant
+    const from = at(move.from);
+    let vx = x - from.x;
+    let vy = y - from.y;
+    const len = Math.hypot(vx, vy) || 1;
+    vx /= len;
+    vy /= len;
+    const spin = (vx >= 0 ? 1 : -1) * rand(140, 260);
+    once(
+      ghost,
+      [
+        { transform: 'translate(0,0) rotate(0deg)', opacity: 1, filter: 'none' },
+        { transform: 'translate(0,0) rotate(0deg)', opacity: 1, filter: 'brightness(1.8)', offset: 0.15 },
+        { transform: `translate(${vx * s * 0.55}px, ${vy * s * 0.55 - s * 0.35}px) rotate(${spin * 0.6}deg)`, opacity: 1, filter: 'none', offset: 0.5 },
+        { transform: `translate(${vx * s * 0.9}px, ${vy * s * 0.9 + s * 0.2}px) rotate(${spin}deg)`, opacity: 0 },
+      ],
+      { duration: 640 + value * 15, delay: impact - 20, easing: 'cubic-bezier(.2,.6,.4,1)', fill: 'backwards' },
+    );
+    muzzle(x, y, s, { delay: impact, size: 0.8 + value * 0.04 });
+    bulletHole(x + rand(-0.15, 0.15) * s, y + rand(-0.1, 0.15) * s, s, { delay: impact, life: 1200 });
+    dust(x, y, s, { count: 5 + value * 2, delay: impact + 30 });
+    casing(from.x > x ? x + s * 0.3 : x - s * 0.3, y - s * 0.1, s, { delay: impact + 80 });
+    setTimeout(() => shake(value >= 9 ? 5 : value >= 5 ? 3.5 : 2, 260), impact);
+  }
+
+  /** Échec « Western » : le viseur se pose sur le roi, pancarte « Échec ! ». */
+  function westernCheckFx(kingSq) {
+    const delay = 80;
+    crosshair(kingSq, { delay, duration: 1250, hold: 0.55 });
+    const { x, y, s } = at(kingSq);
+    const above = y - s * 0.75 > s * 0.3;
+    const tag = el(over, 'fx-check-tag western', { left: `${Math.min(Math.max(x, s * 0.9), frame.clientWidth - s * 0.9)}px`, top: `${above ? y - s * 0.78 : y + s * 0.78}px`, fontSize: `${Math.max(12, s * 0.24)}px` }, 'Échec !');
+    once(
+      tag,
+      [
+        { transform: 'translate(-50%,-50%) rotate(-14deg) translateY(-30%)', opacity: 0 },
+        { transform: 'translate(-50%,-50%) rotate(6deg)', opacity: 1, offset: 0.14 },
+        { transform: 'translate(-50%,-50%) rotate(-3deg)', opacity: 1, offset: 0.24 },
+        { transform: 'translate(-50%,-50%) rotate(0deg)', opacity: 1, offset: 0.8 },
+        { transform: 'translate(-50%,-50%) rotate(0deg)', opacity: 0 },
+      ],
+      { duration: 1400, delay: delay + 150, easing: 'ease-out', fill: 'backwards' },
+    );
+  }
+
+  /**
+   * Mat « Règlement de comptes » : le viseur se resserre sur le roi vaincu, BANG, il tombe dans la poussière,
+   * un virevoltant traverse l'échiquier, puis une pancarte de saloon descend avec l'étoile du shérif.
+   * Défaite : même duel mais c'est ton roi ; la pancarte est trouée d'une balle et pend de travers.
+   */
+  async function westernMateFx(move, kingSq, loser, outcome, gen) {
+    const { x, y, s } = at(kingSq);
+    const W = frame.clientWidth;
+    const calm = reduceMotion();
+    const lose = outcome === 'loss';
+    await wait(140);
+    if (gen !== generation) return;
+    frame.classList.add('mated-' + loser);
+    const vignette = el(over, 'fx-vignette fx-western-vignette' + (lose ? ' loss' : ''));
+    vignette.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1200, fill: 'forwards' });
+    const king = el(over, 'cg-wrap fx-king', { left: `${x - s / 2}px`, top: `${y - s / 2}px`, width: `${s}px`, height: `${s}px` }, `<piece class="king ${COLOR[loser]}"></piece>`);
+    const BANG = calm ? 0 : 860;
+    if (!calm) crosshair(kingSq, { duration: 1050, hold: 0.25 });
+
+    setTimeout(() => {
+      if (gen !== generation) return;
+      if (!calm) {
+        const flash = el(over, 'fx-screen-flash fx-western-flash');
+        once(flash, [{ opacity: 0 }, { opacity: 0.55, offset: 0.1 }, { opacity: 0 }], { duration: 380, easing: 'ease-out' });
+        muzzle(x, y, s, { size: 1.6 });
+        bulletHole(x + s * 0.05, y - s * 0.08, s, { life: 2400, size: 0.34 });
+        dust(x, y, s, { count: 16, spread: 1.6 });
+        shake(7, 420);
+      }
+      let dir = FILES.indexOf(move.to[0]) <= FILES.indexOf(kingSq[0]) ? 1 : -1;
+      if (getOrientation() === 'b') dir = -dir;
+      king.animate(
+        calm
+          ? [{ filter: 'none' }, { filter: 'grayscale(.7) brightness(.7)' }]
+          : [
+              { transform: 'translate(0,0) rotate(0deg)', filter: 'brightness(1.6)' },
+              { transform: `translate(${dir * 6}%, -10%) rotate(${dir * 25}deg)`, filter: 'none', offset: 0.3 },
+              { transform: `translate(${dir * 14}%, 12%) rotate(${dir * 92}deg)`, filter: 'brightness(.75) drop-shadow(0 4px 5px rgba(0,0,0,.5))', offset: 0.75 },
+              { transform: `translate(${dir * 13}%, 10%) rotate(${dir * 86}deg)`, filter: 'brightness(.7) drop-shadow(0 4px 5px rgba(0,0,0,.5))' },
+            ],
+        { duration: calm ? 500 : 900, easing: 'cubic-bezier(.3,.6,.4,1)', fill: 'forwards' },
+      );
+    }, BANG);
+
+    tumbleweed(gen, { delay: BANG + 500, duration: lose ? 4300 : 3300, y: 0.74 });
+    if (!calm) setTimeout(() => gen === generation && dust(W * 0.15, frame.clientHeight * 0.8, s, { count: 6, spread: 2, rise: 0.1 }), BANG + 900);
+
+    // La pancarte du saloon
+    setTimeout(() => {
+      if (gen !== generation) return;
+      const sub = outcome === 'win' ? 'Victoire' : lose ? 'Défaite' : `${loser === 'w' ? 'Les Noirs' : 'Les Blancs'} gagnent le duel`;
+      const banner = el(over, 'fx-mate-banner western ' + outcome, { fontSize: `${Math.max(24, W * 0.085)}px` },
+        `<div class="sign">${lose ? '<i class="hole"></i>' : '<div class="star">★</div>'}<div class="t">Échec et mat</div><div class="s">${sub}</div></div>`);
+      const sign = banner.firstElementChild;
+      const end = lose ? 7 : 0;
+      sign.animate(
+        calm
+          ? [{ opacity: 0 }, { opacity: 1, transform: `rotate(${end}deg)` }]
+          : [
+              { transform: 'translateY(-160%) rotate(0deg)', opacity: 1 },
+              { transform: 'translateY(4%) rotate(0deg)', offset: 0.35 },
+              { transform: `translateY(0) rotate(${end - 9}deg)`, offset: 0.5 },
+              { transform: `translateY(0) rotate(${end + 6}deg)`, offset: 0.66 },
+              { transform: `translateY(0) rotate(${end - 3}deg)`, offset: 0.82 },
+              { transform: `translateY(0) rotate(${end}deg)`, opacity: 1 },
+            ],
+        { duration: calm ? 300 : 1500, easing: 'ease-out', fill: 'both' },
+      );
+      setTimeout(() => {
+        if (gen !== generation) return;
+        once(banner, [{ opacity: 1 }, { opacity: 0 }], { duration: 900, fill: 'forwards' });
+        once(vignette, [{ opacity: 1 }, { opacity: 0 }], { duration: 1100, fill: 'forwards' });
+      }, 5200);
+    }, calm ? 300 : BANG + 650);
+  }
+
+  // -------------------------------------------------------------------------
   // API
   // -------------------------------------------------------------------------
   function kingSquare(chess, color) {
@@ -1017,6 +1275,7 @@ export function createFx(frame, getOrientation) {
         if (eq.capture === 'classic') classicCaptureFx(move);
         else if (eq.capture === 'royal') captureFx(move, true); // l'ancienne prise (éclats) avec les particules d'or
         else if (eq.capture === 'japon') japonCaptureFx(move);
+        else if (eq.capture === 'western') westernCaptureFx(move);
         else spaceCaptureFx(move);
       }
       const kSq = move.san.includes('+') || mated ? kingSquare(chess, loser) : null;
@@ -1024,9 +1283,10 @@ export function createFx(frame, getOrientation) {
         if (classicEnd) classicMateFx(move, kSq, loser, outcome, gen);
         else if (eq.endAnim === 'royal') royalMateFx(move, kSq, kingSquare(chess, loser === 'w' ? 'b' : 'w'), loser, outcome, gen);
         else if (eq.endAnim === 'japon') japonMateFx(move, kSq, loser, outcome, gen, kingSquare(chess, loser === 'w' ? 'b' : 'w'));
+        else if (eq.endAnim === 'western') westernMateFx(move, kSq, loser, outcome, gen);
         else spaceMateFx(move, kSq, loser, outcome, gen, kingSquare(chess, loser === 'w' ? 'b' : 'w'));
       }
-      else if (kSq) (classicEnd ? classicCheckFx : eq.endAnim === 'japon' ? japonCheckFx : checkFx)(kSq);
+      else if (kSq) (classicEnd ? classicCheckFx : eq.endAnim === 'japon' ? japonCheckFx : eq.endAnim === 'western' ? westernCheckFx : checkFx)(kSq);
     },
     /** Efface tout (nouvelle partie). */
     reset() {

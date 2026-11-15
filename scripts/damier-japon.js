@@ -24,7 +24,7 @@ function seigaiha() {
 // Asanoha : grille de triangles équilatéraux ; dans chaque triangle, les côtés et les trois traits
 // sommet → centre dessinent les étoiles à six branches.
 function asanoha() {
-  const a = 25; // côté d'un triangle (4 par case)
+  const a = 100 / 3; // côté d'un triangle (3 par case)
   const h = (a * Math.sqrt(3)) / 2;
   let d = '';
   for (let r = -1; r * h <= 100 + h; r++) {
@@ -51,7 +51,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs
   + `<g id="w" fill="${INDIGO}" stroke="${WAVE_LINE}" stroke-width="1.1"><circle r="12.5"/><circle r="8.5"/><circle r="4.5"/></g>`
   + `<clipPath id="c"><rect width="100" height="100"/></clipPath>`
   + `<g id="dark" clip-path="url(#c)">${seigaiha()}</g>`
-  + `<g id="light" clip-path="url(#c)"><path d="${asanoha()}" fill="none" stroke="${ASANOHA_LINE}" stroke-width=".8" stroke-linejoin="round" opacity=".42"/></g>`
+  + `<g id="light" clip-path="url(#c)"><path d="${asanoha()}" fill="none" stroke="${ASANOHA_LINE}" stroke-width=".6" stroke-linejoin="round" opacity=".24"/></g>`
   + `</defs><use href="#dark" x="100"/><use href="#dark" y="100"/><use href="#light"/><use href="#light" x="100" y="100"/></svg>\n`;
 
 const out = path.join(__dirname, '..', 'public/img/damier-japon.svg');

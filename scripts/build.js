@@ -68,6 +68,37 @@ for (const file of walk(dist)) {
 }
 console.log(`Version ${version} ajoutée aux scripts de ${tagged} fichiers`);
 
+// Images : une empreinte de leur contenu (« ?h=… »). Une image modifiée (ex. nouvelles couleurs des pièces) change
+// d'adresse et le navigateur la télécharge à nouveau ; les autres restent en cache.
+const crypto = require('crypto');
+const imgHash = {};
+const hashOf = (rel) => {
+  if (!(rel in imgHash)) {
+    const f = path.join(dist, rel);
+    imgHash[rel] = fs.existsSync(f) ? crypto.createHash('md5').update(fs.readFileSync(f)).digest('hex').slice(0, 10) : null;
+  }
+  return imgHash[rel];
+};
+let imgTagged = 0;
+for (const file of walk(dist)) {
+  const isCss = file.endsWith('.css') && file.startsWith(path.join(dist, 'css'));
+  const isOurJs = file.endsWith('.js') && file.startsWith(path.join(dist, 'js'));
+  const isHtml = file.endsWith('.html');
+  if (!isCss && !isOurJs && !isHtml) continue;
+  let src = fs.readFileSync(file, 'utf8');
+  const before = src;
+  // url('../img/x.svg') dans le CSS ; "img/x.svg" écrit en clair dans le HTML et les scripts
+  src = src.replace(/(['"(])((?:\.\.\/)?img\/[^'"()?$`]+\.(?:svg|png|jpe?g|webp|gif))(?=['")])/g, (m, q, url) => {
+    const h = hashOf(url.replace(/^\.\.\//, ''));
+    return h ? `${q}${url}?h=${h}` : m;
+  });
+  if (src !== before) {
+    fs.writeFileSync(file, src);
+    imgTagged++;
+  }
+}
+console.log(`Empreinte ajoutée aux images de ${imgTagged} fichiers`);
+
 // Mise à jour automatique : GitHub Pages laisse le navigateur garder une page 10 minutes.
 // Chaque page compare sa version à version.json (jamais en cache) et se recharge une fois si le site a changé.
 fs.writeFileSync(path.join(dist, 'version.json'), JSON.stringify({ v: version }));

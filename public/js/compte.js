@@ -226,6 +226,8 @@ export const BADGES = {
   fondateur: { name: 'Fondateur', emoji: '👑', cls: 'founder', how: 'Réservé au fondateur de ROOOK.' },
   admin: { name: 'Admin', emoji: '🛡️', cls: 'admin', how: 'Réservé aux administrateurs.' },
   royal: { name: 'Royal', emoji: '⚜️', cls: 'royal', how: 'Débloqué avec 100 victoires en ligne (le pack Royal chess).' },
+  // Badge du pack Sakura chess : ouvert à tous pour l'instant (free) ; il ne s'affiche sur le profil que si on le porte
+  sakura: { name: 'Sakura', emoji: '🌸', cls: 'sakura', free: true, how: 'Le badge du pack Sakura chess, ouvert à tous.' },
 };
 export const ROYAL_WINS = 100;
 
@@ -252,6 +254,7 @@ export function ownedBadges({ role, royal }) {
   if (role === 'fondateur') out.push('fondateur');
   if (role === 'admin') out.push('admin');
   if (royal) out.push('royal');
+  for (const [id, b] of Object.entries(BADGES)) if (b.free) out.push(id);
   return out;
 }
 
@@ -260,6 +263,7 @@ export function shownBadge(badge, role, hasRoyalProof) {
   if (badge === 'fondateur' && role === 'fondateur') return badge;
   if (badge === 'admin' && role === 'admin') return badge;
   if (badge === 'royal' && hasRoyalProof) return badge;
+  if (BADGES[badge]?.free) return badge;
   return null;
 }
 

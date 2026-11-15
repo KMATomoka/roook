@@ -1,5 +1,5 @@
 // Génère les pièces du pack « Sakura chess » (public/img/pieces-japon/*.svg).
-// Blancs : ivoire et trait d'encre (sumi). Noirs : laque noire (urushi) et liseré d'or (maki-e).
+// Blancs : rose fleur de cerisier, trait prune. Noirs : indigo comme le damier, liseré d'or pâle (maki-e).
 // Pion kokeshi, cavalier à crinière vermillon, fou « giboshi » (le bulbe des ponts japonais),
 // tour en château (tenshu), dame à éventail (sensu), roi à cimier de kabuto et soleil rouge.
 // Utilisation : node scripts/pieces-japon.js
@@ -7,8 +7,10 @@ const fs = require('fs');
 const path = require('path');
 
 const PAL = {
-  w: { top: '#fffdf7', mid: '#f3e8d2', bot: '#dbc8a4', ink: '#2b211c', line: '#2b211c', red: '#c8372d', gold: '#c99a35', hair: '#2b211c' },
-  b: { top: '#5a4c45', mid: '#2a211e', bot: '#110c0b', ink: '#e0b85e', line: '#e0b85e', red: '#d9472f', gold: '#e8c46a', hair: '#d9472f' },
+  // Blancs : fleur de cerisier (rose pâle), trait prune
+  w: { top: '#fffafb', mid: '#fde3ea', bot: '#f2b8c7', ink: '#5b2438', line: '#5b2438', red: '#d8343f', gold: '#c99a35', hair: '#2b1a22' },
+  // Noirs : indigo (ai), comme les cases sombres du damier, liseré d'or pâle
+  b: { top: '#5d71a6', mid: '#2c3a66', bot: '#141b38', ink: '#efd49a', line: '#efd49a', red: '#ec5a44', gold: '#f2ca6c', hair: '#0b1024' },
 };
 
 /** Petite fleur de cerisier (5 pétales). */

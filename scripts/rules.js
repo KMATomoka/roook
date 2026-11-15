@@ -90,7 +90,7 @@ const rules = {
         },
         // Badge affiché en partie : seulement un badge qu'on possède vraiment
         badge: {
-          '.validate': `newData.isString() && ((newData.val() === 'fondateur' && root.child('roles/' + $uid).val() === 'fondateur') || (newData.val() === 'admin' && root.child('roles/' + $uid).val() === 'admin') || (newData.val() === 'royal' && newData.parent().child('royalProof').exists()))`,
+          '.validate': `newData.isString() && ((newData.val() === 'fondateur' && root.child('roles/' + $uid).val() === 'fondateur') || (newData.val() === 'admin' && root.child('roles/' + $uid).val() === 'admin') || (newData.val() === 'royal' && newData.parent().child('royalProof').exists()) || newData.val() === 'sakura')`,
         },
         // Preuve du badge Royal (100 victoires différentes)
         royalProof: {

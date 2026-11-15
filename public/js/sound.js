@@ -368,10 +368,48 @@ function koto(freq, at = 0, vol = 0.09, dur = 1.4) {
   burst({ at, dur: 0.02, vol: vol * 1.2, freq: freq * 4, q: 4 });
 }
 
-/** Sabre : un souffle qui monte (la lame fend l'air), puis l'acier qui chante. */
+/** Souffle filtré qui enfle puis retombe (la lame qui fend l'air), filtre qui balaie f0 → f1 → f2. */
+function noiseSweep({ at = 0, dur = 0.2, type = 'bandpass', f = [500, 4000, 900], q = 2, vol = 0.3, peak = 0.5 }) {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + at;
+  const src = a.createBufferSource();
+  src.buffer = noiseBuf;
+  const fl = a.createBiquadFilter();
+  fl.type = type;
+  fl.Q.value = q;
+  fl.frequency.setValueAtTime(f[0], t);
+  fl.frequency.exponentialRampToValueAtTime(f[1], t + dur * peak);
+  fl.frequency.exponentialRampToValueAtTime(f[2], t + dur);
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + dur * peak);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(fl).connect(g).connect(master);
+  src.start(t, Math.random() * 0.5);
+  src.stop(t + dur + 0.05);
+}
+
+/**
+ * Katana : « fwish » de la lame qui fend l'air, le « tchak » de la coupe, puis l'acier qui chante
+ * (frottement métallique « shiiing » et résonance d'une lame : partiels inharmoniques un peu désaccordés).
+ */
 function katana(at = 0, vol = 1) {
-  burst({ at, dur: 0.16, vol: 0.22 * vol, type: 'bandpass', freq: 900, endFreq: 7000, q: 1.6 });
-  [[2760, 0.5], [4130, 0.35], [5530, 0.22]].forEach(([f, d], i) => tone({ freq: f, type: 'sine', at: at + 0.11, dur: d, vol: (0.05 / (i + 1)) * vol, attack: 0.002 }));
+  // La lame fend l'air
+  noiseSweep({ at, dur: 0.2, f: [450, 3800, 1200], q: 2.2, vol: 0.55 * vol, peak: 0.55 });
+  noiseSweep({ at: at + 0.02, dur: 0.16, type: 'highpass', f: [2500, 6000, 3500], q: 0.7, vol: 0.12 * vol, peak: 0.6 });
+  // La coupe
+  const cut = at + 0.11;
+  burst({ at: cut, dur: 0.03, vol: 0.5 * vol, freq: 2600, q: 3 });
+  burst({ at: cut, dur: 0.05, vol: 0.25 * vol, type: 'lowpass', freq: 700, q: 0.8 });
+  // « Shiiing » : l'acier qui frotte
+  noiseSweep({ at: cut, dur: 0.42, f: [4200, 7600, 6200], q: 9, vol: 0.2 * vol, peak: 0.25 });
+  // La lame qui résonne (rapports d'une barre métallique 1 : 2,76 : 5,40, chacun doublé et désaccordé : ça miroite)
+  const base = 1480;
+  [[1, 1.3, 0.05], [2.756, 0.9, 0.035], [5.404, 0.55, 0.022], [8.93, 0.3, 0.012]].forEach(([m, d, v]) => {
+    tone({ freq: base * m, type: 'sine', at: cut + 0.01, dur: d, vol: v * vol, attack: 0.004 });
+    tone({ freq: base * m + 5 + m * 2, type: 'sine', at: cut + 0.01, dur: d * 0.9, vol: v * 0.7 * vol, attack: 0.004 });
+  });
 }
 
 /** Shakuhachi : flûte de bambou, attaque soufflée et vibrato qui s'installe. */
@@ -417,7 +455,7 @@ const sakura = {
   // Le sabre fend l'air au moment où l'éclair traverse la case, puis la pièce se pose
   capture: () => {
     katana(0);
-    pachi(0.11, { pitch: 0.9, vol: 1.1 });
+    pachi(0.18, { pitch: 0.9, vol: 0.6 });
   },
   castle: () => {
     pachi(0);

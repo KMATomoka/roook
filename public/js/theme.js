@@ -35,10 +35,10 @@ export const PACKS = [
   {
     id: 'japon',
     name: 'Sakura chess',
-    desc: 'Le Japon : papier washi et indigo, pièces de laque, coups de sabre, cerisiers en fleur et sons de taiko et de koto.',
+    desc: 'Le Japon : papier washi rose sakura et indigo, pièces de laque, coups de sabre, cerisiers en fleur et sons de taiko et de koto.',
     items: {
-      board: { name: 'Damier Washi', desc: 'Papier washi et indigo, vagues seigaiha, cadre de laque vermillon.' },
-      pieces: { name: 'Pièces Edo', desc: 'Ivoire et encre pour les Blancs, laque noire et or pour les Noirs : pion kokeshi, château, éventail, casque de samouraï.' },
+      board: { name: 'Damier Washi', desc: 'Papier washi rose sakura et indigo, vagues seigaiha, cadre de laque vermillon.' },
+      pieces: { name: 'Pièces Edo', desc: 'Rose sakura pour les Blancs, indigo et or pour les Noirs : pion kokeshi, château, éventail, casque de samouraï.' },
       endAnim: { name: 'Hanami', desc: 'Victoire : le roi vaincu est tranché d’un coup de sabre, un soleil rouge se lève dans une tempête de pétales, sceau 勝. Défaite : ton roi se dissout dans l’encre, sceau 負.' },
       capture: { name: 'Iaï', desc: 'Un éclair de sabre tranche la pièce prise en deux, quelques pétales s’envolent ; bois de shogi, taiko et koto.' },
     },

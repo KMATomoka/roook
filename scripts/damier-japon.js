@@ -6,9 +6,9 @@
 const fs = require('fs');
 const path = require('path');
 
-const INDIGO = '#5266a0'; // = --sq-dark de .board-japon
-const WAVE_LINE = 'rgba(255,255,255,.11)';
-const ASANOHA_LINE = '#c96a86'; // rose profond, affiché très légèrement
+const INDIGO = '#6683c4'; // = --sq-dark de .board-japon (bleu « ai » clair, pour que les pièces indigo ressortent)
+const WAVE_LINE = 'rgba(255,255,255,.16)';
+const ASANOHA_LINE = '#ffffff'; // blanc : motif « papier washi » ton sur ton, sans voile rouge
 const f = (n) => Math.round(n * 100) / 100;
 
 // Seigaiha : rangées de demi-cercles concentriques qui se recouvrent
@@ -51,7 +51,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs
   + `<g id="w" fill="${INDIGO}" stroke="${WAVE_LINE}" stroke-width="1.1"><circle r="12.5"/><circle r="8.5"/><circle r="4.5"/></g>`
   + `<clipPath id="c"><rect width="100" height="100"/></clipPath>`
   + `<g id="dark" clip-path="url(#c)">${seigaiha()}</g>`
-  + `<g id="light" clip-path="url(#c)"><path d="${asanoha()}" fill="none" stroke="${ASANOHA_LINE}" stroke-width=".6" stroke-linejoin="round" opacity=".24"/></g>`
+  + `<g id="light" clip-path="url(#c)"><path d="${asanoha()}" fill="none" stroke="${ASANOHA_LINE}" stroke-width=".7" stroke-linejoin="round" opacity=".5"/></g>`
   + `</defs><use href="#dark" x="100"/><use href="#dark" y="100"/><use href="#light"/><use href="#light" x="100" y="100"/></svg>\n`;
 
 const out = path.join(__dirname, '..', 'public/img/damier-japon.svg');

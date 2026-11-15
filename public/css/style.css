@@ -40,14 +40,6 @@ html { scroll-behavior: smooth; overflow-x: clip; } /* pas de défilement horizo
 body {
   margin: 0;
   background: var(--bg);
-  background-image:
-    radial-gradient(1100px 680px at 82% -12%, rgba(143, 107, 255, 0.24), transparent 62%),
-    radial-gradient(760px 520px at 8% 6%, rgba(98, 70, 220, 0.09), transparent 65%),
-    radial-gradient(900px 640px at -12% 108%, rgba(64, 104, 255, 0.13), transparent 62%),
-    radial-gradient(130% 34% at 50% 118%, rgba(143, 107, 255, 0.2), rgba(143, 107, 255, 0.05) 55%, transparent 75%),
-    radial-gradient(620px 420px at 70% 115%, rgba(60, 242, 163, 0.05), transparent 70%),
-    linear-gradient(180deg, #0e0b1c 0%, #0b0917 55%, #08060f 100%);
-  background-attachment: fixed;
   color: var(--text);
   font-family: var(--font);
   font-size: 16px;
@@ -601,6 +593,22 @@ cg-board {
 .orientation-black .ranks :nth-child(odd),
 .orientation-black .files :nth-child(odd) { color: var(--coord-on-light); text-shadow: var(--coord-on-light-shadow); }
 .board-frame { box-shadow: var(--board-shadow); }
+
+/* Fond dégradé de l'espace : un calque fixe à la taille de l'écran (« background-attachment: fixed » est ignoré
+   par les navigateurs des téléphones, qui étiraient alors le dégradé sur toute la page et changeaient les teintes) */
+html::after {
+  content: ''; position: fixed; inset: 0; z-index: -2; pointer-events: none;
+  background-image:
+    radial-gradient(1100px 680px at 82% -12%, rgba(143, 107, 255, 0.24), transparent 62%),
+    radial-gradient(760px 520px at 8% 6%, rgba(98, 70, 220, 0.09), transparent 65%),
+    radial-gradient(900px 640px at -12% 108%, rgba(64, 104, 255, 0.13), transparent 62%),
+    radial-gradient(130% 34% at 50% 118%, rgba(143, 107, 255, 0.2), rgba(143, 107, 255, 0.05) 55%, transparent 75%),
+    radial-gradient(620px 420px at 70% 115%, rgba(60, 242, 163, 0.05), transparent 70%),
+    linear-gradient(180deg, #0e0b1c 0%, #0b0917 55%, #08060f 100%);
+}
+/* Le site est déjà sombre : les navigateurs ne doivent pas le recolorer (mode sombre automatique d'Android) */
+@media (prefers-color-scheme: dark) { :root { color-scheme: dark; } }
+@media (prefers-color-scheme: light) { :root { color-scheme: dark; } }
 
 /* Champ d'étoiles : trois couches discrètes (poussière fine, étoiles, quelques brillantes qui scintillent) */
 body::before, body::after, html::before {
@@ -1192,7 +1200,6 @@ a.person-link:hover { color: var(--accent-soft); }
   .topnav { gap: 12px; font-size: 0.9rem; }
 }
 @media (max-width: 420px) {
-  .logo { font-size: 0; gap: 0; }
   .topnav { gap: 10px; font-size: 0.86rem; }
 }
 .pf-facts-1 { grid-template-columns: 1fr; }
@@ -1793,18 +1800,6 @@ cg-board square.learn-target.done {
   .cg-wrap.learn-ico { width: 44px; height: 44px; }
 }
 
-/* Petits écrans : le menu du haut (5 liens) défile sur le côté au lieu d'élargir la page */
-@media (max-width: 600px) {
-  .topnav {
-    flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none;
-    -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent);
-    mask-image: linear-gradient(90deg, #000 85%, transparent);
-    padding-right: 18px;
-  }
-  .topnav::-webkit-scrollbar { display: none; }
-  .topnav a { flex: none; }
-  .topbar > :not(.topnav) { flex: none; }
-}
 /* Apprendre sur petit écran : explication, puis consigne, puis échiquier (la consigne reste visible en jouant) */
 @media (max-width: 900px) {
   .learn-play { display: flex; flex-direction: column; gap: 12px; }
@@ -1832,3 +1827,160 @@ cg-board square.learn-target.done {
   background: var(--surface-2); border: 1px solid var(--line);
 }
 .learn-steps .learn-stat b { color: var(--text); margin-left: 2px; }
+
+/* ==========================================================================
+   Téléphone et tablette
+   - menu déroulant (bouton ☰, js/compte.js) jusqu'à 900 px de large
+   - commandes faciles à toucher, champs à 16 px (sinon l'iPhone zoome quand on écrit)
+   - échiquier toujours entier à l'écran avec les deux pendules
+   ========================================================================== */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+a, button, label, summary, [role='button'] { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.nav-ico { display: none; }
+.menu-toggle { display: none; }
+/* Encoches et coins arrondis des téléphones (viewport-fit=cover) */
+.topbar { padding-left: max(clamp(16px, 4vw, 40px), env(safe-area-inset-left)); padding-right: max(clamp(16px, 4vw, 40px), env(safe-area-inset-right)); }
+body { padding-bottom: env(safe-area-inset-bottom); }
+
+@media (max-width: 900px) {
+  /* --- Barre du haut : logo, (son), compte, ☰ ---------------------------- */
+  .topbar { gap: 8px; padding-top: 10px; padding-bottom: 10px; flex-wrap: nowrap; }
+  body:not(.page-game):not(.page-learn) .topbar { position: sticky; top: 0; z-index: 60; }
+  .topbar .logo { margin-right: auto; }
+  .topbar-right { order: 4; gap: 8px; }
+  .topbar .account { order: 5; }
+  .menu-toggle {
+    order: 10; display: grid; place-content: center; gap: 4px; flex: none;
+    width: 44px; height: 42px; border-radius: 12px; cursor: pointer;
+    background: var(--surface-2); border: 1px solid var(--line);
+  }
+  .menu-toggle span { display: block; width: 18px; height: 2px; border-radius: 2px; background: var(--text); transition: transform 0.22s, opacity 0.18s; }
+  .menu-open .menu-toggle { border-color: var(--accent); background: #2a2350; }
+  .menu-open .menu-toggle span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+  .menu-open .menu-toggle span:nth-child(2) { opacity: 0; }
+  .menu-open .menu-toggle span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+  .topbar .topnav {
+    position: absolute; top: calc(100% + 6px); left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right));
+    margin: 0; z-index: 70; display: flex; flex-direction: column; gap: 2px; padding: 8px; font-size: 1rem;
+    background: #19152d; border: 1px solid var(--line-strong); border-radius: 18px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), 0 0 40px rgba(143, 107, 255, 0.12);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    opacity: 0; visibility: hidden; transform: translateY(-8px) scale(0.98); transform-origin: top right;
+    transition: opacity 0.18s, transform 0.18s, visibility 0s 0.18s;
+  }
+  .menu-open .topnav { opacity: 1; visibility: visible; transform: none; transition: opacity 0.18s, transform 0.18s; }
+  /* voile sur la page quand le menu est ouvert (un appui dessus le ferme) */
+  .topbar::after {
+    content: ''; position: absolute; top: 100%; left: 0; right: 0; height: 100vh; z-index: -1; background: rgba(5, 3, 12, 0.6);
+    opacity: 0; visibility: hidden; transition: opacity 0.18s, visibility 0s 0.18s; pointer-events: none;
+  }
+  .menu-open::after { opacity: 1; visibility: visible; transition: opacity 0.18s; pointer-events: auto; }
+  .topbar .topnav a { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 12px; color: var(--text); font-size: 1.05rem; }
+  .topbar .topnav a:active { background: var(--surface-2); }
+  .topbar .topnav a[aria-current='page'] { background: rgba(143, 107, 255, 0.18); box-shadow: inset 3px 0 0 var(--accent); }
+  .topbar .topnav a[aria-current='page']::after { display: none; }
+  .nav-ico {
+    display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 10px;
+    background: var(--surface-2); border: 1px solid var(--line); font-size: 1.05rem;
+  }
+  .topnav a[aria-current='page'] .nav-ico { border-color: var(--accent); }
+  .mode-label { display: none; }
+
+  /* --- Pages ------------------------------------------------------------- */
+  .hero { padding-top: 26px; gap: 30px; }
+  .explore, .how { padding-top: 24px; padding-bottom: 24px; }
+  .moves { max-height: 150px; }
+
+  /* Partie : l'échiquier tient à l'écran avec les deux joueurs ; le reste en dessous */
+  .game-layout { padding: 8px 12px 28px; gap: 12px; }
+  .board-col { width: min(100%, max(300px, calc(100vh - 200px))); width: min(100%, max(300px, calc(100svh - 200px))); justify-self: center; gap: 6px; }
+  .game-layout .side { width: min(100%, 680px); justify-self: center; }
+  .player { min-height: 48px; padding: 4px 6px; gap: 10px; }
+  .avatar { width: 34px; height: 34px; }
+  .actions .btn { flex: 1 1 40%; }
+
+  /* Bilan */
+  .review-main { gap: 14px; }
+  .review-board { width: min(100%, max(300px, calc(100svh - 160px))); margin: 0 auto; }
+
+  /* Apprendre : l'échiquier ne dépasse pas l'écran */
+  .learn-play .board-col { width: min(100%, max(300px, calc(100svh - 120px))); }
+
+  /* Fenêtres */
+  .modal { padding: 26px 18px 20px; }
+  .modal h2 { font-size: 1.5rem; }
+  .end-actions .btn { flex: 1 1 auto; }
+}
+
+/* Commandes faciles à toucher (écran tactile ou petit écran) */
+@media (pointer: coarse), (max-width: 900px) {
+  .btn { min-height: 44px; }
+  .btn.small { min-height: 38px; }
+  .icon-btn { min-width: 40px; height: 38px; font-size: 0.9rem; }
+  .moves-head .icon-btn { min-width: 42px; }
+  input:not([type=radio]):not([type=range]):not([type=checkbox]), select, textarea, .player-search input.search-input { font-size: 16px; }
+  .seg span { padding: 0.7em 0.5em; }
+  input[type=range] { height: 28px; }
+  .learn-steps a { width: 36px; height: 36px; }
+  .inv-tab { padding-top: 12px; padding-bottom: 14px; }
+}
+/* Sur écran tactile, pas d'effet « survol » qui reste collé après un appui */
+@media (hover: none) {
+  .explore-card:hover, .learn-lesson:hover, .mode-card:hover { transform: none; box-shadow: none; }
+}
+
+@media (max-width: 640px) {
+  .topbar { padding-top: 8px; padding-bottom: 8px; }
+  .hero h1 { margin-bottom: 14px; }
+  .hero-cta { margin: 20px 0 24px; }
+  .hero-cta .btn { flex: 1 1 100%; }
+  .play-page { padding-top: 18px; }
+  .page-head h1 { font-size: 1.8rem; }
+  .card { padding: 14px 14px; }
+  .mode-card { padding: 18px 16px; }
+  .clock { font-size: 1.15rem; min-width: 76px; padding: 3px 10px; }
+  .pname { font-size: 0.95rem; }
+  .learn-home { padding-top: 22px; }
+  .learn-cat-head h2, .learn-infinite h2 { font-size: 1.15rem; }
+  .learn-infinite .learn-modes { width: 100%; }
+  .learn-infinite .learn-modes .btn { flex: 1 1 40%; }
+  /* Listes d'amis / de joueurs : les boutons passent à la ligne au lieu d'écraser le pseudo */
+  .person { flex-wrap: wrap; row-gap: 8px; }
+  .person-actions { margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }
+  /* Notifications en bas de l'écran, sur toute la largeur */
+  .toasts { left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); width: auto; }
+  .promo-choices button { width: 62px; height: 62px; }
+  .eval-bar { width: 18px; }
+  .inv-tabs { -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); }
+}
+@media (max-width: 360px) {
+  .logo { font-size: 0; gap: 0; }
+}
+/* Inventaire sur tablette : les 4 cases « équipé » sur 2 colonnes (sinon les noms sont coupés) */
+@media (max-width: 1100px) { .inv-slots { grid-template-columns: 1fr 1fr; } }
+/* Bilan sur téléphone et tablette : les flèches (coup suivant / précédent) juste sous l'échiquier, l'explication ensuite */
+@media (max-width: 900px) {
+  .review-main .side .moves-card { order: -1; }
+  .review-main .side .moves { max-height: 120px; }
+}
+/* Menu déroulant, connecté : Mon profil, Administration, Se déconnecter (seulement sur petit écran) */
+.nav-extra { display: none; }
+@media (max-width: 900px) {
+  .topbar .topnav .nav-extra { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--line); }
+  .nav-logout {
+    display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 12px; width: 100%;
+    background: none; border: 0; color: #ff8a7a; font: 600 1.05rem var(--font); text-align: left; cursor: pointer;
+  }
+  .nav-logout:active { background: var(--surface-2); }
+}
+@media (max-width: 640px) { .btn { white-space: normal; text-align: center; line-height: 1.25; } }
+@media (pointer: coarse), (max-width: 900px) { .link-btn.forgot { padding: 10px 0; margin: -10px 0; } }
+/* Apprendre sur tablette : échiquier et panneau côte à côte, tout tient à l'écran */
+@media (min-width: 601px) and (max-width: 900px) {
+  .learn-play { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 300px); align-items: start; gap: 14px; }
+  .learn-play .side { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 12px; }
+  .learn-play .board-col { width: 100%; order: 0; }
+  .learn-play .learn-card h1 { font-size: 1.35rem; }
+  .learn-play .learn-intro { font-size: 0.9rem; }
+}

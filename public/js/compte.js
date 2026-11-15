@@ -22,6 +22,42 @@ import {
   });
 }
 
+// Téléphone et tablette : le menu devient un menu déroulant, ouvert par le bouton ☰
+{
+  const bar = document.querySelector('.topbar');
+  const nav = bar?.querySelector('.topnav');
+  if (nav) {
+    const ICONS = { 'jouer.html': '♞', 'apprendre.html': '🎓', 'amis.html': '👥', 'bilan.html': '📊', 'inventaire.html': '🎒' };
+    nav.id ||= 'topnav';
+    nav.querySelectorAll('a').forEach((a) => {
+      const ico = ICONS[a.getAttribute('href')];
+      if (ico && !a.querySelector('.nav-ico')) a.insertAdjacentHTML('afterbegin', `<span class="nav-ico" aria-hidden="true">${ico}</span>`);
+    });
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'menu-toggle';
+    btn.setAttribute('aria-controls', nav.id);
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-label', 'Ouvrir le menu');
+    btn.innerHTML = '<span></span><span></span><span></span>';
+    bar.appendChild(btn);
+    const setOpen = (open) => {
+      bar.classList.toggle('menu-open', open);
+      btn.setAttribute('aria-expanded', String(open));
+      btn.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
+    };
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setOpen(!bar.classList.contains('menu-open'));
+    });
+    nav.addEventListener('click', (e) => e.target.closest('a') && setOpen(false));
+    // un appui ailleurs (ou sur le voile, qui fait partie de la barre) ferme le menu
+    document.addEventListener('click', (e) => (!bar.contains(e.target) || e.target === bar) && setOpen(false));
+    addEventListener('keydown', (e) => e.key === 'Escape' && setOpen(false));
+    matchMedia('(min-width: 901px)').addEventListener('change', (m) => m.matches && setOpen(false));
+  }
+}
+
 export const CADENCES = [
   ['1+0', 'Bullet · 1 min'],
   ['3+0', 'Blitz · 3 min'],
@@ -392,6 +428,24 @@ function renderAccount(user) {
   }
   bar.appendChild(el);
   if (user) setupSearch(el.querySelector('.player-search'));
+
+  // Menu déroulant (téléphone, tablette) : profil, administration et déconnexion, cachés dans la barre sur petit écran
+  const nav = bar.querySelector('.topnav');
+  if (user && nav && !nav.querySelector('.nav-extra')) {
+    const isStaff = user.role === 'admin' || user.role === 'fondateur';
+    nav.insertAdjacentHTML(
+      'beforeend',
+      `<div class="nav-extra">
+        <a href="profil.html"${location.pathname.endsWith('/profil.html') && !location.search ? ' aria-current="page"' : ''}><span class="nav-ico" aria-hidden="true">👤</span>Mon profil</a>
+        ${isStaff ? `<a href="admin.html"${location.pathname.endsWith('/admin.html') ? ' aria-current="page"' : ''}><span class="nav-ico" aria-hidden="true">🛡</span>Administration</a>` : ''}
+        <button type="button" class="nav-logout"><span class="nav-ico" aria-hidden="true">⎋</span>Se déconnecter</button>
+      </div>`,
+    );
+    nav.querySelector('.nav-logout').addEventListener('click', async () => {
+      await signOut(auth).catch(() => {});
+      location.href = './';
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -38,7 +38,9 @@ Puis ouvre http://localhost:3000 (le site local utilise la même base Firebase q
 
 | Fichier | Rôle |
 |---|---|
-| `public/index.html`, `js/accueil.js` | Page d'accueil |
+| `public/index.html`, `js/accueil.js` | Accueil (présentation et accès aux pages) |
+| `public/jouer.html`, `js/jouer.js` | Jouer : contre un ami, contre Noa, sur le même écran |
+| `public/profil.html`, `js/profil.js` | Profil d'un joueur : statistiques des parties en ligne, public ou privé |
 | `public/connexion.html` | Connexion, création de compte, mot de passe oublié |
 | `public/admin.html`, `js/admin.js` | Administration des membres (admins seulement) |
 | `public/amis.html`, `js/amis.js` | Mes amis, demandes, défis, historique |
@@ -66,11 +68,11 @@ Il n'y a pas de serveur : ce sont les **règles de la base** (`scripts/rules.js`
   - le gain au temps n'est accepté que si l'heure de Firebase montre que la pendule est tombée.
 - Un coup illégal reçu permet d'annuler la partie (personne ne gagne).
 - L'historique n'accepte une partie entre amis que si elle existe, est terminée, avec le même résultat, et une seule fois. On ne peut ni effacer ni modifier une partie ; un admin le peut.
-- Les statistiques « classées » du profil ne comptent que ces parties vérifiées.
+- Les statistiques du profil ne comptent que ces parties vérifiées.
 
 ## Limites à connaître
 
-- Les parties contre Noa se jouent dans le navigateur : elles ne peuvent pas être vérifiées. Elles sont affichées à part (« entraînement, non classé »).
+- Les parties contre Noa se jouent dans le navigateur : elles ne comptent pas dans les statistiques (seules les parties en ligne contre des amis comptent).
 - Rien n'empêche quelqu'un de se faire aider par un logiciel d'échecs pendant une partie (comme partout).
 
 Crédits : moteur Stockfish (GPL, licence dans `vendor/stockfish/`), échiquier Chessground de Lichess (GPL), pièces originales dessinées pour ROOOK, avatar de Noa tiré de son overlay.

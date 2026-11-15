@@ -567,12 +567,12 @@ function gunshot(at = 0, vol = 1) {
   // Le chien qui tombe, juste avant
   if (at >= 0.015) burst({ at: at - 0.014, dur: 0.012, vol: 0.35 * vol, freq: 3800, q: 6 });
   const out = a.createGain();
-  out.gain.value = vol;
+  out.gain.value = vol * 0.6; // un peu moins fort
   out.connect(master);
   const send = canyon();
   if (send) {
     const s = a.createGain();
-    s.gain.value = 0.9;
+    s.gain.value = 0.75;
     out.connect(s).connect(send);
   }
   const sat = saturator(a, 3.2);
@@ -758,7 +758,7 @@ const western = {
  */
 function westernMate(outcome) {
   hammer(0.18);
-  gunshot(1.0, 1.2);
+  gunshot(1.0, 1.1);
   shell(1.5);
   if (outcome === 'loss') {
     desertWind(1.3, 3.2, 0.11);

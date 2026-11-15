@@ -22,57 +22,105 @@
         <button role="tab" data-tab="connexion" aria-selected="true">Connexion</button>
         <button role="tab" data-tab="inscription" aria-selected="false">Créer un compte</button>
       </div>
+
       <form id="auth-form" novalidate>
-        <label class="field">Pseudo
-          <input name="username" autocomplete="username" required minlength="3" maxlength="20" placeholder="Ton pseudo">
+        <label class="field" data-only="inscription">Pseudo
+          <input name="username" autocomplete="username" minlength="3" maxlength="20" placeholder="Ton pseudo de joueur" spellcheck="false">
+          <span class="field-note" id="pseudo-note">3 à 20 caractères : lettres, chiffres, « _ » ou « - ». C’est avec lui que tes amis te trouvent.</span>
+        </label>
+        <label class="field"><span id="email-label">E-mail</span>
+          <input name="email" type="email" autocomplete="email" maxlength="200" placeholder="ton.adresse@exemple.fr" spellcheck="false">
+          <span class="field-note" data-only="inscription">Elle reste privée : elle sert seulement à te connecter et à récupérer ton mot de passe.</span>
         </label>
         <label class="field">Mot de passe
-          <input name="password" type="password" autocomplete="current-password" required minlength="6" maxlength="100" placeholder="Au moins 6 caractères">
+          <input name="password" type="password" autocomplete="current-password" minlength="6" maxlength="100" placeholder="Au moins 6 caractères">
         </label>
-        <p class="hint" id="auth-hint" hidden>3 à 20 caractères : lettres, chiffres, « _ » ou « - ». Tes amis t’ajouteront avec ce pseudo.</p>
+        <button class="link-btn forgot" type="button" id="forgot" data-only="connexion">Mot de passe oublié ?</button>
         <p class="error" id="auth-error" hidden></p>
+        <p class="form-msg ok" id="auth-ok" hidden></p>
         <button class="btn btn-primary btn-lg" id="auth-submit">Se connecter</button>
       </form>
     </div>
   </main>
 
   <script type="module">
-    import { session, signIn, signUp } from './js/compte.js';
+    import { session, signIn, signUp, resetPassword, pseudoAvailable } from './js/compte.js';
     const form = document.querySelector('#auth-form');
     const err = document.querySelector('#auth-error');
+    const ok = document.querySelector('#auth-ok');
+    const note = document.querySelector('#pseudo-note');
     const params = new URLSearchParams(location.search);
     // On ne revient que vers une page de ce site (adresse relative, jamais vers un autre site)
     const wanted = params.get('retour') || '';
     const back = /^(\.\/|[a-z]+\.html)[^:]*$/i.test(wanted) && !wanted.includes('//') ? wanted : 'amis.html';
+    let busy = false;
     // Déjà connecté : on file directement
-    session.then(({ user }) => user && (location.href = back));
+    session.then(({ user }) => user && !busy && (location.href = back));
     let mode = params.get('mode') === 'inscription' ? 'inscription' : 'connexion';
 
     function setMode(m) {
       mode = m;
       document.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === m)));
+      document.querySelectorAll('[data-only]').forEach((el) => (el.hidden = el.dataset.only !== m));
       document.querySelector('#auth-submit').textContent = m === 'connexion' ? 'Se connecter' : 'Créer mon compte';
-      document.querySelector('#auth-hint').hidden = m === 'connexion';
+      document.querySelector('#email-label').textContent = m === 'connexion' ? 'E-mail' : 'Adresse e-mail';
+      form.email.type = m === 'connexion' ? 'text' : 'email'; // les anciens comptes se connectent encore avec leur pseudo
+      form.email.placeholder = m === 'connexion' ? 'ton.adresse@exemple.fr' : 'ton.adresse@exemple.fr';
       form.password.autocomplete = m === 'connexion' ? 'current-password' : 'new-password';
-      err.hidden = true;
+      err.hidden = ok.hidden = true;
     }
     document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.tab)));
     setMode(mode);
 
+    // Disponibilité du pseudo, en direct pendant qu'on tape
+    let checkTimer = null;
+    form.username.addEventListener('input', () => {
+      clearTimeout(checkTimer);
+      const name = form.username.value.trim();
+      note.className = 'field-note';
+      if (!name) return void (note.textContent = '3 à 20 caractères : lettres, chiffres, « _ » ou « - ». C’est avec lui que tes amis te trouvent.');
+      if (!/^[A-Za-z0-9_-]{3,20}$/.test(name)) {
+        note.textContent = '3 à 20 caractères : lettres, chiffres, « _ » ou « - » (pas d’espace ni d’accent).';
+        note.className = 'field-note bad';
+        return;
+      }
+      note.textContent = 'Vérification…';
+      checkTimer = setTimeout(async () => {
+        const free = await pseudoAvailable(name).catch(() => null);
+        if (form.username.value.trim() !== name) return;
+        note.textContent = free === null ? '' : free ? `✓ « ${name} » est libre.` : `✗ « ${name} » est déjà pris.`;
+        note.className = 'field-note ' + (free ? 'good' : 'bad');
+      }, 300);
+    });
+
+    document.querySelector('#forgot').addEventListener('click', async () => {
+      err.hidden = ok.hidden = true;
+      try {
+        await resetPassword(form.email.value);
+        ok.textContent = `Si un compte existe avec l’adresse ${form.email.value.trim()}, un e-mail pour choisir un nouveau mot de passe vient d’être envoyé. Pense à regarder dans les spams.`;
+        ok.hidden = false;
+      } catch (ex) {
+        err.textContent = ex.message;
+        err.hidden = false;
+        form.email.focus();
+      }
+    });
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      err.hidden = true;
+      err.hidden = ok.hidden = true;
       const btn = document.querySelector('#auth-submit');
       btn.disabled = true;
+      busy = true;
       try {
-        const name = form.username.value.trim();
-        if (mode === 'inscription') await signUp(name, form.password.value);
-        else await signIn(name, form.password.value);
+        if (mode === 'inscription') await signUp(form.username.value, form.email.value, form.password.value);
+        else await signIn(form.email.value, form.password.value);
         location.href = back;
       } catch (ex) {
         err.textContent = ex.message;
         err.hidden = false;
         btn.disabled = false;
+        busy = false;
       }
     });
   </script>

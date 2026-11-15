@@ -8,6 +8,9 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
+  sendPasswordResetEmail,
+  verifyBeforeUpdateEmail,
+  deleteUser,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
   getDatabase,
@@ -34,6 +37,7 @@ import { firebaseConfig } from './firebase-config.js';
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+auth.languageCode = 'fr'; // e-mails de Firebase (mot de passe oublié…) en français
 export const db = getDatabase(app);
 
 export {
@@ -41,6 +45,9 @@ export {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
+  sendPasswordResetEmail,
+  verifyBeforeUpdateEmail,
+  deleteUser,
   ref,
   get,
   set,
@@ -69,3 +76,6 @@ export const serverNow = () => Date.now() + serverOffset;
 /** Firebase identifie les comptes par e-mail : on fabrique une adresse à partir du pseudo (jamais utilisée pour écrire). */
 export const pseudoEmail = (username) => `${username.toLowerCase()}@joueurs.roook-echecs.invalid`;
 export const USERNAME_RE = /^[A-Za-z0-9_-]{3,20}$/;
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+/** Anciens comptes : l'adresse était fabriquée à partir du pseudo (pas de vraie adresse). */
+export const isLegacyEmail = (email) => !email || email.endsWith('.roook-echecs.invalid');

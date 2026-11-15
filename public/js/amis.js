@@ -1,9 +1,11 @@
 // Page « Mes amis » : demandes, défis, photo de profil, et l'historique des parties (Firebase).
 import { $, escapeHtml, gameRow, saveGame, getGame, serverGameToLocal as toLocal, historyToGame as fromHistory } from './common.js';
-import { session, challenge, toast, watchFriends, acceptFriend, declineFriend, cancelRequest, removeFriend, myHistory, picHtml, setAvatar, removeAvatar } from './compte.js';
+import { session, challenge, toast, watchFriends, acceptFriend, declineFriend, cancelRequest, removeFriend, myHistory, picHtml, setAvatar, removeAvatar, myEmail, changeEmail } from './compte.js';
 
-const { user } = await session;
-if (!user) location.href = 'connexion.html?retour=amis.html';
+const { user, banned } = await session;
+if (banned) {
+  // l'écran de suspension est déjà affiché
+} else if (!user) location.href = 'connexion.html?retour=amis.html';
 else start();
 
 let friends = [];
@@ -13,6 +15,7 @@ function start() {
   $('#friends-page').hidden = false;
   $('#profile-name').textContent = user.username;
   showMyPic();
+  setupEmail();
 
   // Photo de profil : on clique sur la pastille ou sur le bouton, on choisit une image
   $('#pic-change').addEventListener('click', () => $('#pic-input').click());
@@ -47,6 +50,36 @@ function start() {
     renderRequests(data);
   });
   loadHistory();
+}
+
+/** Adresse e-mail du compte : privée, sert à se connecter et à récupérer le mot de passe. */
+function setupEmail() {
+  const show = () => {
+    const email = myEmail();
+    $('#email-text').innerHTML = email
+      ? `✉ ${escapeHtml(email)} <small class="muted">(visible par toi seul)</small>`
+      : '⚠ Pas d’adresse e-mail : ajoute-en une pour pouvoir récupérer ton mot de passe.';
+    $('#email-text').classList.toggle('warn', !email);
+    $('#email-edit').textContent = email ? 'Changer' : 'Ajouter mon e-mail';
+  };
+  show();
+  $('#email-edit').addEventListener('click', () => {
+    $('#email-form').hidden = false;
+    $('#email-form').email.focus();
+  });
+  $('#email-cancel').addEventListener('click', () => ($('#email-form').hidden = true));
+  $('#email-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = e.target.email.value.trim();
+    try {
+      await changeEmail(email);
+      $('#email-form').hidden = true;
+      e.target.reset();
+      toast(`📬 Un lien de confirmation a été envoyé à <b>${escapeHtml(email)}</b>. Clique dessus, puis reconnecte-toi avec cette adresse.`, { cls: 'info', duration: 12000 });
+    } catch (ex) {
+      toast(escapeHtml(ex.message), { cls: 'error' });
+    }
+  });
 }
 
 function showMyPic() {

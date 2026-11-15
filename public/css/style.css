@@ -779,3 +779,97 @@ body::after {
   .logo { font-size: 1.15rem; }
   .logo-mark { width: 30px; height: 30px; }
 }
+
+/* Connexion : notes sous les champs, mot de passe oublié */
+.field-note { font-weight: 400; font-size: 0.8rem; color: var(--muted); }
+.field-note.good { color: var(--mint); }
+.field-note.bad { color: var(--danger); }
+.link-btn { background: none; border: 0; padding: 0; color: var(--accent-soft); font: 600 0.88rem var(--font); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.link-btn:hover { color: var(--text); }
+.forgot { align-self: flex-end; margin-top: -6px; }
+
+/* Mes amis : adresse e-mail du compte */
+.account-email { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 12px; font-size: 0.88rem; color: var(--muted); }
+.account-email .warn { color: #f2cf4d; }
+.email-form { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; max-width: 520px; }
+.email-form input { flex: 1 1 220px; width: auto; }
+
+/* Écran d'un compte banni */
+.ban-screen { position: fixed; inset: 0; z-index: 500; display: grid; place-items: center; padding: 16px; background: rgba(8, 6, 16, 0.92); backdrop-filter: blur(6px); }
+.ban-card { max-width: 440px; text-align: center; padding: 32px 28px; display: flex; flex-direction: column; gap: 12px; align-items: center; border-color: rgba(224, 102, 90, 0.5); }
+.ban-card h1 { font: 700 1.8rem var(--serif); color: var(--danger); }
+.ban-card p { margin: 0; }
+.ban-reason { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; width: 100%; }
+body.is-banned { overflow: hidden; }
+
+/* Lien Administration dans la barre du haut */
+.admin-link { display: grid; place-items: center; text-decoration: none; font-size: 0.95rem; }
+
+/* Page d'administration */
+.admin-page { max-width: 1150px; margin: 0 auto; padding: 28px clamp(16px, 4vw, 40px) 60px; }
+.admin-head h1 { font: 700 clamp(1.7rem, 3.6vw, 2.4rem) var(--serif); margin: 4px 0; }
+.admin-head .lead { margin: 0; }
+.admin-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 22px 0; }
+.admin-stat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+.admin-stat b { font: 700 1.8rem var(--serif); }
+.admin-stat span { color: var(--muted); font-size: 0.85rem; font-weight: 600; }
+.admin-stat.online b { color: var(--mint); }
+.admin-stat.playing b { color: #f2cf4d; }
+.admin-stat.banned b { color: var(--danger); }
+.admin-stat.admin b { color: var(--accent-soft); }
+.admin-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+.admin-search { position: relative; flex: 1 1 240px; }
+.admin-search span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.admin-search input#member-search { padding-left: 34px; }
+.admin-filter { flex: 0 1 auto; }
+.admin-filter span { padding: 0.5em 0.9em; }
+.admin-toolbar select { width: auto; flex: 0 0 auto; }
+.member-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.member-list .empty { color: var(--muted); text-align: center; padding: 30px; }
+.member { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; transition: border-color 0.15s; }
+.member:hover, .member.open { border-color: var(--line-strong); }
+.member.is-banned { border-color: rgba(224, 102, 90, 0.35); }
+.member-main {
+  width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) 110px 120px 70px 18px; align-items: center; gap: 14px;
+  padding: 12px 16px; background: none; border: 0; color: var(--text); font: inherit; text-align: left; cursor: pointer;
+}
+.member-main .person-avatar { width: 42px; height: 42px; }
+.member-main .presence { border-color: var(--surface); }
+.member-id { display: flex; flex-direction: column; min-width: 0; }
+.member-name { font-weight: 700; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.member-email { color: var(--muted); font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.member-col { display: flex; flex-direction: column; font-size: 0.88rem; font-weight: 600; }
+.member-col small { color: var(--muted); font-weight: 500; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.member-chevron { color: var(--muted); transition: transform 0.2s; }
+.member.open .member-chevron { transform: rotate(180deg); }
+.badge { font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+.badge.admin { color: var(--accent-soft); border-color: rgba(143, 107, 255, 0.5); background: rgba(143, 107, 255, 0.12); }
+.badge.banned { color: var(--danger); border-color: rgba(224, 102, 90, 0.5); background: rgba(224, 102, 90, 0.1); }
+.badge.me { color: var(--mint); border-color: rgba(60, 242, 163, 0.4); }
+.member-details { padding: 4px 16px 16px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px; }
+.member-ban { margin-top: 12px; padding: 10px 14px; border-radius: 10px; background: rgba(224, 102, 90, 0.1); border: 1px solid rgba(224, 102, 90, 0.35); color: #f3b1a9; font-size: 0.9rem; }
+.member-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 20px; margin: 12px 0 0; }
+.member-facts div { min-width: 0; }
+.member-facts .wide { grid-column: 1 / -1; }
+.member-facts dt { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+.member-facts dd { margin: 2px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.member-facts code { font-size: 0.8rem; color: var(--muted); }
+.member-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.small-note { font-size: 0.82rem; margin: -6px 0 0; }
+.ban-dialog form { display: flex; flex-direction: column; gap: 14px; text-align: left; }
+.ban-dialog h2 { text-align: center; }
+.ban-dialog p { margin: 0; font-size: 0.9rem; }
+@media (max-width: 860px) {
+  .admin-stats { grid-template-columns: repeat(3, 1fr); }
+  .member-main { grid-template-columns: auto minmax(0, 1fr) 70px 18px; }
+  .member-main .member-col:nth-of-type(3), .member-main .member-col:nth-of-type(4) { display: none; }
+  .member-facts { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 520px) {
+  .admin-stats { grid-template-columns: repeat(2, 1fr); }
+  .member-main { grid-template-columns: auto minmax(0, 1fr) 18px; }
+  .member-main .member-col { display: none; }
+  .member-facts { grid-template-columns: 1fr; }
+  .admin-filter { flex: 1 1 100%; }
+}
+.admin-filter span { white-space: nowrap; }

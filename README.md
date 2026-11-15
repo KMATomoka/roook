@@ -2,7 +2,9 @@
 
 Site : **https://kmatomoka.github.io/roook/**
 
-- **Comptes et amis** : chacun crée son compte (pseudo + mot de passe), trouve ses amis avec la barre « Rechercher un joueur » en haut de chaque page (ou la touche « / »), voit qui est en ligne et les défie en un clic. L'ami reçoit le défi en direct, où qu'il soit sur le site.
+- **Comptes** : inscription avec une adresse e-mail (privée) et un pseudo unique, connexion par e-mail, « mot de passe oublié » qui envoie un lien par e-mail.
+- **Amis** : on trouve ses amis avec la barre « Rechercher un joueur » en haut de chaque page (ou la touche « / »), on voit qui est en ligne et on les défie en un clic. L'ami reçoit le défi en direct, où qu'il soit sur le site.
+- **Rôles** : membre ou admin. Les admins ont la page `admin.html` : liste de tous les membres en direct (e-mail, inscription, dernière connexion, parties, amis), bannir (1 h à définitif, avec motif) / débannir, retirer une photo, envoyer un lien « nouveau mot de passe », nommer ou retirer un admin.
 - **Photo de profil** : chacun choisit sa photo sur la page « Mes amis » (recadrée et réduite à 160 px). Elle s'affiche en partie à côté du pseudo, dans la liste d'amis et dans les défis.
 - **Parties entre amis** : en temps réel, à la pendule (bullet, blitz, rapide, classique), avec chat, nulle et revanche. Chaque partie terminée va dans l'historique du joueur.
 - **Contre Noa** : l'IA, 8 niveaux, du débutant au grand maître (le moteur tourne dans le navigateur).
@@ -16,8 +18,10 @@ Site : **https://kmatomoka.github.io/roook/**
   - les **comptes** (Authentication, « adresse e-mail / mot de passe » : l'adresse est fabriquée à partir du pseudo et ne sert jamais à écrire) ;
   - la **base temps réel** (Realtime Database, Belgique) : profils, photos de profil, amis, demandes, présence, défis, parties, historique.
 
-La configuration Firebase (`public/js/firebase-config.js`) n'est pas secrète. La sécurité vient des **règles de la base** (`database.rules.json`, à recopier dans la console Firebase → Realtime Database → Règles si on les modifie) :
-seul le joueur dont c'est le tour peut ajouter un coup, personne ne lit l'historique ou les demandes d'un autre, on ne peut défier que ses amis, etc.
+La configuration Firebase (`public/js/firebase-config.js`) n'est pas secrète. La sécurité vient des **règles de la base** (`database.rules.json`, générées par `node scripts/rules.js`, à recopier dans la console Firebase → Realtime Database → Règles si on les modifie) :
+seul le joueur dont c'est le tour peut ajouter un coup, personne ne lit l'historique ou les demandes d'un autre, on ne peut défier que ses amis, un joueur banni ne peut plus rien écrire, seuls les admins voient les e-mails et la liste des membres, etc.
+
+**Nommer le premier admin** : dans la console Firebase → Realtime Database → Données, ajouter `roles/<identifiant du compte>` = `admin` (l'identifiant est dans Authentication → Utilisateurs). Ensuite, les admins peuvent en nommer d'autres depuis la page Administration.
 
 ## Lancer le site sur ton ordinateur
 
@@ -35,7 +39,8 @@ Puis ouvre http://localhost:3000 (le site local utilise la même base Firebase q
 | Fichier | Rôle |
 |---|---|
 | `public/index.html`, `js/accueil.js` | Page d'accueil |
-| `public/connexion.html` | Connexion et création de compte |
+| `public/connexion.html` | Connexion, création de compte, mot de passe oublié |
+| `public/admin.html`, `js/admin.js` | Administration des membres (admins seulement) |
 | `public/amis.html`, `js/amis.js` | Mes amis, demandes, défis, historique |
 | `public/jeu.html`, `js/jeu.js` | Page de partie (ami, Noa, même écran) |
 | `public/js/online.js` | Parties entre amis via Firebase (coups, pendule, nulle, revanche, chat) |
@@ -44,7 +49,7 @@ Puis ouvre http://localhost:3000 (le site local utilise la même base Firebase q
 | `public/bilan.html`, `js/bilan.js`, `js/explain.js` | Bilan de partie et explications de Noa |
 | `public/js/engine.js` | IA (moteur dans le navigateur) et niveaux |
 | `public/css/style.css` | Le style (thème espace violet) |
-| `database.rules.json` | Règles de sécurité de la base Firebase |
+| `database.rules.json`, `scripts/rules.js` | Règles de sécurité de la base Firebase (et leur générateur) |
 | `scripts/build.js` | Construit le site dans `dist/` |
 
 ## Limites à connaître

@@ -33,6 +33,15 @@
           <button class="btn btn-ghost small" id="pic-change" type="button">📷 Changer ma photo</button>
           <button class="btn btn-ghost small" id="pic-remove" type="button" hidden>Retirer</button>
         </div>
+        <div class="account-email">
+          <span id="email-text"></span>
+          <button class="link-btn" type="button" id="email-edit"></button>
+        </div>
+        <form class="email-form" id="email-form" hidden novalidate>
+          <input name="email" type="email" maxlength="200" placeholder="ton.adresse@exemple.fr" autocomplete="email" required>
+          <button class="btn btn-primary small">Envoyer le lien</button>
+          <button class="btn btn-ghost small" type="button" id="email-cancel">Annuler</button>
+        </form>
       </div>
     </section>
 

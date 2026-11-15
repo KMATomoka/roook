@@ -1,13 +1,15 @@
 // Compte du joueur, partagé par toutes les pages (version Firebase) :
-// - connexion / inscription par pseudo + mot de passe
+// - inscription avec e-mail + pseudo unique, connexion par e-mail (ou pseudo pour les anciens comptes)
+// - rôles (membre / admin) et bannissements
 // - présence en ligne, amis, demandes d'amis
 // - défis en direct : notification où qu'on soit sur le site, fenêtre « Défier »
 import { escapeHtml, getPref, setPref } from './common.js';
 import {
   auth, db, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
+  sendPasswordResetEmail, verifyBeforeUpdateEmail, deleteUser,
   ref, get, set, update, remove, push, onValue, onChildAdded, onChildRemoved, onDisconnect, serverTimestamp,
   query, orderByKey, startAt, endAt, limitToFirst,
-  serverNow, pseudoEmail, USERNAME_RE,
+  serverNow, pseudoEmail, USERNAME_RE, EMAIL_RE, isLegacyEmail,
 } from './fb.js';
 
 export const CADENCES = [
@@ -59,44 +61,103 @@ export function toast(html, { duration = 5000, cls = '' } = {}) {
 // ---------------------------------------------------------------------------
 // Connexion / inscription
 // ---------------------------------------------------------------------------
+const PSEUDO_RULE = 'Pseudo : 3 à 20 caractères, lettres, chiffres, « _ » ou « - ».';
 const AUTH_ERRORS = {
-  'auth/email-already-in-use': 'Ce pseudo est déjà pris.',
+  'auth/email-already-in-use': 'Cette adresse e-mail a déjà un compte. Connecte-toi, ou utilise « Mot de passe oublié ».',
   'auth/weak-password': 'Le mot de passe doit faire au moins 6 caractères.',
-  'auth/invalid-credential': 'Pseudo ou mot de passe incorrect.',
-  'auth/wrong-password': 'Pseudo ou mot de passe incorrect.',
-  'auth/user-not-found': 'Pseudo ou mot de passe incorrect.',
-  'auth/invalid-email': 'Pseudo : 3 à 20 caractères, lettres, chiffres, « _ » ou « - ».',
+  'auth/invalid-credential': 'E-mail ou mot de passe incorrect.',
+  'auth/wrong-password': 'E-mail ou mot de passe incorrect.',
+  'auth/user-not-found': 'E-mail ou mot de passe incorrect.',
+  'auth/invalid-email': 'Cette adresse e-mail n’est pas valide.',
+  'auth/missing-email': 'Indique ton adresse e-mail.',
   'auth/too-many-requests': 'Trop de tentatives. Réessaie dans quelques minutes.',
   'auth/network-request-failed': 'Pas de connexion Internet.',
+  'auth/requires-recent-login': 'Par sécurité, déconnecte-toi puis reconnecte-toi avant de faire ça.',
+  'auth/user-disabled': 'Ce compte a été désactivé.',
 };
 const authError = (e) => new Error(AUTH_ERRORS[e.code] || 'Erreur : ' + (e.code || e.message));
 
-export async function signUp(username, password) {
-  username = username.trim();
-  if (!USERNAME_RE.test(username)) throw new Error(AUTH_ERRORS['auth/invalid-email']);
-  if (password.length < 6) throw new Error(AUTH_ERRORS['auth/weak-password']);
-  let cred;
-  try {
-    cred = await createUserWithEmailAndPassword(auth, pseudoEmail(username), password);
-  } catch (e) {
-    throw authError(e);
-  }
-  const uid = cred.user.uid;
-  await update(ref(db), {
-    [`users/${uid}`]: { username, createdAt: serverTimestamp() },
-    [`usernames/${username.toLowerCase()}`]: uid,
-  });
+/** Le pseudo est-il libre ? (lisible sans être connecté, pour l'inscription) */
+export async function pseudoAvailable(username) {
+  const name = String(username || '').trim();
+  if (!USERNAME_RE.test(name)) return false;
+  return !(await get(ref(db, `usernames/${name.toLowerCase()}`))).exists();
 }
 
-export async function signIn(username, password) {
-  username = username.trim();
-  if (!USERNAME_RE.test(username)) throw new Error(AUTH_ERRORS['auth/invalid-credential']);
+let signupDone = null; // pendant une inscription, la session attend que le profil soit écrit
+
+export async function signUp(username, email, password) {
+  username = String(username || '').trim();
+  email = String(email || '').trim();
+  if (!USERNAME_RE.test(username)) throw new Error(PSEUDO_RULE);
+  if (!EMAIL_RE.test(email)) throw new Error(AUTH_ERRORS['auth/invalid-email']);
+  if (password.length < 6) throw new Error(AUTH_ERRORS['auth/weak-password']);
+  if (!(await pseudoAvailable(username))) throw new Error('Ce pseudo est déjà pris. Choisis-en un autre.');
+  let finish;
+  signupDone = new Promise((r) => (finish = r));
   try {
-    await signInWithEmailAndPassword(auth, pseudoEmail(username), password);
+    let cred;
+    try {
+      cred = await createUserWithEmailAndPassword(auth, email, password);
+    } catch (e) {
+      throw authError(e);
+    }
+    const uid = cred.user.uid;
+    try {
+      // Tout d'un coup : si le pseudo vient d'être pris par quelqu'un d'autre, rien n'est écrit
+      await update(ref(db), {
+        [`users/${uid}`]: { username, createdAt: serverTimestamp() },
+        [`usernames/${username.toLowerCase()}`]: uid,
+        [`private/${uid}`]: { email },
+      });
+    } catch {
+      await deleteUser(cred.user).catch(() => {});
+      throw new Error('Ce pseudo vient d’être pris. Choisis-en un autre.');
+    }
+  } finally {
+    finish();
+  }
+}
+
+/** Connexion par e-mail. Les anciens comptes (sans e-mail) se connectent encore avec leur pseudo. */
+export async function signIn(identifier, password) {
+  identifier = String(identifier || '').trim();
+  let email = identifier;
+  if (!identifier.includes('@')) {
+    if (!USERNAME_RE.test(identifier)) throw new Error(AUTH_ERRORS['auth/invalid-credential']);
+    email = pseudoEmail(identifier);
+  }
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
   } catch (e) {
     throw authError(e);
   }
 }
+
+/** Envoie l'e-mail « mot de passe oublié ». Ne dit pas si l'adresse a un compte (vie privée). */
+export async function resetPassword(email) {
+  email = String(email || '').trim();
+  if (!EMAIL_RE.test(email)) throw new Error('Indique l’adresse e-mail de ton compte.');
+  try {
+    await sendPasswordResetEmail(auth, email);
+  } catch (e) {
+    if (e.code !== 'auth/user-not-found') throw authError(e);
+  }
+}
+
+/** Ajoute ou change l'adresse e-mail du compte : Firebase envoie un lien de confirmation à la nouvelle adresse. */
+export async function changeEmail(email) {
+  email = String(email || '').trim();
+  if (!EMAIL_RE.test(email)) throw new Error(AUTH_ERRORS['auth/invalid-email']);
+  try {
+    await verifyBeforeUpdateEmail(auth.currentUser, email);
+  } catch (e) {
+    throw authError(e);
+  }
+}
+
+/** Adresse e-mail réelle du compte (null pour un ancien compte sans e-mail). */
+export const myEmail = () => (auth.currentUser && !isLegacyEmail(auth.currentUser.email) ? auth.currentUser.email : null);
 
 // ---------------------------------------------------------------------------
 // Session
@@ -109,20 +170,78 @@ let started = false;
 onAuthStateChanged(auth, async (u) => {
   if (started) return; // une seule résolution par page (après connexion/déconnexion, on recharge)
   started = true;
+  if (u && signupDone) await signupDone; // inscription en cours : on attend que le profil soit écrit
   if (u) {
-    let username = null;
-    let avatar = null;
-    try {
-      [username, avatar] = await Promise.all([get(ref(db, `users/${u.uid}/username`)).then((x) => x.val()), avatarOf(u.uid)]);
-    } catch {}
-    currentUser = { id: u.uid, username: username || u.email.split('@')[0], avatar };
+    const val = (path) => get(ref(db, path)).then((x) => x.val()).catch(() => null);
+    const [username, avatar, role, ban] = await Promise.all([
+      val(`users/${u.uid}/username`),
+      avatarOf(u.uid),
+      val(`roles/${u.uid}`),
+      val(`bans/${u.uid}`),
+    ]);
+    if (isBanActive(ban)) {
+      showBanScreen(ban);
+      resolveSession({ user: null, banned: ban });
+      return;
+    }
+    currentUser = { id: u.uid, username: username || 'Joueur', avatar, role: role === 'admin' ? 'admin' : 'member' };
+    syncEmail(u);
     startPresence();
     listenInvitations();
     listenFriendRequests();
+    watchBan(u.uid);
   }
   renderAccount(currentUser);
   resolveSession({ user: currentUser });
 });
+
+// ---------------------------------------------------------------------------
+// Rôles et bannissements
+// ---------------------------------------------------------------------------
+export const isAdmin = () => currentUser?.role === 'admin';
+export const isBanActive = (ban) => !!ban && (!ban.until || ban.until > serverNow());
+
+export function banEndText(ban) {
+  if (!ban.until) return 'définitivement';
+  return 'jusqu’au ' + new Date(ban.until).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' });
+}
+
+/** Écran affiché à un joueur banni, sur toutes les pages. */
+function showBanScreen(ban) {
+  document.querySelector('.ban-screen')?.remove();
+  const el = document.createElement('div');
+  el.className = 'ban-screen';
+  el.innerHTML = `
+    <div class="card ban-card">
+      <img src="img/noa/colere.svg" alt="" width="96" height="96">
+      <h1>Compte suspendu</h1>
+      <p>Ton compte ROOOK est suspendu <b>${escapeHtml(banEndText(ban))}</b>.</p>
+      ${ban.reason ? `<p class="ban-reason">Motif : ${escapeHtml(ban.reason)}</p>` : ''}
+      <p class="muted">Tu peux toujours jouer contre Noa sans compte après t’être déconnecté.</p>
+      <button class="btn btn-primary" type="button">Se déconnecter</button>
+    </div>`;
+  el.querySelector('button').addEventListener('click', async () => {
+    await signOut(auth).catch(() => {});
+    location.href = './';
+  });
+  document.body.appendChild(el);
+  document.body.classList.add('is-banned');
+}
+
+/** Si un admin bannit le joueur pendant qu'il est sur le site, la page se recharge sur l'écran de suspension. */
+function watchBan(uid) {
+  onValue(ref(db, `bans/${uid}`), (s) => {
+    if (isBanActive(s.val())) location.reload();
+  });
+}
+
+/** Garde à jour l'adresse e-mail visible par les admins (après un changement d'adresse confirmé). */
+function syncEmail(u) {
+  if (isLegacyEmail(u.email)) return;
+  get(ref(db, `private/${u.uid}/email`))
+    .then((s) => s.val() !== u.email && set(ref(db, `private/${u.uid}/email`), u.email))
+    .catch(() => {});
+}
 
 function renderAccount(user) {
   const bar = document.querySelector('.topbar');
@@ -135,6 +254,7 @@ function renderAccount(user) {
   } else {
     el.innerHTML = `
       ${SEARCH_HTML}
+      ${user.role === 'admin' ? '<a class="icon-btn admin-link" href="admin.html" title="Administration" aria-label="Administration">🛡</a>' : ''}
       <a class="account-chip" href="amis.html" title="Mes amis et mes parties">
         ${picHtml(user.username, user.avatar, 'account-initial')}
         <span class="account-name">${escapeHtml(user.username)}</span>

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administration — ROOOK</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="page-admin">
+  <header class="topbar">
+    <a class="logo" href="./"><span class="logo-mark">♜</span> ROOOK</a>
+    <nav class="topnav">
+      <a href="./#jouer">Jouer</a>
+      <a href="amis.html">Mes amis</a>
+    </nav>
+  </header>
+
+  <main class="admin-page">
+    <div class="card notfound" id="admin-denied" hidden>
+      <h2>Accès réservé</h2>
+      <p>Cette page est réservée aux administrateurs de ROOOK.</p>
+      <a class="btn btn-primary" href="./">Retour à l’accueil</a>
+    </div>
+
+    <div id="admin-app" hidden>
+      <div class="admin-head">
+        <div>
+          <p class="eyebrow">🛡 Administration</p>
+          <h1>Les membres</h1>
+          <p class="lead">Tous les comptes ROOOK, en direct. Clique sur un membre pour voir sa fiche et agir.</p>
+        </div>
+      </div>
+
+      <section class="admin-stats" id="stats"></section>
+
+      <div class="admin-toolbar">
+        <div class="admin-search">
+          <span aria-hidden="true">⌕</span>
+          <input id="member-search" type="search" placeholder="Pseudo ou e-mail…" autocomplete="off" spellcheck="false" aria-label="Chercher un membre">
+        </div>
+        <div class="seg admin-filter" role="radiogroup" aria-label="Filtrer">
+          <label><input type="radio" name="filtre" value="all" checked><span>Tous</span></label>
+          <label><input type="radio" name="filtre" value="online"><span>En ligne</span></label>
+          <label><input type="radio" name="filtre" value="banned"><span>Bannis</span></label>
+          <label><input type="radio" name="filtre" value="admin"><span>Admins</span></label>
+        </div>
+        <select id="member-sort" aria-label="Trier">
+          <option value="recent">Inscrits récemment</option>
+          <option value="seen">Dernière connexion</option>
+          <option value="name">Pseudo A → Z</option>
+          <option value="games">Plus de parties</option>
+        </select>
+      </div>
+
+      <ul class="member-list" id="members"></ul>
+    </div>
+  </main>
+
+  <dialog class="modal ban-dialog" id="ban-dialog">
+    <form method="dialog" id="ban-form">
+      <h2>Bannir <span id="ban-name"></span></h2>
+      <p class="muted">Le joueur est déconnecté tout de suite et ne peut plus rien faire sur le site (parties entre amis, défis, amis, photo) jusqu’à la fin du bannissement.</p>
+      <label class="field">Durée
+        <select name="duree">
+          <option value="3600000">1 heure</option>
+          <option value="86400000" selected>1 jour</option>
+          <option value="604800000">7 jours</option>
+          <option value="2592000000">30 jours</option>
+          <option value="0">Définitif</option>
+        </select>
+      </label>
+      <label class="field">Motif (le joueur le verra)
+        <input name="motif" maxlength="200" placeholder="Ex. : insultes dans le chat" autocomplete="off">
+      </label>
+      <div class="end-actions">
+        <button class="btn btn-danger" value="ban">⛔ Bannir</button>
+        <button class="btn btn-ghost" value="cancel" formnovalidate>Annuler</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

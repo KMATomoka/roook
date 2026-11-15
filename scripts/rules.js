@@ -26,7 +26,9 @@ const VISIBLE = (v) => `(auth.uid === ${v} || ${ADMIN} || root.child('users/' + 
 //      temps → seulement si l'heure de Firebase montre que la pendule est vraiment tombée ;
 //      coup illégal reçu → la partie peut être annulée (personne ne gagne) ;
 //      déconnexion → si l'adversaire a quitté la partie depuis plus de 60 s (heure de Firebase) et n'est pas revenu,
-//      on peut écrire sa propre victoire (« deconnexion »).
+//      on peut écrire sa propre victoire (« deconnexion ») ;
+//      adversaire absent → avant le 2e coup, si l'adversaire n'est pas dans la partie, on peut l'annuler (« absent »).
+// Les parties se créent entre amis, ou entre deux joueurs de la file « Adversaire au hasard » (matchmaking).
 // ---------------------------------------------------------------------------
 const G = (p) => `root.child('games/' + $g + '/${p}')`; // valeur actuelle (avant l'écriture)
 const PLAYER = `(${G('white')}.val() === auth.uid || ${G('black')}.val() === auth.uid)`;
@@ -57,7 +59,16 @@ const END_OK = `((${W_} === 'abandon' && ${R_} === ${LOSS_ME})
   || ((${W_} === 'pat' || ${W_} === 'materiel' || ${W_} === 'repetition' || ${W_} === '50coups') && ${R_} === '1/2-1/2' && root.child('games/' + $g + '/claims/' + ${OTHER}).val() === ${W_})
   || (${AT} > 0 && ${LEFT(TURN)} <= 0 && ((${W_} === 'temps' && ${R_} === ${LOSS_TURN}) || (${W_} === 'temps-materiel' && ${R_} === '1/2-1/2' && ${TURN} !== ${SEAT})))
   || (${W_} === 'annulee' && ${R_} === '*' && ${TURN} === ${SEAT})
-  || (${W_} === 'deconnexion' && ${R_} === ${WIN_ME} && ${OPP_GONE}))`.replace(/\n\s*/g, ' ');
+  || (${W_} === 'deconnexion' && ${R_} === ${WIN_ME} && ${OPP_GONE})
+  || (${W_} === 'absent' && ${R_} === '*' && ${G('ply')}.val() < 2 && !root.child('games/' + $g + '/online/' + ${OPP_UID}).exists()))`.replace(/\n\s*/g, ' ');
+
+// Adversaire au hasard : la partie est créée dans la même écriture que le « trouvé » des deux joueurs de la file
+const NEWG = (p) => `newData.child('${p}').val()`;
+const MM_MATCH = (seat) => `newData.parent().parent().child('matchmaking/' + ${NEWG('mm')} + '/' + ${NEWG(seat)} + '/match').val() === $g`;
+const MM_PAIR = `(newData.child('mm').isString() && ${NEWG('white')} !== ${NEWG('black')} && ${MM_MATCH('white')} && ${MM_MATCH('black')})`;
+// Depuis matchmaking/$key/$uid/match, la racine après l'écriture
+const MM_ROOT = 'newData.parent().parent().parent().parent()';
+const MM_GAME = (p) => `${MM_ROOT}.child('games/' + newData.val() + '/${p}').val()`;
 
 // Historique : une partie entre amis n'y entre que si elle existe vraiment, est terminée, et avec le même résultat
 const GH = (p) => `root.child('games/' + newData.child('game').val() + '/${p}')`;
@@ -206,13 +217,29 @@ const rules = {
         },
       },
     },
+    // File d'attente « Adversaire au hasard », une par cadence ($key = « base-inc » en ms, ex. 600000-0).
+    // Chacun s'inscrit et part soi-même ; l'appariement écrit, en une fois, la partie et le « match » des deux joueurs.
+    matchmaking: {
+      $key: {
+        '.read': ME,
+        $uid: {
+          '.write': `${ME} && auth.uid === $uid && ${OK} && $key.matches(/^[0-9]{5,7}-[0-9]{1,5}$/) && (!newData.exists() || !newData.child('match').exists())`,
+          '.validate': "newData.hasChildren(['username', 'at']) && newData.child('username').isString() && newData.child('username').val().length <= 20 && (newData.child('at').val() === now || newData.child('at').val() === data.child('at').val())",
+          match: {
+            // Seulement en créant la partie dans la même écriture, entre deux joueurs inscrits dans cette file
+            '.write': `${ME} && ${OK} && !data.exists() && newData.isString() && root.child('matchmaking/' + $key + '/' + $uid + '/at').exists() && root.child('matchmaking/' + $key + '/' + auth.uid + '/at').exists() && !root.child('games/' + newData.val()).exists() && ${MM_GAME('mm')} === $key && (${MM_GAME('white')} === $uid || ${MM_GAME('black')} === $uid) && (${MM_GAME('white')} === auth.uid || ${MM_GAME('black')} === auth.uid)`,
+          },
+        },
+      },
+    },
     // Parties entre amis : les règles servent d'arbitre (voir la section « Arbitre » plus haut).
     games: {
       $g: {
         '.read': ME,
-        // Création seulement (par l'un des deux joueurs, qui doivent être amis) ; ensuite, chaque champ a sa règle
-        '.write': `${ME} && ${OK} && !data.exists() && (newData.child('white').val() === auth.uid || newData.child('black').val() === auth.uid) && root.child('friends/' + newData.child('white').val() + '/' + newData.child('black').val()).exists()`,
-        '.validate': `newData.hasChildren(['white', 'black', 'names', 'time', 'status', 'round', 'ply']) && (data.exists() || (newData.child('status').val() === 'playing' && newData.child('round').val() === 1 && newData.child('ply').val() === 0 && !newData.child('moves').exists() && !newData.child('result').exists() && !newData.child('reason').exists() && newData.child('time/base').isNumber() && newData.child('time/base').val() >= 60000 && newData.child('time/inc').isNumber() && newData.child('clock/w').val() === newData.child('time/base').val() && newData.child('clock/b').val() === newData.child('time/base').val() && newData.child('clock/at').val() === 0))`,
+        // Création seulement (par l'un des deux joueurs, qui doivent être amis ou appariés par la file d'attente) ;
+        // ensuite, chaque champ a sa règle
+        '.write': `${ME} && ${OK} && !data.exists() && (newData.child('white').val() === auth.uid || newData.child('black').val() === auth.uid) && (root.child('friends/' + newData.child('white').val() + '/' + newData.child('black').val()).exists() || ${MM_PAIR})`,
+        '.validate': `newData.hasChildren(['white', 'black', 'names', 'time', 'status', 'round', 'ply']) && (data.exists() || (newData.child('status').val() === 'playing' && newData.child('round').val() === 1 && newData.child('ply').val() === 0 && !newData.child('moves').exists() && !newData.child('result').exists() && !newData.child('reason').exists() && newData.child('time/base').isNumber() && newData.child('time/base').val() >= 60000 && newData.child('time/inc').isNumber() && newData.child('clock/w').val() === newData.child('time/base').val() && newData.child('clock/b').val() === newData.child('time/base').val() && newData.child('clock/at').val() === 0 && (!newData.child('mm').exists() || newData.child('mm').val() === newData.child('time/base').val() + '-' + newData.child('time/inc').val())))`,
         // Revanche : couleurs inversées
         white: { '.write': RESET, '.validate': `!data.exists() || newData.val() === ${G('black')}.val()` },
         black: { '.write': RESET, '.validate': `!data.exists() || newData.val() === ${G('white')}.val()` },
@@ -253,7 +280,7 @@ const rules = {
         },
         reason: {
           '.write': `(${PLAYER} && !data.exists() && ${PLAYING} && newData.parent().child('status').val() === 'over') || (${RESET} && !newData.exists())`,
-          '.validate': `newData.isString() && newData.val().matches(/^(mat|abandon|accord|temps|temps-materiel|pat|materiel|repetition|50coups|annulee|deconnexion)$/)`,
+          '.validate': `newData.isString() && newData.val().matches(/^(mat|abandon|accord|temps|temps-materiel|pat|materiel|repetition|50coups|annulee|deconnexion|absent)$/)`,
         },
         // Proposer la nulle (pour soi), ou effacer une proposition
         drawOffer: { '.write': `${PLAYER} && (!newData.exists() || (${OK} && ${PLAYING} && newData.val() === ${SEAT}))` },
@@ -273,9 +300,10 @@ const rules = {
         online: { $uid: { '.write': `auth.uid === $uid && ${PLAYER}` } },
         // Heure de déconnexion d'un joueur (posée par Firebase quand sa page se ferme, effacée à son retour)
         left: { $uid: { '.write': `auth.uid === $uid && ${PLAYER}`, '.validate': 'newData.isNumber()' } },
+        // Pas de discussion avec un adversaire inconnu (partie « au hasard »)
         chat: {
           $m: {
-            '.write': `${PLAYER} && ${OK} && !data.exists()`,
+            '.write': `${PLAYER} && ${OK} && !data.exists() && !${G('mm')}.exists()`,
             '.validate': "newData.hasChildren(['from', 'text', 'at']) && newData.child('text').isString() && newData.child('text').val().length <= 300",
           },
         },

@@ -328,6 +328,20 @@ function spaceMate(outcome) {
   [1046.5, 1318.5, 1568, 2093, 2349.3, 2637, 3136].forEach((f, i) =>
     echo({ freq: f, type: 'sine', at: 1.25 + i * 0.09, dur: 0.35, vol: 0.06 }, { times: 2, gap: 0.16 }),
   );
+  // Comètes : deux souffles qui passent
+  burst({ at: 2.1, dur: 0.9, vol: 0.12, type: 'bandpass', freq: 800, endFreq: 4200, q: 2 });
+  burst({ at: 2.9, dur: 0.9, vol: 0.1, type: 'bandpass', freq: 4200, endFreq: 700, q: 2 });
+  // Fanfare de synthé : arpège qui monte, puis la note finale tenue, sur une grande nappe
+  const lead = [[392, 0.16], [523.3, 0.16], [659.3, 0.16], [784, 0.3], [1046.5, 1.3]];
+  let t = 2.15;
+  for (const [f, d] of lead) {
+    tone({ freq: f, type: 'sawtooth', at: t, dur: d + 0.1, vol: 0.045, attack: 0.01 });
+    tone({ freq: f, type: 'triangle', at: t, dur: d + 0.15, vol: 0.08, attack: 0.01 });
+    echo({ freq: f * 2, type: 'sine', at: t + 0.05, dur: 0.2, vol: 0.025 }, { times: 2, gap: 0.15 });
+    t += d + 0.03;
+  }
+  pad([261.6, 329.6, 392, 523.3, 659.3], { at: 2.7, dur: 2.6, vol: 0.05, open: 4200 });
+  tone({ freq: 65.4, at: 2.7, dur: 2.2, vol: 0.18, attack: 0.08 });
 }
 
 // Royal : garde les sons d'origine (avant Astrea « espace ») pour les coups, prises et échecs

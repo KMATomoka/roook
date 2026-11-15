@@ -1423,3 +1423,21 @@ a.person-link:hover { color: var(--accent-soft); }
 @keyframes fx-spin { to { transform: rotate(360deg); } }
 .fx-mate-banner.space .s { position: relative; }
 .fx-mate-banner.space.win .s { background: linear-gradient(90deg, #8f6bff, #3cf2a3); color: #0c0a16; }
+
+/* Supernova (Astrea, victoire) : onde sur l'échiquier, gloire du vainqueur, constellation, comètes */
+.fx-cell { position: absolute; pointer-events: none; mix-blend-mode: screen; will-change: transform, opacity; }
+.fx-aura {
+  position: absolute; border-radius: 50%; pointer-events: none; will-change: transform, opacity;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.7) 0%, rgba(185, 166, 255, 0.55) 22%, rgba(60, 242, 163, 0.25) 45%, transparent 68%);
+}
+.fx-moon-orbit { position: absolute; border-radius: 50%; border: 1px solid rgba(185, 166, 255, 0.35); pointer-events: none; z-index: 3; }
+.fx-moon-spin { position: absolute; inset: 0; }
+.fx-moon { position: absolute; left: 50%; top: 0; border-radius: 50%; transform: translate(-50%, -50%); }
+.fx-constellation { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; overflow: visible; }
+.fx-constellation line { stroke: rgba(230, 224, 250, 0.85); stroke-width: 2; stroke-linecap: round; filter: drop-shadow(0 0 4px #b9a6ff); }
+.fx-comet {
+  position: absolute; height: 3px; border-radius: 3px; pointer-events: none; transform-origin: 100% 50%; z-index: 3; will-change: transform, opacity;
+  background: linear-gradient(90deg, rgba(127, 216, 255, 0), rgba(185, 166, 255, 0.5) 60%, #ffffff);
+  box-shadow: 0 0 10px rgba(185, 166, 255, 0.8);
+}
+.fx-comet::after { content: ''; position: absolute; right: -3px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: #fff; box-shadow: 0 0 12px 4px rgba(185, 166, 255, 0.9); }

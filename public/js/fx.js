@@ -533,8 +533,96 @@ export function createFx(frame, getOrientation) {
     }
   }
 
+  /** Onde de lumière qui traverse l'échiquier case par case, depuis une case. */
+  function boardWave(fromSq, { colors = ['rgba(185,166,255,.55)', 'rgba(60,242,163,.45)'], step = 55, delay = 0 } = {}) {
+    if (reduceMotion()) return;
+    const f0 = FILES.indexOf(fromSq[0]);
+    const r0 = Number(fromSq[1]) - 1;
+    for (let f = 0; f < 8; f++) {
+      for (let r = 0; r < 8; r++) {
+        const sq = FILES[f] + (r + 1);
+        const { x, y, s } = at(sq);
+        const dist = Math.hypot(f - f0, r - r0);
+        const d = el(under, 'fx-cell', { left: `${x - s / 2}px`, top: `${y - s / 2}px`, width: `${s}px`, height: `${s}px`, background: colors[(f + r) % colors.length] });
+        once(d, [{ opacity: 0, transform: 'scale(.6)' }, { opacity: 1, transform: 'scale(1)', offset: 0.35 }, { opacity: 0, transform: 'scale(.92)' }], { duration: 620, delay: delay + dist * step, easing: 'ease-out', fill: 'backwards' });
+      }
+    }
+  }
+
+  /** Le roi vainqueur : halo cosmique et trois petites lunes en orbite. */
+  function kingGlory(sq, gen, life = 4200) {
+    if (reduceMotion() || !sq) return;
+    const { x, y, s } = at(sq);
+    const aura = el(under, 'fx-aura', { left: `${x}px`, top: `${y}px`, width: `${s * 2.4}px`, height: `${s * 2.4}px` });
+    once(aura, [{ opacity: 0, transform: 'translate(-50%,-50%) scale(.3)' }, { opacity: 1, transform: 'translate(-50%,-50%) scale(1)', offset: 0.15 }, { opacity: 0.8, transform: 'translate(-50%,-50%) scale(1.1)', offset: 0.85 }, { opacity: 0, transform: 'translate(-50%,-50%) scale(1.2)' }], { duration: life, easing: 'ease-out' });
+    const moons = [
+      { r: 0.62, size: 0.13, color: '#3cf2a3', period: 1600, tilt: -18 },
+      { r: 0.78, size: 0.1, color: '#b9a6ff', period: 2300, tilt: 22 },
+      { r: 0.92, size: 0.08, color: '#7fd8ff', period: 3100, tilt: -4 },
+    ];
+    for (const m of moons) {
+      // Une orbite = un anneau aplati qui tourne, la lune posée sur son bord
+      const orbit = el(over, 'fx-moon-orbit', { left: `${x}px`, top: `${y}px`, width: `${s * m.r * 2}px`, height: `${s * m.r * 2}px`, transform: `translate(-50%,-50%) rotate(${m.tilt}deg) scale(1,.38)` });
+      const spin = el(orbit, 'fx-moon-spin');
+      el(spin, 'fx-moon', { width: `${s * m.size}px`, height: `${s * m.size / 0.38}px`, background: m.color, boxShadow: `0 0 ${s * 0.12}px ${m.color}` });
+      spin.animate([{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }], { duration: m.period, iterations: Infinity });
+      once(orbit, [{ opacity: 0 }, { opacity: 1, offset: 0.12 }, { opacity: 1, offset: 0.85 }, { opacity: 0 }], { duration: life });
+    }
+  }
+
+  /** Une constellation qui se dessine en lumière, étoile après étoile. */
+  function constellation(gen, { delay = 0, life = 3400 } = {}) {
+    if (reduceMotion()) return;
+    const W = frame.clientWidth;
+    // Points (en fraction de l'échiquier) : une étoile à 5 branches stylisée, posée en haut à droite ou à gauche
+    const left = Math.random() < 0.5;
+    const cx = left ? 0.24 : 0.76;
+    const cy = 0.24;
+    const R = 0.15;
+    const pts = [0, 2, 4, 1, 3].map((k) => {
+      const a = -Math.PI / 2 + (k * 2 * Math.PI) / 5;
+      return [(cx + Math.cos(a) * R) * W, (cy + Math.sin(a) * R) * W];
+    });
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'fx-constellation');
+    svg.setAttribute('viewBox', `0 0 ${W} ${W}`);
+    over.appendChild(svg);
+    const path = [...pts, pts[0]];
+    path.slice(1).forEach(([x2, y2], i) => {
+      const [x1, y1] = path[i];
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      Object.entries({ x1, y1, x2, y2 }).forEach(([k, v]) => line.setAttribute(k, v));
+      const len = Math.hypot(x2 - x1, y2 - y1);
+      line.style.strokeDasharray = `${len}`;
+      line.style.strokeDashoffset = `${len}`;
+      svg.appendChild(line);
+      line.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], { duration: 260, delay: delay + 200 + i * 230, easing: 'ease-out', fill: 'forwards' });
+    });
+    pts.forEach(([px, py], i) => {
+      const w = W * 0.035;
+      const st = el(over, 'fx-star', { left: `${px}px`, top: `${py}px`, width: `${w}px`, height: `${w}px`, background: '#ffffff', filter: 'drop-shadow(0 0 6px #b9a6ff)' });
+      once(st, [{ opacity: 0, transform: 'translate(-50%,-50%) scale(.2) rotate(0deg)' }, { opacity: 1, transform: 'translate(-50%,-50%) scale(1.3) rotate(45deg)', offset: 0.1 }, { opacity: 0.9, transform: 'translate(-50%,-50%) scale(1) rotate(45deg)', offset: 0.85 }, { opacity: 0, transform: 'translate(-50%,-50%) scale(.6) rotate(90deg)' }], { duration: life - i * 230, delay: delay + i * 230, fill: 'backwards' });
+    });
+    once(svg, [{ opacity: 1 }, { opacity: 1, offset: 0.8 }, { opacity: 0 }], { duration: life + 300, delay });
+  }
+
+  /** Comète qui traverse l'échiquier en diagonale. */
+  function comet({ delay = 0, fromLeft = true } = {}) {
+    if (reduceMotion()) return;
+    const W = frame.clientWidth;
+    const y0 = W * rand(0.05, 0.35);
+    const d = el(over, 'fx-comet', { left: `${fromLeft ? -W * 0.1 : W * 1.1}px`, top: `${y0}px`, width: `${W * 0.22}px` });
+    const ang = fromLeft ? rand(14, 26) : 180 - rand(14, 26);
+    const dist = W * 1.35;
+    once(d, [
+      { transform: `rotate(${ang}deg) translateX(0)`, opacity: 0 },
+      { opacity: 1, offset: 0.12 },
+      { transform: `rotate(${ang}deg) translateX(${dist}px)`, opacity: 0 },
+    ], { duration: 1100, delay, easing: 'cubic-bezier(.3,.1,.6,1)', fill: 'backwards' });
+  }
+
   /** Titre de fin « espace » : dégradé nébuleuse et petite planète en orbite autour. */
-  function spaceBanner(outcome, loser, W, gen, calm, vignette) {
+  function spaceBanner(outcome, loser, W, gen, calm, vignette, hold = 4800) {
     const sub = outcome === 'win' ? 'Victoire !' : outcome === 'loss' ? 'Défaite' : `${loser === 'w' ? 'Les Noirs' : 'Les Blancs'} gagnent`;
     const banner = el(over, 'fx-mate-banner space ' + outcome, { fontSize: `${Math.max(26, W * 0.1)}px` },
       `<div class="orbit"><span class="spin"><i></i></span></div><div class="t">Échec et mat</div><div class="s">${sub}</div>`);
@@ -553,7 +641,7 @@ export function createFx(frame, getOrientation) {
       if (gen !== generation) return;
       once(banner, [{ opacity: 1 }, { opacity: 0 }], { duration: 800, fill: 'forwards' });
       once(vignette, [{ opacity: 1 }, { opacity: 0 }], { duration: 1000, fill: 'forwards' });
-    }, 4800);
+    }, hold);
   }
 
   /**
@@ -561,7 +649,7 @@ export function createFx(frame, getOrientation) {
    *  - victoire (ou spectateur) : SUPERNOVA — hyperespace, le roi vaincu surchauffe et explose en nébuleuse d'étoiles ;
    *  - défaite : TROU NOIR — ton roi est aspiré par un trou noir.
    */
-  async function spaceMateFx(move, kingSq, loser, outcome, gen) {
+  async function spaceMateFx(move, kingSq, loser, outcome, gen, winnerSq = null) {
     const { x, y, s } = at(kingSq);
     const W = frame.clientWidth;
     const calm = reduceMotion();
@@ -631,8 +719,13 @@ export function createFx(frame, getOrientation) {
       // Débris du roi qui flottent en apesanteur
       shards(kingSq, { count: 16, colors: loser === 'w' ? ['#fbf8ee', '#e9e4d3', '#b9a6ff'] : ['#2b2b29', '#45443f', '#8f6bff'], spread: [0.5, 1.4], gravity: -0.15, duration: [1400, 2200] });
       shake(7, 650);
+      boardWave(kingSq, { delay: 60 });
     }, 900);
-    setTimeout(() => gen === generation && spaceBanner(outcome, loser, W, gen, calm, vignette), 1250);
+    setTimeout(() => gen === generation && kingGlory(winnerSq, gen, 4600), 1350);
+    setTimeout(() => gen === generation && constellation(gen, { life: 3600 }), 1700);
+    setTimeout(() => gen === generation && comet({ fromLeft: true }), 2100);
+    setTimeout(() => gen === generation && comet({ fromLeft: false }), 2900);
+    setTimeout(() => gen === generation && spaceBanner(outcome, loser, W, gen, calm, vignette, 5400), 1250);
   }
 
   function confetti(x, y, s, W, colors, count) {
@@ -690,7 +783,7 @@ export function createFx(frame, getOrientation) {
       if (mated && kSq) {
         if (classicEnd) classicMateFx(move, kSq, loser, outcome, gen);
         else if (eq.endAnim === 'royal') royalMateFx(move, kSq, kingSquare(chess, loser === 'w' ? 'b' : 'w'), loser, outcome, gen);
-        else spaceMateFx(move, kSq, loser, outcome, gen);
+        else spaceMateFx(move, kSq, loser, outcome, gen, kingSquare(chess, loser === 'w' ? 'b' : 'w'));
       }
       else if (kSq) (classicEnd ? classicCheckFx : checkFx)(kSq);
     },

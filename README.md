@@ -52,9 +52,25 @@ Puis ouvre http://localhost:3000 (le site local utilise la même base Firebase q
 | `database.rules.json`, `scripts/rules.js` | Règles de sécurité de la base Firebase (et leur générateur) |
 | `scripts/build.js` | Construit le site dans `dist/` |
 
+## L'arbitre (sécurité des parties)
+
+Il n'y a pas de serveur : ce sont les **règles de la base** (`scripts/rules.js`) qui arbitrent les parties entre amis.
+
+- Un coup : seulement à son tour, numéroté dans l'ordre, jamais réécrit.
+- La pendule : vérifiée avec l'heure de Firebase à chaque coup. Impossible de se rajouter du temps ou de jouer après être tombé.
+- Personne ne peut se déclarer gagnant soi-même :
+  - l'abandon est écrit par celui qui abandonne ;
+  - le mat est confirmé par le joueur maté (automatique dans le jeu) ;
+  - la nulle d'un commun accord demande la proposition de l'autre ;
+  - pat, répétition, 50 coups et matériel insuffisant demandent que les deux joueurs le constatent ;
+  - le gain au temps n'est accepté que si l'heure de Firebase montre que la pendule est tombée.
+- Un coup illégal reçu permet d'annuler la partie (personne ne gagne).
+- L'historique n'accepte une partie entre amis que si elle existe, est terminée, avec le même résultat, et une seule fois. On ne peut ni effacer ni modifier une partie ; un admin le peut.
+- Les statistiques « classées » du profil ne comptent que ces parties vérifiées.
+
 ## Limites à connaître
 
-Il n'y a pas de serveur : ce sont les navigateurs des joueurs qui vérifient les coups et font tourner la pendule.
-Les règles de la base empêchent de jouer à la place de l'adversaire ou hors de son tour, mais un joueur très malin pourrait trafiquer sa propre pendule.
+- Les parties contre Noa se jouent dans le navigateur : elles ne peuvent pas être vérifiées. Elles sont affichées à part (« entraînement, non classé »).
+- Rien n'empêche quelqu'un de se faire aider par un logiciel d'échecs pendant une partie (comme partout).
 
 Crédits : moteur Stockfish (GPL, licence dans `vendor/stockfish/`), échiquier Chessground de Lichess (GPL), pièces originales dessinées pour ROOOK, avatar de Noa tiré de son overlay.

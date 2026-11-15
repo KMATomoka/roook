@@ -64,6 +64,7 @@
         <button class="btn btn-ghost" id="btn-flip">⇅ Tourner</button>
         <button class="btn btn-danger" id="btn-resign">⚑ Abandonner</button>
       </div>
+      <p class="leave-note" id="leave-note" hidden>⚠️ Quitter ou recharger la page pendant la partie = <strong>défaite par abandon</strong>.</p>
 
       <div class="card chat" id="chat" hidden>
         <h2>Discussion</h2>
@@ -75,6 +76,16 @@
       </div>
     </aside>
   </main>
+
+  <dialog id="leave-dialog" class="modal leave-dialog">
+    <div class="end-icon">⚠️</div>
+    <h2>Quitter la partie ?</h2>
+    <p>La partie est en cours : si tu quittes maintenant, tu <strong>perds par abandon</strong>.</p>
+    <div class="end-actions">
+      <button class="btn btn-primary" id="leave-stay">Rester et jouer</button>
+      <button class="btn btn-danger" id="leave-go">Quitter et abandonner</button>
+    </div>
+  </dialog>
 
   <dialog id="end-dialog" class="modal">
     <div class="end-icon" id="end-icon">♚</div>

@@ -10,7 +10,8 @@ import { createFx } from './fx.js';
 import { attachArrows } from './arrows.js';
 import { scrollMoveIntoList } from './common.js';
 import { session, avatarOf, profileUrl, badgeOf, badgeHtml } from './compte.js';
-import { gameSocket } from './online.js';
+import { gameSocket, AWAY_LIMIT } from './online.js';
+import { serverNow } from './fb.js';
 const account = await session;
 
 const params = new URLSearchParams(location.search);
@@ -319,6 +320,8 @@ function renderStatus() {
     txt = `Au tour de <strong>${escapeHtml(names[chess.turn()])}</strong>.`;
   }
   if (!over && chess.inCheck()) txt += ' <span class="tag-check">Échec !</span>';
+  const away = awayInfo();
+  if (away) txt += ` <span class="away-tag">⏳ ${escapeHtml(names[away.color])} a quitté la partie : tu gagnes dans ${away.left} s s’il ne revient pas.</span>`;
   if (viewPly !== null) txt += ` <a href="#" id="back-live">Revenir à la position actuelle</a>`;
   el.innerHTML = txt;
   $('#status-review')?.addEventListener('click', (e) => {
@@ -331,8 +334,18 @@ function renderStatus() {
   });
 }
 
+/** Adversaire parti (page fermée) pendant une partie entre amis : { color, left (secondes) } ou null. */
+function awayInfo() {
+  if (mode !== 'ami' || over || !myColor || online.status !== 'playing' || !online.away) return null;
+  const opp = myColor === 'w' ? 'b' : 'w';
+  const since = online.away[opp];
+  if (!since) return null;
+  return { color: opp, left: Math.max(0, Math.ceil((AWAY_LIMIT - (serverNow() - since)) / 1000)) };
+}
+
 function renderActions() {
   const playing = !over;
+  $('#leave-note').hidden = !(mode === 'ami' && myColor && online.status === 'playing' && playing);
   $('#btn-draw').hidden = mode !== 'ami' || !playing || !myColor || online.status !== 'playing';
   $('#btn-resign').hidden = !playing || (mode === 'ami' && (!myColor || online.status !== 'playing'));
   if (mode === 'ami') {
@@ -654,6 +667,28 @@ function startOnline() {
     orientation = myColor || 'w';
     chess = new Chess();
   });
+
+  // Quitter la page par un lien du site pendant la partie : on prévient que c'est une défaite par abandon
+  let leaveTo = null;
+  document.addEventListener(
+    'click',
+    (e) => {
+      const a = e.target.closest?.('a[href]');
+      if (!a || !socket?.live || a.target === '_blank' || a.hasAttribute('download') || a.getAttribute('href').startsWith('#')) return;
+      if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return; // ouverture dans un nouvel onglet
+      e.preventDefault();
+      leaveTo = a.href;
+      $('#leave-dialog').showModal();
+    },
+    true,
+  );
+  $('#leave-stay').addEventListener('click', () => $('#leave-dialog').close());
+  $('#leave-go').addEventListener('click', () => {
+    $('#leave-go').disabled = true;
+    socket.emit('leave', null, () => (location.href = leaveTo || './'));
+  });
+  // Compte à rebours quand l'adversaire est parti
+  setInterval(() => awayInfo() && renderStatus(), 1000);
 
   socket.on('chat', addChat);
   socket.on('disconnect', () => {

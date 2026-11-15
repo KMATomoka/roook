@@ -24,12 +24,17 @@ const VISIBLE = (v) => `(auth.uid === ${v} || ${ADMIN} || root.child('users/' + 
 //      abandon → seul le perdant peut l'écrire ; mat → c'est le joueur maté qui le confirme ;
 //      nulle d'un commun accord → il faut la proposition de l'autre ; pat, répétition… → il faut que les deux le constatent ;
 //      temps → seulement si l'heure de Firebase montre que la pendule est vraiment tombée ;
-//      coup illégal reçu → la partie peut être annulée (personne ne gagne).
+//      coup illégal reçu → la partie peut être annulée (personne ne gagne) ;
+//      déconnexion → si l'adversaire a quitté la partie depuis plus de 60 s (heure de Firebase) et n'est pas revenu,
+//      on peut écrire sa propre victoire (« deconnexion »).
 // ---------------------------------------------------------------------------
 const G = (p) => `root.child('games/' + $g + '/${p}')`; // valeur actuelle (avant l'écriture)
 const PLAYER = `(${G('white')}.val() === auth.uid || ${G('black')}.val() === auth.uid)`;
 const SEAT = `(${G('white')}.val() === auth.uid ? 'w' : 'b')`;
 const OTHER = `(${G('white')}.val() === auth.uid ? 'b' : 'w')`;
+const OPP_UID = `(${G('white')}.val() === auth.uid ? ${G('black')}.val() : ${G('white')}.val())`;
+const LEFT_AT = `root.child('games/' + $g + '/left/' + ${OPP_UID})`; // heure de la déconnexion de l'adversaire
+const OPP_GONE = `(!root.child('games/' + $g + '/online/' + ${OPP_UID}).exists() && ${LEFT_AT}.isNumber() && now - ${LEFT_AT}.val() > 60000)`;
 const PLAYING = `${G('status')}.val() === 'playing'`;
 const TURN = `(${G('ply')}.val() % 2 === 0 ? 'w' : 'b')`; // camp qui doit jouer
 const AT = `${G('clock/at')}.val()`;
@@ -44,13 +49,15 @@ const RESET = `(${PLAYER} && ${G('status')}.val() === 'over' && ${G('rematch/w')
 const R_ = "newData.parent().child('result').val()";
 const W_ = "newData.parent().child('reason').val()";
 const LOSS_ME = `(${SEAT} === 'w' ? '0-1' : '1-0')`;
+const WIN_ME = `(${SEAT} === 'w' ? '1-0' : '0-1')`;
 const LOSS_TURN = `(${TURN} === 'w' ? '0-1' : '1-0')`;
 const END_OK = `((${W_} === 'abandon' && ${R_} === ${LOSS_ME})
   || (${W_} === 'accord' && ${R_} === '1/2-1/2' && ${G('drawOffer')}.val() === ${OTHER})
   || (${W_} === 'mat' && ${TURN} === ${SEAT} && ${R_} === ${LOSS_ME})
   || ((${W_} === 'pat' || ${W_} === 'materiel' || ${W_} === 'repetition' || ${W_} === '50coups') && ${R_} === '1/2-1/2' && root.child('games/' + $g + '/claims/' + ${OTHER}).val() === ${W_})
   || (${AT} > 0 && ${LEFT(TURN)} <= 0 && ((${W_} === 'temps' && ${R_} === ${LOSS_TURN}) || (${W_} === 'temps-materiel' && ${R_} === '1/2-1/2' && ${TURN} !== ${SEAT})))
-  || (${W_} === 'annulee' && ${R_} === '*' && ${TURN} === ${SEAT}))`.replace(/\n\s*/g, ' ');
+  || (${W_} === 'annulee' && ${R_} === '*' && ${TURN} === ${SEAT})
+  || (${W_} === 'deconnexion' && ${R_} === ${WIN_ME} && ${OPP_GONE}))`.replace(/\n\s*/g, ' ');
 
 // Historique : une partie entre amis n'y entre que si elle existe vraiment, est terminée, et avec le même résultat
 const GH = (p) => `root.child('games/' + newData.child('game').val() + '/${p}')`;
@@ -246,7 +253,7 @@ const rules = {
         },
         reason: {
           '.write': `(${PLAYER} && !data.exists() && ${PLAYING} && newData.parent().child('status').val() === 'over') || (${RESET} && !newData.exists())`,
-          '.validate': `newData.isString() && newData.val().matches(/^(mat|abandon|accord|temps|temps-materiel|pat|materiel|repetition|50coups|annulee)$/)`,
+          '.validate': `newData.isString() && newData.val().matches(/^(mat|abandon|accord|temps|temps-materiel|pat|materiel|repetition|50coups|annulee|deconnexion)$/)`,
         },
         // Proposer la nulle (pour soi), ou effacer une proposition
         drawOffer: { '.write': `${PLAYER} && (!newData.exists() || (${OK} && ${PLAYING} && newData.val() === ${SEAT}))` },
@@ -264,6 +271,8 @@ const rules = {
           '.validate': `${RESET} || ((newData.child(${OTHER}).val() === true) === (data.child(${OTHER}).val() === true))`,
         },
         online: { $uid: { '.write': `auth.uid === $uid && ${PLAYER}` } },
+        // Heure de déconnexion d'un joueur (posée par Firebase quand sa page se ferme, effacée à son retour)
+        left: { $uid: { '.write': `auth.uid === $uid && ${PLAYER}`, '.validate': 'newData.isNumber()' } },
         chat: {
           $m: {
             '.write': `${PLAYER} && ${OK} && !data.exists()`,

@@ -6,7 +6,11 @@
 // pendule vérifiée avec l'heure de Firebase, et personne ne peut se déclarer gagnant tout seul
 // (le mat est confirmé par le joueur maté, l'abandon écrit par celui qui abandonne, etc.).
 // Chaque navigateur vérifie aussi que les coups sont légaux.
-import { db, ref, get, set, update, push, onValue, onChildAdded, onDisconnect, runTransaction, serverTimestamp, serverNow } from './fb.js';
+import { db, auth, ref, get, set, update, push, onValue, onChildAdded, onDisconnect, runTransaction, serverTimestamp, serverNow } from './fb.js';
+import { firebaseConfig } from './firebase-config.js';
+
+/** Délai avant qu'un joueur parti (page fermée sans prévenir) perde la partie. */
+export const AWAY_LIMIT = 60000;
 import { Chess, localGameOver } from './common.js';
 import { markPlaying } from './compte.js';
 
@@ -37,9 +41,15 @@ export function gameSocket(gameId, user) {
   let round = null;
   let savedRound = null;
   let wasConnected = true;
+  let leaving = false; // le joueur a choisi de quitter (abandon déjà envoyé)
+  let token = null; // jeton de connexion gardé sous la main pour abandonner pendant la fermeture de la page
 
   const sock = {
     connected: true,
+    /** Partie en cours où je joue (quitter la page = défaite) ? */
+    get live() {
+      return !!(g && color && g.status === 'playing' && !leaving);
+    },
     on(ev, h) {
       (handlers[ev] ||= []).push(h);
     },
@@ -76,6 +86,11 @@ export function gameSocket(gameId, user) {
       names: game.names,
       ids: { w: game.white, b: game.black },
       online: { w: !!on[game.white], b: !!on[game.black] },
+      // Joueur parti (page fermée) : heure de son départ, tant qu'il n'est pas revenu
+      away: {
+        w: !on[game.white] && typeof game.left?.[game.white] === 'number' ? game.left[game.white] : null,
+        b: !on[game.black] && typeof game.left?.[game.black] === 'number' ? game.left[game.black] : null,
+      },
       seated: { w: true, b: true },
       status: game.status,
       result: game.result || null,
@@ -129,6 +144,43 @@ export function gameSocket(gameId, user) {
     }).catch(() => {});
   }, 1000);
 
+  // Adversaire parti (page fermée sans abandonner) depuis plus d'une minute : on gagne (l'arbitre vérifie l'heure)
+  setInterval(() => {
+    if (!g || g.status !== 'playing' || !color) return;
+    const oppId = color === 'w' ? g.black : g.white;
+    const left = g.left?.[oppId];
+    if (g.online?.[oppId] || typeof left !== 'number' || serverNow() - left < AWAY_LIMIT + 1500) return;
+    update(gRef, { status: 'over', result: color === 'w' ? '1-0' : '0-1', reason: 'deconnexion' }).catch(() => {});
+  }, 1000);
+
+  /** Je suis dans la partie : présence (effacée par Firebase si la page se ferme) et heure de départ posée à ce moment-là. */
+  function announce() {
+    if (!color) return;
+    const p = push(ref(db, `games/${gameId}/online/${user.id}`));
+    onDisconnect(p).remove();
+    set(p, true);
+    const leftRef = ref(db, `games/${gameId}/left/${user.id}`);
+    onDisconnect(leftRef).set(serverTimestamp());
+    set(leftRef, null).catch(() => {});
+  }
+
+  // Quitter la page pendant la partie = abandon : avertissement, puis abandon envoyé pendant la fermeture
+  const refreshToken = () => auth.currentUser?.getIdToken().then((t) => (token = t)).catch(() => {});
+  setInterval(refreshToken, 20 * 60 * 1000);
+  addEventListener('beforeunload', (e) => {
+    if (!sock.live) return;
+    e.preventDefault();
+    e.returnValue = '';
+  });
+  addEventListener('pagehide', () => {
+    if (!sock.live || !token) return;
+    leaving = true;
+    const body = JSON.stringify({ status: 'over', result: color === 'w' ? '0-1' : '1-0', reason: 'abandon' });
+    try {
+      fetch(`${firebaseConfig.databaseURL}/games/${gameId}.json?auth=${encodeURIComponent(token)}`, { method: 'PATCH', body, keepalive: true });
+    } catch {}
+  });
+
   /**
    * Fins de partie constatées sur l'échiquier. Pour qu'on ne puisse pas tricher :
    *  - échec et mat : c'est le joueur maté qui l'écrit (son navigateur le fait tout seul) ;
@@ -163,10 +215,8 @@ export function gameSocket(gameId, user) {
       color = seatOf(g);
       round = g.round;
       if (color) {
-        // Présence dans la partie (effacée automatiquement si on ferme la page)
-        const p = push(ref(db, `games/${gameId}/online/${user.id}`));
-        onDisconnect(p).remove();
-        set(p, true);
+        announce();
+        refreshToken();
         markPlaying(gameId);
       }
       ack({ color, chat: [], round: g.round });
@@ -190,6 +240,7 @@ export function gameSocket(gameId, user) {
         const ok = !!s.val();
         sock.connected = ok;
         if (!ok && wasConnected) fire('disconnect');
+        if (ok && !wasConnected) announce(); // de retour après une coupure : on se signale à nouveau
         if (ok && !wasConnected && g) fire('state', publicState(g));
         wasConnected = ok;
       });
@@ -219,6 +270,15 @@ export function gameSocket(gameId, user) {
     resign() {
       if (!g || !color || g.status !== 'playing') return;
       update(gRef, { status: 'over', result: color === 'w' ? '0-1' : '1-0', reason: 'abandon' });
+    },
+
+    /** Quitter la partie pour aller ailleurs sur le site : abandon, puis on part (sans second avertissement). */
+    async leave(_, ack) {
+      if (sock.live) {
+        leaving = true;
+        await update(gRef, { status: 'over', result: color === 'w' ? '0-1' : '1-0', reason: 'abandon' }).catch(() => {});
+      }
+      ack?.();
     },
 
     offerDraw() {

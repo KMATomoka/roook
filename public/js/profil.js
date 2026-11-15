@@ -124,7 +124,7 @@ function ago(t) {
   return 'vu le ' + date(t);
 }
 const plural = (n, word) => `${n} ${word}${n > 1 ? 's' : ''}`;
-const REASON_SHORT = { mat: 'Échec et mat', abandon: 'Abandon', temps: 'Au temps', accord: 'Accord', pat: 'Pat', repetition: 'Répétition', materiel: 'Matériel', '50coups': '50 coups', 'temps-materiel': 'Temps (matériel)', autre: 'Autre' };
+const REASON_SHORT = { mat: 'Échec et mat', abandon: 'Abandon', temps: 'Au temps', accord: 'Accord', pat: 'Pat', repetition: 'Répétition', materiel: 'Matériel', '50coups': '50 coups', 'temps-materiel': 'Temps (matériel)', deconnexion: 'Abandon (parti)', autre: 'Autre' };
 
 function render(p) {
   const me = p.relation === 'me';

@@ -1670,3 +1670,12 @@ a.person-link:hover { color: var(--accent-soft); }
   position: absolute; right: 12%; top: 18%; width: 0.34em; height: 0.34em; border-radius: 50%;
   background: radial-gradient(circle, #0d0703 0 34%, #2e1b0d 42%, rgba(46, 27, 13, 0) 66%);
 }
+
+/* Partie entre amis : quitter la page = défaite par abandon (js/jeu.js, js/online.js) */
+.leave-note { margin: 8px 2px 0; font-size: 0.82rem; color: var(--muted); }
+.leave-note strong { color: #ff8a7a; }
+.leave-dialog p strong { color: #ff8a7a; }
+.away-tag {
+  display: inline-block; margin-top: 4px; padding: 0.2em 0.6em; border-radius: 99px; font-size: 0.86em;
+  color: #ffe2a8; background: rgba(240, 180, 60, 0.14); border: 1px solid rgba(240, 180, 60, 0.4);
+}

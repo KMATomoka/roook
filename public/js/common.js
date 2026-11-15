@@ -96,6 +96,7 @@ export const REASONS = {
   temps: 'au temps',
   'temps-materiel': 'temps écoulé, mais matériel insuffisant',
   annulee: 'un coup illégal a été reçu, personne ne gagne',
+  deconnexion: 'par abandon (adversaire parti)',
 };
 
 export function resultText(result, reason, names = { w: 'Les Blancs', b: 'Les Noirs' }) {

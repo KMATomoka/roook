@@ -148,6 +148,16 @@
       color: #032233; background: linear-gradient(135deg, #f4f1f8, #6fe3ea); box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25), 0 0 18px rgba(70, 230, 212, 0.35); }
     .ask { margin-top: 18px; padding: 16px 18px; border-radius: 16px; background: rgba(70, 230, 212, 0.07); box-shadow: inset 0 0 0 1px rgba(70, 230, 212, 0.35); }
     .ask b { color: var(--aqua); }
+    .kgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+    .kopt { cursor: pointer; border-radius: 18px; padding: 10px 10px 14px; background: rgba(255, 255, 255, 0.04); box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow 0.2s, transform 0.2s; }
+    .kopt:hover { transform: translateY(-2px); }
+    .kopt:focus-visible { outline: 2px solid var(--aqua); outline-offset: 2px; }
+    .kopt.on { box-shadow: inset 0 0 0 2px var(--aqua), 0 0 24px rgba(70, 230, 212, 0.25); }
+    .kpair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .kpair .tile { padding: 6px; }
+    .kopt b { display: block; text-align: center; margin-top: 10px; font: 700 1rem 'Cinzel', serif; color: var(--pearl); }
+    .kopt small { display: block; text-align: center; margin-top: 2px; color: var(--muted); font-size: 0.86rem; line-height: 1.4; }
+    .kopt.on b::after { content: ' ✓'; color: var(--aqua); }
     footer { margin-top: 50px; text-align: center; color: var(--muted); font-size: 0.92rem; }
   </style>
 </head>
@@ -173,6 +183,13 @@
       <h2>Les douze pièces</h2>
       <p class="sub">« Nacre et Abysses » : des silhouettes d’échecs classiques, faciles à reconnaître, avec un détail marin sur chaque pièce. <b>Pion</b> perle, <b>Tour</b> de corail à hublot, <b>Fou</b> coquillage, <b>Cavalier</b> hippocampe, <b>Dame</b> couronne de perles, <b>Roi</b> trident.</p>
       <div class="pieces" id="pieces"></div>
+    </section>
+
+    <div class="rule"></div>
+    <section>
+      <h2>Le cavalier : choisis ton style</h2>
+      <p class="sub">Six idées pour le cavalier, chacune en nacre et en abysses. <b>Clique sur une idée</b> : tous les échiquiers de la page la prennent, pour la voir en vrai. Dis-moi ensuite laquelle tu gardes (A à F).</p>
+      <div class="kgrid" id="knights"></div>
     </section>
 
     <div class="rule"></div>
@@ -362,13 +379,99 @@
       }
       board.appendChild(sq);
     }
-    drawBoard(document.querySelector('[data-board="start"]'), 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR');
-    drawBoard(document.querySelector('[data-board="middle"]'), 'r2q1rk1/pb1nbppp/1p2pn2/2pp4/2PP4/1PNBPN2/PB3PPP/R2Q1RK1');
-
     const NAMES = { k: 'Roi', q: 'Dame', r: 'Tour', b: 'Fou', n: 'Cavalier', p: 'Pion' };
-    document.getElementById('pieces').innerHTML = ['w', 'b']
-      .flatMap((col) => [...'kqrbnp'].map((t) => `<div class="tile ${col === 'w' ? 'on-d' : 'on-l'}"><div class="pcbig" style='background-image:${IMG[col + t]}'></div><span>${NAMES[t]} ${col === 'w' ? 'nacre' : 'abysses'}</span></div>`))
-      .join('');
+    function renderBoards() {
+      drawBoard(document.querySelector('[data-board="start"]'), 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR');
+      drawBoard(document.querySelector('[data-board="middle"]'), 'r2q1rk1/pb1nbppp/1p2pn2/2pp4/2PP4/1PNBPN2/PB3PPP/R2Q1RK1');
+      document.getElementById('pieces').innerHTML = ['w', 'b']
+        .flatMap((col) => [...'kqrbnp'].map((t) => `<div class="tile ${col === 'w' ? 'on-d' : 'on-l'}"><div class="pcbig" style='background-image:${IMG[col + t]}'></div><span>${NAMES[t]} ${col === 'w' ? 'nacre' : 'abysses'}</span></div>`))
+        .join('');
+    }
+    renderBoards();
+
+    // ------------------------------------------------------------------
+    // Six idées de cavalier, au choix
+    // ------------------------------------------------------------------
+    const kPed = (c) => `${base(c)}<path d="M34 81 Q37 69 43 63 H60 Q65 69 67 81Z" fill="url(#g)"/>`;
+    const kTop = (c) => `<rect x="38" y="58.5" width="28" height="5.5" rx="2.75" fill="url(#g)"/><circle cx="51" cy="70.5" r="2.7" fill="url(#pr)" stroke-width="1.3"/>`;
+    const HORSE_EYE = (c) => `<path d="M38.5 28.8 Q41.2 26.4 44 28.6 Q41.2 30.6 38.5 28.8Z" fill="${c.dark}" stroke-width="1"/>
+      <circle cx="27" cy="41.5" r="1.1" fill="${c.dark}" stroke="none"/>
+      <path d="M25 44.8 Q27.5 45.4 29.5 44.4" fill="none" stroke-width="1.1" opacity=".7"/>`;
+    const SEA_HEAD = 'M42 60.5 C41 53 42 48 45 44 C41 43.6 35.5 44 30.5 44.6 C28 44.9 26.8 46.2 25.2 45.6 C23.8 44.8 23.8 41.3 25.2 40.5 C26.5 39.8 27.8 41 29.8 40.6 C35 39.6 40 37.6 43 35 C43.5 26 49.5 18.3 57.5 17.5 C66.5 16.6 72.5 24 71.2 33 C70.6 38 67.8 41.2 66.3 45 C64.8 50 66.2 55 64.5 60.5Z';
+    const leaf = (x, y, a, L, c) => `<g transform="translate(${x} ${y}) rotate(${a})"><path d="M0 0 C${L * 0.3} ${-L * 0.34} ${L * 0.7} ${-L * 0.34} ${L} 0 C${L * 0.7} ${L * 0.34} ${L * 0.3} ${L * 0.34} 0 0Z" fill="${c.acc}" stroke-width="1.3"/><path d="M${L * 0.12} 0 H${L * 0.82}" stroke-width=".8" opacity=".55"/></g>`;
+    const KNIGHTS = [
+      { name: 'Hippocampe sculpté', desc: 'Tête d’hippocampe sur un pied, crête en festons.', draw: SHAPES.n },
+      { name: 'Cheval des mers', desc: 'Le cavalier classique, crinière en vagues qui s’enroulent.', draw: (c) => `${kPed(c)}
+        <path d="M64 18 C70 16 76 20 74.5 26 C73.5 23 70.5 22.5 69 24.5 C74.5 25.5 78 31 75.5 36 C74 33 71 32 69.5 34 C75 36 77.5 42 74.5 46.5 C73 43.5 70 43 68.5 45 C72.5 48 72.5 53 69.5 56 L65 53Z" fill="${c.acc}" stroke-width="1.7"/>
+        <path d="M42 60.5 C40 52 41 46 45 41 C40 42 34 45 29.5 46.5 C26 47.5 23 45.5 23.5 42 C24 38.5 27 36 31 33 C35 30 38 26 41 21.5 L41.5 14.5 L46.5 19 C52 15.5 60 15.5 65 19.5 C71 24.5 73 34 70 43 C68 49 66 54 65 60.5Z" fill="url(#g)"/>
+        ${kTop(c)}
+        <path d="M44.5 53 Q49.5 49.8 54.5 53 T64.5 53" fill="none" stroke="${c.acc2}" stroke-width="2"/>
+        ${HORSE_EYE(c)}
+        <path d="M44 40.5 C40.5 38 39.5 35 41 32" fill="none" stroke-width="1.1" opacity=".5"/>
+        <ellipse cx="54" cy="24" rx="2" ry="5" fill="#fff" opacity=".4" stroke="none" transform="rotate(60 54 24)"/>` },
+      { name: 'Art déco', desc: 'Formes géométriques, nageoire en éventail, lignes nettes.', draw: (c) => {
+        const rays = [-60, -30, 0, 30, 60].map((a) => { const r = (a * Math.PI) / 180; return `M67 41 L${(67 + Math.cos(r) * 16.5).toFixed(1)} ${(41 + Math.sin(r) * 16.5).toFixed(1)}`; }).join(' ');
+        return `${kPed(c)}
+        <path d="M67 24 A17 17 0 0 1 67 58Z" fill="${c.acc}" stroke-width="1.7"/>
+        <path d="${rays}" stroke-width="1.1" opacity=".55"/>
+        <path d="M67 30 A11 11 0 0 1 67 52" fill="none" stroke-width="1.2" opacity=".6"/>
+        <path d="M43 60.5 V46.5 L31 44.6 H24.5 V40 H31 L43 36.6 A12.4 12.4 0 0 1 67.5 34.5 V60.5Z" fill="url(#g)"/>
+        <path d="M49.5 24.2 L51 15 L54.6 20.6 L58 12.5 L61 20.4 L64.3 16.4 L64.6 25.6Z" fill="url(#g)" stroke-width="1.6"/>
+        ${kTop(c)}
+        <path d="M43.5 49.5 H67 M43.5 53.5 H67" stroke="${c.acc2}" stroke-width="1.8"/>
+        <path d="M28 40 V44.6 M31.5 40 V44.6 M35 39.5 V45.2 M38.5 38.5 V45.8" stroke-width="1" opacity=".45"/>
+        <circle cx="55" cy="33" r="4" fill="none" stroke="${c.acc2}" stroke-width="1.6"/>
+        <circle cx="55" cy="33" r="2" fill="${c.dark}" stroke="none"/>
+        <path d="M47 30 A9 9 0 0 1 56 25" fill="none" stroke="#fff" stroke-width="1.4" opacity=".55"/>`;
+      } },
+      { name: 'Vague', desc: 'Une vague qui déferle et prend la forme d’une tête de cheval.', draw: (c) => `${kPed(c)}
+        <path d="M42 60.5 C40 50 44 42 50 36 C44 37 36 40 27 44 C24 45.5 21.5 43.5 23.5 41 C30 33 38 22 50 18 C62 14 72 20 72 32 C72 44 64 50 66 60.5Z" fill="url(#g)"/>
+        <path d="M56 17 L58 9.5 L60.5 15.5 L63.5 10 L64.8 17.5Z" fill="url(#g)" stroke-width="1.4"/>
+        <path d="M60.5 33.5 C60.5 27.5 54.5 25.5 51.2 29.5 C48.6 33 51.8 36.6 54.8 35.2 C56.8 34.2 56.4 31.6 54.4 31.6" fill="none" stroke="${c.acc2}" stroke-width="2.2"/>
+        <path d="M44 23 C50 19.5 58 19 63 22" fill="none" stroke="#fff" stroke-width="1.6" opacity=".6"/>
+        <path d="M29 41.5 Q32 39.2 34.5 41 M35.5 38.6 Q38.5 36.2 41 38.2 M41.5 35.6 Q44.5 33.4 47 35.2" fill="none" stroke="${c.acc2}" stroke-width="1.4"/>
+        <path d="M46 50 Q52 44.5 61 44.5 M45 56 Q53 50.5 63 51.5" fill="none" stroke="${c.acc2}" stroke-width="1.6" opacity=".85"/>
+        <g fill="#fff" stroke-width=".8"><circle cx="30" cy="36.5" r="1.4"/><circle cx="35.5" cy="31" r="1.2"/><circle cx="41" cy="25.5" r="1.4"/><circle cx="25.5" cy="38.5" r="1"/><circle cx="69" cy="18" r="1.3"/><circle cx="73.5" cy="24" r="1.1"/></g>
+        ${kTop(c)}` },
+      { name: 'Hippocampe mythique', desc: 'Le cheval marin des légendes : oreilles en nageoires, écailles, crinière membraneuse.', draw: (c) => `${kPed(c)}
+        <path d="M62 18 C72.5 17 80.5 25.5 79.5 36 C79 46 74 54 67 58.5 L65.5 50 C68.5 42 69.5 30 61 22Z" fill="${c.acc}" stroke-width="1.6"/>
+        <path d="M64 21 L75 24 M66.5 27 L79 32 M68 34 L79.5 39 M68.3 41 L77.5 47 M67.6 47.5 L73.5 54" stroke-width="1" opacity=".55"/>
+        <path d="M40 22 L34.5 10.5 L40.5 14 L42.5 7 L46.5 14 L51.5 10 L50.5 18.5Z" fill="${c.acc}" stroke-width="1.5"/>
+        <path d="M42 60.5 C40 52 41 46 45 41 C40 42 34 45 29.5 46.5 C26 47.5 23 45.5 23.5 42 C24 38.5 27 36 31 33 C35 30 38 26 41 21.5 C46 17 56 15 63 18.5 C70 22.5 72.5 33 70 43 C68 49 66 54 65 60.5Z" fill="url(#g)"/>
+        ${kTop(c)}
+        <path d="M47 46 a2.8 2.8 0 0 0 5.6 0 a2.8 2.8 0 0 0 5.6 0 a2.8 2.8 0 0 0 5.6 0 M44.5 50.5 a2.8 2.8 0 0 0 5.6 0 a2.8 2.8 0 0 0 5.6 0 a2.8 2.8 0 0 0 5.6 0 a2.8 2.8 0 0 0 5.6 0 M46 55 a2.8 2.8 0 0 0 5.6 0 a2.8 2.8 0 0 0 5.6 0 a2.8 2.8 0 0 0 5.6 0" fill="none" stroke="${c.acc2}" stroke-width="1.3"/>
+        ${HORSE_EYE(c)}
+        <path d="M30 46.5 C29 50 31 52 33.5 52.5" fill="none" stroke="${c.acc}" stroke-width="1.4"/>
+        <ellipse cx="54" cy="24" rx="2" ry="5" fill="#fff" opacity=".4" stroke="none" transform="rotate(60 54 24)"/>` },
+      { name: 'Dragon de mer', desc: 'L’hippocampe feuillu : des feuilles d’algue lui poussent sur la tête et le dos.', draw: (c) => `${kPed(c)}
+        ${leaf(59, 19, -100, 11, c)}${leaf(66, 20.5, -55, 12, c)}${leaf(71, 29, -15, 12, c)}${leaf(71, 39, 12, 11, c)}${leaf(67.5, 49, 30, 10, c)}${leaf(36, 44, 115, 8, c)}${leaf(45, 44.5, 140, 7, c)}
+        <path d="${SEA_HEAD}" fill="url(#g)"/>
+        ${kTop(c)}
+        <path d="M44 52.5 Q49 49.3 54 52.5 T64.2 52.5" fill="none" stroke="${c.acc2}" stroke-width="2"/>
+        <path d="M33 40 V44.4 M36.5 39.2 V44.1" stroke-width="1" opacity=".45"/>
+        <g fill="${c.acc2}" stroke="none"><circle cx="48" cy="46" r="1"/><circle cx="56" cy="44" r="1"/><circle cx="62" cy="47" r="1"/><circle cx="60" cy="37.5" r=".9"/></g>
+        <circle cx="52.5" cy="28.5" r="2.7" fill="${c.dark}" stroke="none"/>
+        <circle cx="51.6" cy="27.6" r=".9" fill="#fff" stroke="none"/>
+        <ellipse cx="49.5" cy="24" rx="2" ry="5.2" fill="#fff" opacity=".45" stroke="none" transform="rotate(40 49.5 24)"/>` },
+    ];
+    let knightSel = 0;
+    function renderKnights() {
+      document.getElementById('knights').innerHTML = KNIGHTS.map((k, i) => `<div class="kopt${i === knightSel ? ' on' : ''}" role="button" tabindex="0" data-i="${i}">
+        <div class="kpair"><div class="tile on-d"><div class="pcbig" style='background-image:${pieceSvg('w', 'n', k.draw)}'></div></div><div class="tile on-l"><div class="pcbig" style='background-image:${pieceSvg('b', 'n', k.draw)}'></div></div></div>
+        <b>${String.fromCharCode(65 + i)} · ${k.name}</b><small>${k.desc}</small></div>`).join('');
+    }
+    function useKnight(i) {
+      knightSel = i;
+      SHAPES.n = KNIGHTS[i].draw;
+      IMG.wn = pieceSvg('w', 'n');
+      IMG.bn = pieceSvg('b', 'n');
+      renderBoards();
+      renderKnights();
+    }
+    renderKnights();
+    const kGrid = document.getElementById('knights');
+    kGrid.addEventListener('click', (e) => { const o = e.target.closest('.kopt'); if (o) useKnight(+o.dataset.i); });
+    kGrid.addEventListener('keydown', (e) => { const o = e.target.closest('.kopt'); if (o && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); useKnight(+o.dataset.i); } });
 
     // ------------------------------------------------------------------
     // Sons (synthétisés), avec un écho « sous l'eau »

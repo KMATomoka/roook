@@ -22,27 +22,32 @@ import {
   });
 }
 
-// Navigateur intégré d'une appli (Instagram, Snapchat, TikTok, Facebook…) : beaucoup forcent leur propre
-// « mode sombre », qui inverse les couleurs claires du site (damier, pièces, boutons) sans tenir compte de la
-// page. On propose de rouvrir la page dans le vrai navigateur, où les couleurs sont correctes.
+// Navigateur intégré d'une appli (Instagram, Snapchat, TikTok, Facebook…) ou navigateur d'un fabricant
+// (Samsung Internet, Oppo/OnePlus/Realme, Xiaomi, Huawei, Vivo — ouverts aussi depuis Discord quand c'est le
+// navigateur par défaut) : beaucoup forcent leur propre « mode sombre », qui inverse les couleurs claires du
+// site (damier, pièces, boutons) sans tenir compte de la page. On propose de rouvrir la page dans Chrome.
 {
   const ua = navigator.userAgent;
   const android = /Android/i.test(ua);
   const inApp =
     /; wv\)|FBAN|FBAV|FB_IAB|Instagram|Snapchat|musical_ly|BytedanceWebview|TikTok|Line\/|LinkedInApp|MicroMessenger|Pinterest/i.test(ua) ||
     (/iPhone|iPad/i.test(ua) && !/Safari\//i.test(ua));
+  // navigateurs de fabricant : seulement quand le téléphone est en mode sombre (c'est là qu'ils recolorent)
+  const oemBrowser =
+    /SamsungBrowser|HeyTapBrowser|OppoBrowser|OnePlusBrowser|RealmeBrowser|MiuiBrowser|XiaoMi\/MiuiBrowser|HuaweiBrowser|HONORBrowser|VivoBrowser|UCBrowser|Quark\//i.test(ua) &&
+    matchMedia('(prefers-color-scheme: dark)').matches;
   let dismissed = false;
   try {
     dismissed = sessionStorage.getItem('roque:inapp') === 'ok';
   } catch {}
-  if (inApp && !dismissed) {
+  if ((inApp || oemBrowser) && !dismissed) {
     const url = location.href;
     const chrome = `intent://${location.host}${location.pathname}${location.search}${location.hash}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(url)};end`;
     const bar = document.createElement('div');
     bar.className = 'inapp-banner';
     bar.setAttribute('role', 'note');
     bar.innerHTML = `
-      <p><b>Les couleurs ne sont pas les bonnes ?</b> Tu regardes ROOOK dans le navigateur d’une appli, qui assombrit le site à sa façon.
+      <p><b>Les couleurs ne sont pas les bonnes ?</b> ${oemBrowser && !inApp ? 'Ton navigateur assombrit le site à sa façon (son « mode sombre »).' : 'Tu regardes ROOOK dans le navigateur d’une appli, qui assombrit le site à sa façon.'}
       ${android ? 'Ouvre-le dans Chrome pour le voir comme prévu.' : 'Ouvre-le dans Safari (menu ··· de l’appli) pour le voir comme prévu.'}</p>
       <div class="inapp-actions">
         ${android ? `<a class="btn btn-primary small" href="${chrome}">Ouvrir dans Chrome</a>` : ''}

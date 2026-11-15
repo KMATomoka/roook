@@ -607,8 +607,8 @@ html::after {
     linear-gradient(180deg, #0e0b1c 0%, #0b0917 55%, #08060f 100%);
 }
 /* Le site est déjà sombre : les navigateurs ne doivent pas le recolorer (mode sombre automatique d'Android) */
-@media (prefers-color-scheme: dark) { :root { color-scheme: dark; } }
-@media (prefers-color-scheme: light) { :root { color-scheme: dark; } }
+@media (prefers-color-scheme: dark) { :root { color-scheme: dark; color-scheme: only dark; } }
+@media (prefers-color-scheme: light) { :root { color-scheme: dark; color-scheme: only dark; } }
 
 /* Champ d'étoiles : trois couches discrètes (poussière fine, étoiles, quelques brillantes qui scintillent) */
 body::before, body::after, html::before {

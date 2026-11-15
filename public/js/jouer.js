@@ -1,7 +1,8 @@
-// Page « Jouer » : contre un ami (comptes), contre Noa, ou sur le même écran ; et les dernières parties.
+// Page « Jouer » : adversaire au hasard, contre un ami (comptes), contre Noa, ou sur le même écran ; et les dernières parties.
 import { LEVELS } from './engine.js';
 import { $, $$, getPref, setPref, loadGames, gameRow, escapeHtml } from './common.js';
-import { session, challenge, watchFriends, picHtml, profileUrl } from './compte.js';
+import { session, challenge, watchFriends, picHtml, profileUrl, CADENCES } from './compte.js';
+import { findOpponent } from './matchmaking.js';
 
 // --- Arrivée depuis l'accueil (jouer.html#ami ou #ia) : on met la carte en avant ----
 const wanted = $('#card-' + location.hash.slice(1));
@@ -60,6 +61,92 @@ $('#ami-content').addEventListener('click', (e) => {
   if (b) challenge(friends.find((f) => f.id === b.dataset.challenge));
 });
 loadFriends();
+
+// --- Adversaire au hasard (file d'attente, js/matchmaking.js) ----------------------
+const mmBox = $('#mm-content');
+let cancelSearch = null;
+let searchTimer = null;
+const cadenceName = (c) => (CADENCES.find(([k]) => k === c) || [c, c])[1];
+const toMs = (c) => {
+  const [m, s] = c.split('+').map(Number);
+  return { base: m * 60000, inc: (s || 0) * 1000 };
+};
+
+function renderMatchForm() {
+  if (!user) {
+    mmBox.innerHTML = `<p>Affronte un joueur en ligne que tu ne connais pas, à la même cadence que toi.</p>
+      <div class="ami-actions">
+        <a class="btn btn-primary" href="connexion.html?mode=inscription&retour=jouer.html%23hasard">Créer un compte</a>
+        <a class="btn btn-ghost" href="connexion.html?retour=jouer.html%23hasard">Se connecter</a>
+      </div>`;
+    return;
+  }
+  const saved = getPref('cadence-hasard', getPref('cadence', '10+0'));
+  mmBox.innerHTML = `<p>Affronte un joueur en ligne que tu ne connais pas, à la même cadence que toi.</p>
+    <form id="form-mm" class="mode-form">
+      <label>Temps pour chaque joueur
+        <select name="cadence">${CADENCES.map(([k, label]) => `<option value="${k}"${k === saved ? ' selected' : ''}>${label}</option>`).join('')}</select>
+      </label>
+      <button class="btn btn-primary">🎲 Trouver un adversaire</button>
+    </form>`;
+  $('#form-mm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const c = e.target.cadence.value;
+    setPref('cadence-hasard', c);
+    startSearch(c);
+  });
+}
+
+function startSearch(c) {
+  const t0 = Date.now();
+  let waiting = 1;
+  mmBox.innerHTML = `<div class="mm-search" role="status">
+      <div class="mm-radar" aria-hidden="true"><span></span><span></span><span>🎲</span></div>
+      <p class="mm-title">Recherche d’un adversaire…</p>
+      <p class="muted">${escapeHtml(cadenceName(c))} · <span id="mm-time">0:00</span></p>
+      <p class="muted mm-waiting" id="mm-waiting"></p>
+      <button class="btn btn-ghost" type="button" id="mm-cancel">Annuler</button>
+    </div>`;
+  const tick = () => {
+    const s = Math.floor((Date.now() - t0) / 1000);
+    const t = $('#mm-time');
+    if (t) t.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    const w = $('#mm-waiting');
+    if (w) w.textContent = waiting > 1 ? `${waiting} joueurs cherchent dans cette cadence` : s > 20 ? 'Personne d’autre ne cherche pour le moment. Essaie une autre cadence, ou invite un ami !' : '';
+  };
+  searchTimer = setInterval(tick, 500);
+  tick();
+  const { base, inc } = toMs(c);
+  cancelSearch = findOpponent({
+    user,
+    base,
+    inc,
+    onStatus: (st) => {
+      waiting = st.waiting;
+      tick();
+    },
+    onFound: (gameId) => {
+      clearInterval(searchTimer);
+      cancelSearch = null;
+      mmBox.innerHTML = `<div class="mm-search found" role="status"><div class="mm-radar" aria-hidden="true"><span>⚔</span></div>
+        <p class="mm-title">Adversaire trouvé !</p><p class="muted">La partie commence…</p></div>`;
+      setTimeout(() => (location.href = 'jeu.html?partie=' + gameId), 600);
+    },
+    onError: () => {
+      clearInterval(searchTimer);
+      cancelSearch = null;
+      renderMatchForm();
+      mmBox.insertAdjacentHTML('afterbegin', '<p class="error">La recherche n’a pas pu démarrer. Vérifie ta connexion et réessaie.</p>');
+    },
+  });
+  $('#mm-cancel').addEventListener('click', () => {
+    cancelSearch?.();
+    cancelSearch = null;
+    clearInterval(searchTimer);
+    renderMatchForm();
+  });
+}
+renderMatchForm();
 
 // --- Contre l'IA ---------------------------------------------------------------
 const formIa = $('#form-ia');

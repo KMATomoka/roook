@@ -92,6 +92,7 @@ export function gameSocket(gameId, user) {
         b: !on[game.black] && typeof game.left?.[game.black] === 'number' ? game.left[game.black] : null,
       },
       seated: { w: true, b: true },
+      random: !!game.mm, // partie « Adversaire au hasard »
       status: game.status,
       result: game.result || null,
       reason: game.reason || '',
@@ -149,6 +150,11 @@ export function gameSocket(gameId, user) {
     if (!g || g.status !== 'playing' || !color) return;
     const oppId = color === 'w' ? g.black : g.white;
     const left = g.left?.[oppId];
+    // Adversaire au hasard qui n'est jamais venu (30 s après la création, avant le 2e coup) : partie annulée
+    if (g.mm && (g.ply || 0) < 2 && !g.online?.[oppId] && typeof g.createdAt === 'number' && serverNow() - g.createdAt > 30000) {
+      update(gRef, { status: 'over', result: '*', reason: 'absent' }).catch(() => {});
+      return;
+    }
     if (g.online?.[oppId] || typeof left !== 'number' || serverNow() - left < AWAY_LIMIT + 1500) return;
     update(gRef, { status: 'over', result: color === 'w' ? '1-0' : '0-1', reason: 'deconnexion' }).catch(() => {});
   }, 1000);
@@ -219,7 +225,7 @@ export function gameSocket(gameId, user) {
         refreshToken();
         markPlaying(gameId);
       }
-      ack({ color, chat: [], round: g.round });
+      ack({ color, chat: [], round: g.round, random: !!g.mm });
 
       onValue(gRef, (s) => {
         const game = s.val();

@@ -2018,3 +2018,19 @@ body { padding-bottom: env(safe-area-inset-bottom); }
 }
 /* Sections du bas de l'accueil : dessinées seulement quand elles arrivent à l'écran */
 .explore, .how, .footer { content-visibility: auto; contain-intrinsic-size: auto 600px; }
+
+/* Page Jouer : « Adversaire au hasard » (js/matchmaking.js) */
+.mode-random { border-color: rgba(143, 107, 255, 0.45); background: linear-gradient(155deg, rgba(143, 107, 255, 0.16), var(--surface) 55%); }
+.mm-content { display: flex; flex-direction: column; gap: 10px; }
+.mm-content p { margin: 0; }
+.mm-search { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; padding: 6px 0 2px; }
+.mm-search .btn { margin-top: 8px; }
+.mm-title { font: 700 1.15rem var(--serif); color: var(--text) !important; }
+.mm-waiting { min-height: 1.4em; font-size: 0.88rem; }
+.mm-radar { position: relative; width: 74px; height: 74px; display: grid; place-items: center; margin-bottom: 6px; }
+.mm-radar span { position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; animation: mm-ping 1.8s ease-out infinite; }
+.mm-radar span:nth-child(2) { animation-delay: 0.9s; }
+.mm-radar span:last-child { position: static; border: 0; opacity: 1; animation: none; font-size: 1.9rem; width: 58px; height: 58px; display: grid; place-items: center; background: var(--surface-2); box-shadow: 0 0 0 1px var(--line-strong), 0 0 28px rgba(143, 107, 255, 0.4); }
+.mm-search.found .mm-radar span:last-child { box-shadow: 0 0 0 2px var(--mint), 0 0 30px rgba(60, 242, 163, 0.45); }
+@keyframes mm-ping { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(1.35); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .mm-radar span { animation: none; } }

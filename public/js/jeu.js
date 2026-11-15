@@ -620,6 +620,11 @@ function startOnline() {
     $('#chat-log').innerHTML = '';
     res.chat.forEach(addChat);
     if (!myColor) $('#chat').hidden = true; // les spectateurs regardent sans écrire
+    if (res.random) {
+      // Adversaire au hasard : pas de discussion avec un inconnu
+      $('#chat').hidden = true;
+      $('#mode-label').textContent = 'Adversaire au hasard';
+    }
     render();
   });
 

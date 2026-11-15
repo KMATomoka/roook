@@ -551,12 +551,12 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 }
 /* Pack Sakura : papier washi rose sakura et indigo (ai), vagues seigaiha discrètes sur les cases sombres, cadre de laque vermillon */
 .board-japon {
-  --sq-light: #f7e4e4;
-  --sq-dark: #4a5a7e;
+  --sq-light: #f8d9e0;
+  --sq-dark: #5266a0;
   --sq-last: rgba(226, 92, 64, 0.42);
   --sq-selected: rgba(240, 190, 90, 0.58);
-  --coord-on-dark: #f6efe0;
-  --coord-on-dark-shadow: 0 1px 2px rgba(10, 16, 34, 0.6);
+  --coord-on-dark: #fdeef2;
+  --coord-on-dark-shadow: 0 1px 2px rgba(10, 16, 40, 0.6);
   --coord-on-light: #6b2a40;
   --coord-on-light-shadow: 0 1px 0 rgba(255, 250, 251, 0.6);
   --board-shadow: 0 0 0 3px #c8372d, 0 0 0 6px #1b1414, 0 0 0 7px rgba(200, 55, 45, 0.45), 0 18px 45px rgba(0, 0, 0, 0.55), 0 0 50px rgba(200, 55, 45, 0.14);

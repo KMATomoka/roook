@@ -245,6 +245,88 @@
       `<path d="${d}" fill="none" stroke="${c.stroke}" stroke-width="${w + 3.4}" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
     const base = (c) => `<path d="M23 88.5 Q23 81.5 31 81 H69 Q77 81.5 77 88.5 Q77 94 71 94 H29 Q23 94 23 88.5Z" fill="url(#g)"/>
       <path d="M28.5 88 Q33.5 85 38.5 88 T48.5 88 T58.5 88 T68.5 88 T72 87.5" fill="none" stroke="${c.acc2}" stroke-width="1.7"/>`;
+    // Géométrie de l'hippocampe (dessinée dans un repère 512 × 720, réduite dans la pièce)
+    const SEAHORSE = (() => {
+      const f = (n) => n.toFixed(1);
+      const poly = (pts) => pts.map(([x, y], i) => `${i ? 'L' : 'M'}${f(x)} ${f(y)}`).join(' ');
+      const cub = (q, t) => { const u = 1 - t; return [0, 1].map((k) => u * u * u * q[0][k] + 3 * u * u * t * q[1][k] + 3 * u * t * t * q[2][k] + t * t * t * q[3][k]); };
+      // échantillonne une suite de courbes de Bézier : renvoie [x, y, dx, dy] (tangente unitaire)
+      function sample(segs, n) {
+        const pts = [];
+        segs.forEach((q, si) => { for (let i = si ? 1 : 0; i <= n; i++) pts.push(cub(q, i / n)); });
+        return pts.map((pt, i) => {
+          const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+          const d = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+          return [pt[0], pt[1], (b[0] - a[0]) / d, (b[1] - a[1]) / d];
+        });
+      }
+      const body = 'M262 78 C228 76 198 98 186 140 C182 156 176 170 160 178 L128 190 C118 193 112 188 104 194 C98 199 99 214 106 219 C113 224 118 218 126 222 L168 218 C190 216 210 226 226 238 C206 262 176 300 166 345 C158 385 162 430 190 470 C210 498 235 520 262 540 L330 560 C350 500 372 430 374 350 C376 270 360 190 330 130 C312 98 290 80 262 78Z';
+
+      // queue : spirale qui s'affine, tournée dans le sens des aiguilles d'une montre
+      const C = [232, 612], th0 = (-44 * Math.PI) / 180, turns = 1.55, N = 90;
+      const mid = [];
+      for (let i = 0; i <= N; i++) {
+        const t = i / N, th = th0 + t * turns * 2 * Math.PI;
+        const r = 13 + 76 * Math.pow(1 - t, 1.15);
+        mid.push([C[0] + Math.cos(th) * r, C[1] + Math.sin(th) * r, 10 + 70 * Math.pow(1 - t, 1.4)]);
+      }
+      const inner = [], outer = [], outN = [];
+      mid.forEach(([x, y, w], i) => {
+        const a = mid[Math.max(0, i - 1)], b = mid[Math.min(N, i + 1)];
+        const d = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        const dx = (b[0] - a[0]) / d, dy = (b[1] - a[1]) / d;
+        inner.push([x - dy * w / 2, y + dx * w / 2]);
+        outer.push([x + dy * w / 2, y - dx * w / 2]);
+        outN.push([dy, -dx]);
+      });
+      const tail = poly([...outer, ...inner.reverse()]) + 'Z';
+      inner.reverse();
+
+      // dents le long du ventre et de la queue
+      const tooth = ([x, y], [nx, ny], len, half) => {
+        const tx = -ny, ty = nx;
+        return `M${f(x + tx * half - nx * 4)} ${f(y + ty * half - ny * 4)} L${f(x + nx * len)} ${f(y + ny * len)} L${f(x - tx * half - nx * 4)} ${f(y - ty * half - ny * 4)}Z`;
+      };
+      const front = sample([[[226, 238], [206, 262], [176, 300], [166, 345]], [[166, 345], [158, 385], [162, 430], [190, 470]], [[190, 470], [210, 498], [235, 520], [262, 540]]], 30);
+      let teeth = '', belly = '';
+      for (let i = 12; i < front.length - 22; i += 6) {
+        const [x, y, dx, dy] = front[i];
+        const n = [-dy, dx]; // vers l'avant (dehors)
+        teeth += tooth([x, y], n, 32, 11);
+        belly += `M${f(x - n[0] * 10)} ${f(y - n[1] * 10)} Q${f(x - n[0] * 34 + dx * 4)} ${f(y - n[1] * 34 + dy * 4)} ${f(x - n[0] * 58 + dx * 10)} ${f(y - n[1] * 58 + dy * 10)} `;
+      }
+      let tailTicks = '';
+      for (let i = 6; i < 58; i += 4) {
+        const [x, y] = outer[i], [nx, ny] = outN[i], w = mid[i][2];
+        if (i % 8 === 6) teeth += tooth([x, y], [nx, ny], 26 + w * 0.1, 9);
+        tailTicks += `M${f(x - nx * 8)} ${f(y - ny * 8)} L${f(x - nx * w * 0.42)} ${f(y - ny * w * 0.42)} `;
+      }
+      const tailLine = poly(mid.slice(5, N - 6).map(([x, y, w], i) => { const [nx, ny] = outN[i + 5]; return [x - nx * w * 0.12, y - ny * w * 0.12]; }));
+
+      // crête festonnée le long du dos (du bas vers la tête)
+      const backPts = sample([[[330, 560], [350, 500], [372, 430], [374, 350]], [[374, 350], [376, 270], [360, 190], [330, 130]], [[330, 130], [312, 98], [290, 80], [262, 78]]], 40);
+      const crestPts = backPts.slice(10, backPts.length - 14);
+      const M = crestPts.length - 1;
+      const edge = [], base = [];
+      let crestRays = '', back = '';
+      crestPts.forEach(([x, y, dx, dy], i) => {
+        const nx = -dy, ny = dx; // vers l'extérieur (droite)
+        const s = i / M;
+        const env = Math.min(1, s * 7, (1 - s) * 5);
+        const h = 16 + (12 + 24 * Math.pow(Math.abs(Math.sin(s * Math.PI * 12)), 0.65)) * env;
+        edge.push([x + nx * h, y + ny * h]);
+        base.push([x - nx * 6, y - ny * 6]);
+        if (i % 3 === 1 && env > 0.6) crestRays += `M${f(x + nx * 20)} ${f(y + ny * 20)} L${f(x + nx * (h - 5))} ${f(y + ny * (h - 5))} `;
+        if (i % 4 === 0 && i > 4 && i < M - 4) back += `M${f(x - nx * 12)} ${f(y - ny * 12)} L${f(x - nx * 26 - dx * 4)} ${f(y - ny * 26 - dy * 4)} `;
+      });
+      const crest = poly([...edge, ...base.reverse()]) + 'Z';
+
+      const coronet = 'M222 100 C220 78 228 62 240 56 C240 42 252 34 262 38 C268 26 282 26 288 36 C298 30 312 36 310 50 C322 54 326 68 316 78 C326 86 324 100 312 104 L290 108Z';
+      const fin = 'M366 312 C390 290 420 286 436 300 C430 316 444 330 440 346 C452 362 444 380 438 390 C440 406 424 416 404 414 C392 410 378 404 362 400Z';
+      const finRays = 'M392 352 L428 304 M394 354 L434 330 M395 357 L438 350 M395 360 L436 372 M394 362 L428 394 M392 364 L408 408';
+      return { body, tail, teeth, belly, tailTicks, tailLine, crest, crestRays, back, coronet, fin, finRays };
+    })();
+
     const SHAPES = {
       // Pion : une perle posée dans un coquillage
       p: (c) => `${base(c)}
@@ -264,22 +346,34 @@
         <circle cx="50" cy="66" r="4.2" fill="${c.acc2}" opacity=".6" stroke="none"/>
         <path d="M46.8 63.3 Q48.6 61.8 50.8 62.4" stroke="#fff" stroke-width="1.3" fill="none" opacity=".85"/>
         <g fill="${c.acc}" stroke-width="1"><circle cx="64" cy="74" r="1.8"/><circle cx="60.5" cy="77.5" r="1.3"/><circle cx="38" cy="42" r="1.4"/></g>`,
-      // Cavalier : hippocampe de guerre (crête en lames, piques, mâchoire ouverte, œil rouge, cicatrice)
-      n: (c) => `${base(c)}
-        <path d="M53 21 L49 4 L58 14 L60 0 L65 14 L72 3 L72 18 L83 11 L78 25 L90 24 L80 33 L90 40 L78 42 L86 52 L73 49Z" fill="${c.acc}" stroke-width="1.8"/>
-        <path d="M60 9 L61.5 15 M68.5 10 L68 17 M77 20 L74.5 24 M83 32 L78 33.5 M81 44 L76.5 44" stroke-width="1.1" opacity=".55"/>
-        <path d="M73 50 L83 54.5 L72 58Z M70.5 60 L80 65 L69 68Z" fill="${c.acc}" stroke-width="1.6"/>
-        <path d="M46 55 L37.5 54 L44 60Z M42 62.5 L33.5 63 L40.5 67.5Z M38.5 70 L30.5 71.5 L37.5 75Z" fill="${c.acc}" stroke-width="1.6"/>
-        <path d="M35 81 C35 70 40 62 46 56 C43 53 41.5 50 40.5 47 L27 46 L19.5 44.5 L24.5 41.5 L21.5 38 L27 37.5 L41.5 34.5 C43.5 24 51 16.5 59.5 16.5 C70 16.5 76 26.5 75 39 C74 51 68 61 68 70 L68 81Z" fill="url(#g)"/>
-        <rect x="33" y="77" width="37" height="5.5" rx="2.75" fill="url(#g)"/>
-        <path d="M28 44.5 Q35 45.3 41.5 43" fill="none" stroke-width="1.4" opacity=".75"/>
-        <path d="M46.5 56 Q54 52.5 61 56 M49.5 63 Q57 60 64.5 63.5 M50.5 70.5 Q58 68 66.5 71" fill="none" stroke="${c.acc2}" stroke-width="2"/>
-        <ellipse cx="52.5" cy="29.5" rx="3.9" ry="2.9" fill="#ff3355" stroke-width="1.4"/>
-        <ellipse cx="52.5" cy="29.6" rx=".95" ry="2.3" fill="#14020a" stroke="none"/><circle cx="51.3" cy="28.7" r=".75" fill="#fff" stroke="none"/>
-        <path d="M43.5 27 L61 23.5 L61.5 27 L45 31Z" fill="${c.stroke}" stroke-width="1"/>
-        <path d="M57 33 L64 42.5" stroke="#f3b4ca" stroke-width="1.7" stroke-linecap="round"/>
-        <path d="M58.6 37.6 L61.6 35.6 M61 41 L64 39" stroke="#f3b4ca" stroke-width="1.2" stroke-linecap="round"/>
-        <ellipse cx="66" cy="27" rx="1.8" ry="4.5" fill="#fff" opacity=".35" stroke="none" transform="rotate(35 66 27)"/>`,
+      // Cavalier : hippocampe entier, queue enroulée, crête festonnée, ventre dentelé, nageoire à rayons
+      n: (c) => {
+        const g = SEAHORSE;
+        const OUT = 18, DET = 8.5;
+        return `${base(c)}
+        <g transform="translate(16 -1.6) scale(.135 .12)" stroke-linejoin="round" stroke-linecap="round" stroke-width="${OUT}">
+          <path d="${g.coronet}" fill="${c.acc}" stroke-width="${OUT * 0.75}"/>
+          <path d="${g.crest}" fill="${c.acc}" stroke-width="${OUT * 0.75}"/>
+          <path d="${g.fin}" fill="${c.acc}" stroke-width="${OUT * 0.75}"/>
+          <path d="${g.teeth}" fill="url(#gs)" stroke-width="${OUT * 0.75}"/>
+          <path d="${g.body}" fill="url(#gs)" stroke-width="${OUT * 2}"/>
+          <path d="${g.tail}" fill="url(#gs)" stroke-width="${OUT * 2}"/>
+          <path d="${g.body}" fill="url(#gs)" stroke="none"/>
+          <path d="${g.tail}" fill="url(#gs)" stroke="none"/>
+          <path d="${g.crestRays}" fill="none" stroke-width="${DET * 0.8}" opacity=".55"/>
+          <path d="${g.finRays}" fill="none" stroke-width="${DET * 0.75}" opacity=".6"/>
+          <path d="${g.belly}" fill="none" stroke-width="${DET}" opacity=".6"/>
+          <path d="${g.back}" fill="none" stroke-width="${DET * 0.85}" opacity=".5"/>
+          <path d="${g.tailTicks}" fill="none" stroke-width="${DET * 0.85}" opacity=".55"/>
+          <path d="${g.tailLine}" fill="none" stroke-width="${DET}" opacity=".6"/>
+          <path d="M282 150 C304 225 310 330 302 430 C297 490 306 530 326 556" fill="none" stroke-width="${DET}" opacity=".7"/>
+          <path d="M176 214 C212 212 246 198 270 166" fill="none" stroke-width="${DET}" opacity=".75"/>
+          <path d="M196 142 C204 112 222 94 246 88" fill="none" stroke="#fff" stroke-width="10" opacity=".5"/>
+          <path d="M192 300 C176 340 174 400 194 450" fill="none" stroke="#fff" stroke-width="12" opacity=".3"/>
+          <circle cx="222" cy="150" r="11" fill="${c.dark}" stroke-width="5"/>
+          <circle cx="218.5" cy="146.5" r="3.6" fill="#fff" stroke="none"/>
+        </g>`;
+      },
       // Fou : coquillage en spirale (turritelle), une perle au sommet
       b: (c) => `${base(c)}
         <path d="M38 81 Q41 69 45 63.5 H55 Q59 69 62 81Z" fill="url(#g)"/>
@@ -318,6 +412,7 @@
         <defs>
           <linearGradient id="g" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="${c.top}"/><stop offset="0.3" stop-color="${c.sheen}"/><stop offset="0.6" stop-color="${c.mid}"/><stop offset="1" stop-color="${c.bot}"/></linearGradient>
           <linearGradient id="gu" gradientUnits="userSpaceOnUse" x1="35" y1="4" x2="62" y2="60"><stop offset="0" stop-color="${c.top}"/><stop offset="0.4" stop-color="${c.sheen}"/><stop offset="1" stop-color="${c.mid}"/></linearGradient>
+          <linearGradient id="gs" gradientUnits="userSpaceOnUse" x1="170" y1="60" x2="330" y2="700"><stop offset="0" stop-color="${c.top}"/><stop offset="0.3" stop-color="${c.sheen}"/><stop offset="0.62" stop-color="${c.mid}"/><stop offset="1" stop-color="${c.bot}"/></linearGradient>
           <radialGradient id="pr" cx=".36" cy=".32" r=".75"><stop offset="0" stop-color="${c.pearl}"/><stop offset=".45" stop-color="${c.sheen}"/><stop offset="1" stop-color="${c.bot}"/></radialGradient>
           <filter id="bl" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.5"/></filter>
           <style>.gl *{fill:none!important;stroke:${c.glow || 'none'}!important}</style>

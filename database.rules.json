@@ -1,7 +1,7 @@
 {
   "rules": {
     "users": {
-      ".read": "auth != null && root.child('roles/' + auth.uid).val() === 'admin'",
+      ".read": "auth != null && (root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur')",
       "$uid": {
         ".read": "auth != null",
         ".write": "auth != null && auth.uid === $uid && (!root.child('bans/' + auth.uid).exists() || (root.child('bans/' + auth.uid).child('until').val() > 0 && root.child('bans/' + auth.uid).child('until').val() < now))",
@@ -9,9 +9,9 @@
       }
     },
     "private": {
-      ".read": "auth != null && root.child('roles/' + auth.uid).val() === 'admin'",
+      ".read": "auth != null && (root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur')",
       "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || root.child('roles/' + auth.uid).val() === 'admin')",
+        ".read": "auth != null && (auth.uid === $uid || (root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur'))",
         ".write": "auth != null && auth.uid === $uid",
         ".validate": "newData.hasChildren(['email']) && newData.child('email').isString() && newData.child('email').val().length <= 200"
       }
@@ -26,28 +26,28 @@
     "roles": {
       ".read": "auth != null",
       "$uid": {
-        ".write": "auth != null && root.child('roles/' + auth.uid).val() === 'admin' && $uid !== auth.uid",
+        ".write": "auth != null && $uid !== auth.uid && (((root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur') && !data.exists() && newData.val() === 'admin') || (root.child('roles/' + auth.uid).val() === 'fondateur' && data.val() === 'admin' && !newData.exists()))",
         ".validate": "newData.val() === 'admin'"
       }
     },
     "bans": {
-      ".read": "auth != null && root.child('roles/' + auth.uid).val() === 'admin'",
+      ".read": "auth != null && (root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur')",
       "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || root.child('roles/' + auth.uid).val() === 'admin')",
-        ".write": "auth != null && root.child('roles/' + auth.uid).val() === 'admin' && $uid !== auth.uid && root.child('roles/' + $uid).val() !== 'admin'",
+        ".read": "auth != null && (auth.uid === $uid || (root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur'))",
+        ".write": "auth != null && (root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur') && $uid !== auth.uid && !root.child('roles/' + $uid).exists()",
         ".validate": "newData.hasChildren(['reason', 'at', 'until', 'by']) && newData.child('until').isNumber() && newData.child('reason').isString() && newData.child('reason').val().length <= 200"
       }
     },
     "avatars": {
-      ".read": "auth != null && root.child('roles/' + auth.uid).val() === 'admin'",
+      ".read": "auth != null && (root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur')",
       "$uid": {
         ".read": "auth != null",
-        ".write": "auth != null && ((auth.uid === $uid && (!root.child('bans/' + auth.uid).exists() || (root.child('bans/' + auth.uid).child('until').val() > 0 && root.child('bans/' + auth.uid).child('until').val() < now))) || (root.child('roles/' + auth.uid).val() === 'admin' && !newData.exists()))",
+        ".write": "auth != null && ((auth.uid === $uid && (!root.child('bans/' + auth.uid).exists() || (root.child('bans/' + auth.uid).child('until').val() > 0 && root.child('bans/' + auth.uid).child('until').val() < now))) || ((root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur') && !newData.exists()))",
         ".validate": "newData.isString() && newData.val().length < 60000 && (newData.val().beginsWith('data:image/jpeg;base64,') || newData.val().beginsWith('data:image/webp;base64,') || newData.val().beginsWith('data:image/png;base64,'))"
       }
     },
     "status": {
-      ".read": "auth != null && root.child('roles/' + auth.uid).val() === 'admin'",
+      ".read": "auth != null && (root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur')",
       "$uid": {
         ".read": "auth != null",
         ".write": "auth != null && auth.uid === $uid && (!root.child('bans/' + auth.uid).exists() || (root.child('bans/' + auth.uid).child('until').val() > 0 && root.child('bans/' + auth.uid).child('until').val() < now))"
@@ -72,9 +72,9 @@
       }
     },
     "friends": {
-      ".read": "auth != null && root.child('roles/' + auth.uid).val() === 'admin'",
+      ".read": "auth != null && (root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur')",
       "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || root.child('roles/' + auth.uid).val() === 'admin' || root.child('users/' + $uid + '/private').val() !== true || root.child('friends/' + $uid + '/' + auth.uid).exists())",
+        ".read": "auth != null && (auth.uid === $uid || (root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur') || root.child('users/' + $uid + '/private').val() !== true || root.child('friends/' + $uid + '/' + auth.uid).exists())",
         "$fid": {
           ".write": "auth != null && (!root.child('bans/' + auth.uid).exists() || (root.child('bans/' + auth.uid).child('until').val() > 0 && root.child('bans/' + auth.uid).child('until').val() < now)) && $uid !== $fid && (!newData.exists() ? (auth.uid === $uid || auth.uid === $fid) : ((auth.uid === $uid && root.child('friendRequests/' + $uid + '/' + $fid).exists()) || (auth.uid === $fid && root.child('friendRequests/' + $fid + '/' + $uid).exists())))",
           ".validate": "newData.hasChildren(['username', 'since'])"
@@ -179,11 +179,11 @@
       }
     },
     "history": {
-      ".read": "auth != null && root.child('roles/' + auth.uid).val() === 'admin'",
+      ".read": "auth != null && (root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur')",
       "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || root.child('roles/' + auth.uid).val() === 'admin' || root.child('users/' + $uid + '/private').val() !== true || root.child('friends/' + $uid + '/' + auth.uid).exists())",
+        ".read": "auth != null && (auth.uid === $uid || (root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur') || root.child('users/' + $uid + '/private').val() !== true || root.child('friends/' + $uid + '/' + auth.uid).exists())",
         "$h": {
-          ".write": "auth != null && ((auth.uid === $uid && !data.exists() && newData.exists()) || (root.child('roles/' + auth.uid).val() === 'admin' && !newData.exists()))",
+          ".write": "auth != null && ((auth.uid === $uid && !data.exists() && newData.exists()) || ((root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur') && !newData.exists()))",
           ".validate": "newData.hasChildren(['white', 'black', 'me', 'mode', 'result', 'reason', 'moves', 'date']) && newData.child('mode').val() === 'ami' && (newData.child('game').isString() && newData.child('round').isNumber() && $h === newData.child('game').val() + '-' + newData.child('round').val() && root.child('games/' + newData.child('game').val() + '/status').val() === 'over' && newData.child('result').val() !== '*' && newData.child('date').val() === now && root.child('games/' + newData.child('game').val() + '/round').val() === newData.child('round').val() && root.child('games/' + newData.child('game').val() + '/result').val() === newData.child('result').val() && root.child('games/' + newData.child('game').val() + '/reason').val() === newData.child('reason').val() && root.child('games/' + newData.child('game').val() + '/ply').val() === newData.child('ply').val() && newData.child('white').val() === root.child('games/' + newData.child('game').val() + '/names/w').val() && newData.child('black').val() === root.child('games/' + newData.child('game').val() + '/names/b').val() && ((newData.child('me').val() === 'w' && root.child('games/' + newData.child('game').val() + '/white').val() === $uid && newData.child('opp').val() === root.child('games/' + newData.child('game').val() + '/black').val()) || (newData.child('me').val() === 'b' && root.child('games/' + newData.child('game').val() + '/black').val() === $uid && newData.child('opp').val() === root.child('games/' + newData.child('game').val() + '/white').val())))"
         }
       }

@@ -193,7 +193,7 @@ onAuthStateChanged(auth, async (u) => {
       resolveSession({ user: null, banned: ban });
       return;
     }
-    currentUser = { id: u.uid, username: username || 'Joueur', avatar, role: role === 'admin' ? 'admin' : 'member' };
+    currentUser = { id: u.uid, username: username || 'Joueur', avatar, role: role === 'fondateur' || role === 'admin' ? role : 'member' };
     syncEmail(u);
     startPresence();
     listenInvitations();
@@ -207,7 +207,16 @@ onAuthStateChanged(auth, async (u) => {
 // ---------------------------------------------------------------------------
 // Rôles et bannissements
 // ---------------------------------------------------------------------------
-export const isAdmin = () => currentUser?.role === 'admin';
+/** Droits d'administration : admin ou fondateur. */
+export const isAdmin = () => currentUser?.role === 'admin' || currentUser?.role === 'fondateur';
+export const isFounder = () => currentUser?.role === 'fondateur';
+
+/** Badge du rôle d'un joueur (rien pour un simple membre). */
+export function roleBadge(role) {
+  if (role === 'fondateur') return '<span class="badge founder">👑 fondateur</span>';
+  if (role === 'admin') return '<span class="badge admin">🛡 admin</span>';
+  return '';
+}
 export const isBanActive = (ban) => !!ban && (!ban.until || ban.until > serverNow());
 
 export function banEndText(ban) {
@@ -263,7 +272,7 @@ function renderAccount(user) {
   } else {
     el.innerHTML = `
       ${SEARCH_HTML}
-      ${user.role === 'admin' ? '<a class="icon-btn admin-link" href="admin.html" title="Administration" aria-label="Administration">🛡</a>' : ''}
+      ${user.role === 'admin' || user.role === 'fondateur' ? '<a class="icon-btn admin-link" href="admin.html" title="Administration" aria-label="Administration">🛡</a>' : ''}
       <a class="account-chip" href="profil.html" title="Mon profil">
         ${picHtml(user.username, user.avatar, 'account-initial')}
         <span class="account-name">${escapeHtml(user.username)}</span>
@@ -886,7 +895,8 @@ export async function loadProfile(uid) {
     online: !!status?.connections,
     playing: !!status?.playing,
     lastSeen: status?.lastSeen || 0,
-    admin: role === 'admin',
+    role: role === 'fondateur' || role === 'admin' ? role : 'member',
+    admin: role === 'admin' || role === 'fondateur',
     relation,
     visible,
     games: visible ? Object.entries(history || {}).map(([id, g]) => ({ id, ...g })) : null,

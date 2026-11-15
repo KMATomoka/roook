@@ -1047,3 +1047,4 @@ a.person-link:hover { color: var(--accent-soft); }
 .pf-account .warn { color: #f2cf4d; }
 .pf-account .email-form { margin-top: 12px; }
 @media (max-width: 600px) { .pf-account { flex-direction: column; } }
+.badge.founder { color: #f2cf4d; border-color: rgba(242, 207, 77, 0.55); background: rgba(242, 207, 77, 0.12); }

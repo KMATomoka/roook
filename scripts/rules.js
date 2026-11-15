@@ -5,7 +5,10 @@ const fs = require('fs');
 const path = require('path');
 
 const ME = 'auth != null';
-const ADMIN = "root.child('roles/' + auth.uid).val() === 'admin'";
+// Rôles : « fondateur » (au-dessus de tout, donné seulement depuis la console Firebase) et « admin ».
+// ADMIN = a les droits d'administration (admin ou fondateur) ; FOUNDER = fondateur.
+const ADMIN = "(root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur')";
+const FOUNDER = "root.child('roles/' + auth.uid).val() === 'fondateur'";
 const BAN = "root.child('bans/' + auth.uid)";
 // Pas banni : aucun bannissement, ou un bannissement temporaire déjà terminé (until = 0 → définitif)
 const OK = `(!${BAN}.exists() || (${BAN}.child('until').val() > 0 && ${BAN}.child('until').val() < now))`;
@@ -93,7 +96,9 @@ const rules = {
       '.read': ME,
       $uid: {
         // Seul un admin nomme ou retire un admin, et jamais lui-même (pour ne pas se retirer ses droits par erreur)
-        '.write': `${ME} && ${ADMIN} && $uid !== auth.uid`,
+        // Nommer admin un membre : un admin ou le fondateur. Retirer le rôle d'un admin : le fondateur seulement.
+        // Le rôle « fondateur » ne se donne ni ne s'enlève depuis le site (console Firebase uniquement).
+        '.write': `${ME} && $uid !== auth.uid && ((${ADMIN} && !data.exists() && newData.val() === 'admin') || (${FOUNDER} && data.val() === 'admin' && !newData.exists()))`,
         '.validate': "newData.val() === 'admin'",
       },
     },
@@ -101,7 +106,8 @@ const rules = {
       '.read': `${ME} && ${ADMIN}`,
       $uid: {
         '.read': `${ME} && (${OWNER('$uid')} || ${ADMIN})`,
-        '.write': `${ME} && ${ADMIN} && $uid !== auth.uid && root.child('roles/' + $uid).val() !== 'admin'`,
+        // Personne ne bannit un admin ou le fondateur
+        '.write': `${ME} && ${ADMIN} && $uid !== auth.uid && !root.child('roles/' + $uid).exists()`,
         '.validate': "newData.hasChildren(['reason', 'at', 'until', 'by']) && newData.child('until').isNumber() && newData.child('reason').isString() && newData.child('reason').val().length <= 200",
       },
     },

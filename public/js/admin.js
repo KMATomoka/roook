@@ -2,7 +2,7 @@
 // (bannir / débannir, retirer une photo, réinitialiser un mot de passe, nommer ou retirer un admin).
 // Les vraies protections sont dans les règles de la base : seul un admin peut lire ces données et agir.
 import { $, escapeHtml } from './common.js';
-import { session, toast, picHtml, isBanActive, banEndText, profileUrl } from './compte.js';
+import { session, toast, picHtml, isBanActive, banEndText, profileUrl, roleBadge } from './compte.js';
 import { db, ref, get, set, remove, onValue, serverTimestamp, serverNow, sendPasswordResetEmail, auth } from './fb.js';
 
 const { user, banned } = await session;
@@ -15,7 +15,7 @@ if (banned) {
   // écran de suspension déjà affiché
 } else if (!user) {
   location.href = 'connexion.html?retour=admin.html';
-} else if (user.role !== 'admin') {
+} else if (user.role !== 'admin' && user.role !== 'fondateur') {
   $('#admin-denied').hidden = false;
 } else {
   start();
@@ -88,7 +88,8 @@ function members() {
         online: !!st.connections,
         playing: !!st.playing,
         lastSeen: st.connections ? serverNow() : st.lastSeen || 0,
-        admin: data.roles[id] === 'admin',
+        role: data.roles[id] === 'fondateur' || data.roles[id] === 'admin' ? data.roles[id] : 'member',
+        admin: data.roles[id] === 'admin' || data.roles[id] === 'fondateur',
         ban: isBanActive(ban) ? ban : null,
         avatar: data.avatars[id] || null,
         games: data.games[id] || { n: 0, w: 0, l: 0, d: 0 },
@@ -144,7 +145,7 @@ function row(m) {
   const presence = m.playing ? 'playing' : m.online ? 'online' : 'offline';
   const badges = [
     me ? '<span class="badge me">toi</span>' : '',
-    m.admin ? '<span class="badge admin">🛡 admin</span>' : '',
+    roleBadge(m.role),
     m.ban ? '<span class="badge banned">⛔ banni</span>' : '',
   ].join('');
   const statusTxt = m.playing ? '<span class="status-playing">en partie</span>' : m.online ? '<span class="status-online">en ligne</span>' : `<span class="muted">${ago(m.lastSeen)}</span>`;
@@ -176,20 +177,23 @@ function details(m, me) {
   if (m.avatar) actions.push('<button class="btn btn-ghost small" data-a="photo">🖼 Retirer la photo</button>');
   if (m.email) actions.push('<button class="btn btn-ghost small" data-a="reset">✉ Envoyer un lien « nouveau mot de passe »</button>');
   actions.unshift(`<a class="btn btn-ghost small" href="${profileUrl(m.id)}">👤 Voir le profil</a>`);
-  if (!me) actions.push(m.admin ? '<button class="btn btn-ghost small" data-a="demote">Retirer le rôle admin</button>' : '<button class="btn btn-ghost small" data-a="promote">🛡 Nommer admin</button>');
+  // Nommer admin : admins et fondateur. Retirer le rôle d'un admin : le fondateur seulement. Le fondateur est intouchable.
+  if (!me && m.role === 'member') actions.push('<button class="btn btn-ghost small" data-a="promote">🛡 Nommer admin</button>');
+  if (!me && m.role === 'admin' && user.role === 'fondateur') actions.push('<button class="btn btn-ghost small" data-a="demote">Retirer le rôle admin</button>');
   return `<div class="member-details">
     ${banInfo}
     <dl class="member-facts">
       <div><dt>E-mail</dt><dd>${m.email ? escapeHtml(m.email) : '—'}</dd></div>
       <div><dt>Inscription</dt><dd>${date(m.createdAt)}</dd></div>
       <div><dt>Dernière connexion</dt><dd>${m.online ? 'en ligne maintenant' : ago(m.lastSeen)}</dd></div>
-      <div><dt>Rôle</dt><dd>${m.admin ? 'Administrateur' : 'Membre'}</dd></div>
+      <div><dt>Rôle</dt><dd>${m.role === 'fondateur' ? 'Fondateur' : m.role === 'admin' ? 'Administrateur' : 'Membre'}</dd></div>
       <div><dt>Parties entre amis</dt><dd>${g.n ? `${g.n} · ${g.w} V · ${g.l} D · ${g.d} N` : 'aucune'}</dd></div>
       <div><dt>Amis (${m.friends.length})</dt><dd>${m.friends.length ? m.friends.map(escapeHtml).join(', ') : 'aucun'}</dd></div>
       <div class="wide"><dt>Identifiant</dt><dd><code>${m.id}</code></dd></div>
     </dl>
     <div class="member-actions">${actions.join('') || '<span class="muted">C’est ton compte.</span>'}</div>
-    ${m.admin && !me ? '<p class="muted small-note">Un admin ne peut pas être banni : retire-lui d’abord son rôle.</p>' : ''}
+    ${!me && m.role === 'fondateur' ? '<p class="muted small-note">Le fondateur ne peut être ni banni ni rétrogradé.</p>' : ''}
+    ${!me && m.role === 'admin' ? `<p class="muted small-note">Un admin ne peut pas être banni.${user.role === 'fondateur' ? ' Retire-lui d’abord son rôle.' : ' Seul le fondateur peut lui retirer son rôle.'}</p>` : ''}
   </div>`;
 }
 

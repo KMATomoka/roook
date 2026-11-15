@@ -3,7 +3,7 @@
 import { $, escapeHtml } from './common.js';
 import {
   session, toast, picHtml, loadProfile, setProfilePrivate, profileUrl, addFriend, acceptFriend, challenge, cadenceLabel, logout,
-  setAvatar, removeAvatar, myEmail, changeEmail,
+  setAvatar, removeAvatar, myEmail, changeEmail, roleBadge,
 } from './compte.js';
 
 const page = $('#profile-page');
@@ -138,7 +138,7 @@ function render(p) {
         : `<div class="pf-pic">${picHtml(p.username, p.avatar, 'profile-avatar', `<i class="presence ${presence}"></i>`)}</div>`}
       <div class="pf-id">
         <h1>${escapeHtml(p.username)}
-          ${p.admin ? '<span class="badge admin">🛡 admin</span>' : ''}
+          ${roleBadge(p.role)}
           ${p.isPrivate ? '<span class="badge">🔒 privé</span>' : ''}
           ${p.relation === 'friend' ? '<span class="badge me">ami</span>' : ''}
         </h1>

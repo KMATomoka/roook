@@ -44,8 +44,12 @@ body {
   margin: 0;
   background: var(--bg);
   background-image:
-    radial-gradient(900px 600px at 85% -10%, rgba(143, 107, 255, 0.2), transparent 60%),
-    radial-gradient(700px 520px at -10% 105%, rgba(70, 110, 255, 0.1), transparent 60%);
+    radial-gradient(1100px 680px at 82% -12%, rgba(143, 107, 255, 0.24), transparent 62%),
+    radial-gradient(760px 520px at 8% 6%, rgba(98, 70, 220, 0.09), transparent 65%),
+    radial-gradient(900px 640px at -12% 108%, rgba(64, 104, 255, 0.13), transparent 62%),
+    radial-gradient(130% 34% at 50% 118%, rgba(143, 107, 255, 0.2), rgba(143, 107, 255, 0.05) 55%, transparent 75%),
+    radial-gradient(620px 420px at 70% 115%, rgba(60, 242, 163, 0.05), transparent 70%),
+    linear-gradient(180deg, #0e0b1c 0%, #0b0917 55%, #08060f 100%);
   background-attachment: fixed;
   color: var(--text);
   font-family: var(--font);
@@ -116,7 +120,6 @@ p { margin: 0 0 0.6em; }
   padding: 0;
 }
 .cg-wrap.board { width: 100%; height: 100%; border-radius: 4px; }
-.cg-wrap coords { font-family: var(--font); font-weight: 700; font-size: 11px; }
 cg-board square.move-dest { background: radial-gradient(rgba(40, 20, 90, 0.5) 19%, transparent 21%); }
 cg-board square.oc.move-dest { background: radial-gradient(transparent 0%, transparent 79%, rgba(40, 20, 90, 0.45) 80%); }
 cg-board square.move-dest:hover { background: rgba(60, 242, 163, 0.35); }
@@ -519,41 +522,60 @@ cg-board {
   background-image: conic-gradient(var(--sq-dark) 0 25%, transparent 0 50%, var(--sq-dark) 0 75%, transparent 0);
   background-size: 25% 25%;
 }
+/* Coordonnées : toujours lisibles — texte clair sur case sombre, texte sombre sur case claire.
+   a1 est une case sombre : avec les Blancs en bas, rangées impaires et colonnes a, c, e, g sont sur cases sombres. */
+.cg-wrap coords { opacity: 1; }
+.cg-wrap coords coord { font: 800 clamp(11px, 1.3vw, 14px)/1 var(--font); letter-spacing: 0.02em; }
 .orientation-white .ranks :nth-child(odd),
-.orientation-white .files :nth-child(even),
-.orientation-black .ranks :nth-child(even),
-.orientation-black .files :nth-child(odd) { color: rgba(60, 40, 130, 0.85); }
-.orientation-white .ranks :nth-child(even),
 .orientation-white .files :nth-child(odd),
+.orientation-black .ranks :nth-child(even),
+.orientation-black .files :nth-child(even) { color: #f6f3ff; text-shadow: 0 1px 2px rgba(40, 20, 100, 0.55); }
+.orientation-white .ranks :nth-child(even),
+.orientation-white .files :nth-child(even),
 .orientation-black .ranks :nth-child(odd),
-.orientation-black .files :nth-child(even) { color: rgba(235, 230, 251, 0.9); }
+.orientation-black .files :nth-child(odd) { color: #4b33a8; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5); }
 .board-frame { box-shadow: 0 0 0 1px rgba(143, 107, 255, 0.3), 0 18px 45px rgba(0, 0, 0, 0.5), 0 0 60px rgba(143, 107, 255, 0.14); }
 
-/* Champ d'étoiles (deux couches, la seconde scintille doucement) */
-body::before, body::after {
+/* Champ d'étoiles : trois couches discrètes (poussière fine, étoiles, quelques brillantes qui scintillent) */
+body::before, body::after, html::before {
   content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+}
+/* Poussière d'étoiles fine, qui dérive très lentement */
+html::before {
+  background-image:
+    radial-gradient(0.8px 0.8px at 18px 26px, rgba(255, 255, 255, 0.55), transparent 70%),
+    radial-gradient(0.8px 0.8px at 96px 140px, rgba(220, 210, 255, 0.45), transparent 70%),
+    radial-gradient(0.7px 0.7px at 152px 58px, rgba(255, 255, 255, 0.4), transparent 70%),
+    radial-gradient(0.8px 0.8px at 44px 170px, rgba(255, 255, 255, 0.35), transparent 70%),
+    radial-gradient(0.7px 0.7px at 182px 196px, rgba(200, 190, 255, 0.45), transparent 70%);
+  background-size: 210px 210px;
+  opacity: 0.55;
+  animation: drift 160s linear infinite;
 }
 body::before {
   background-image:
-    radial-gradient(1px 1px at 22px 34px, rgba(255, 255, 255, 0.75), transparent 60%),
-    radial-gradient(1px 1px at 128px 86px, rgba(255, 255, 255, 0.5), transparent 60%),
-    radial-gradient(1.4px 1.4px at 214px 158px, rgba(205, 190, 255, 0.85), transparent 60%),
-    radial-gradient(1px 1px at 64px 218px, rgba(255, 255, 255, 0.4), transparent 60%),
+    radial-gradient(1px 1px at 22px 34px, rgba(255, 255, 255, 0.8), transparent 60%),
+    radial-gradient(1px 1px at 128px 86px, rgba(255, 255, 255, 0.55), transparent 60%),
+    radial-gradient(1.3px 1.3px at 214px 158px, rgba(205, 190, 255, 0.85), transparent 60%),
+    radial-gradient(1px 1px at 64px 218px, rgba(255, 255, 255, 0.45), transparent 60%),
     radial-gradient(1px 1px at 266px 262px, rgba(255, 255, 255, 0.6), transparent 60%),
-    radial-gradient(1px 1px at 172px 24px, rgba(255, 255, 255, 0.45), transparent 60%);
-  background-size: 300px 300px;
+    radial-gradient(1px 1px at 172px 24px, rgba(255, 255, 255, 0.5), transparent 60%);
+  background-size: 320px 320px;
   opacity: 0.5;
 }
 body::after {
   background-image:
-    radial-gradient(1.6px 1.6px at 80px 120px, rgba(185, 166, 255, 0.9), transparent 60%),
-    radial-gradient(1.2px 1.2px at 340px 60px, rgba(255, 255, 255, 0.8), transparent 60%),
+    radial-gradient(1.6px 1.6px at 80px 120px, rgba(185, 166, 255, 0.95), transparent 60%),
+    radial-gradient(1.2px 1.2px at 340px 60px, rgba(255, 255, 255, 0.85), transparent 60%),
     radial-gradient(1.4px 1.4px at 400px 380px, rgba(60, 242, 163, 0.7), transparent 60%),
-    radial-gradient(1px 1px at 200px 430px, rgba(255, 255, 255, 0.7), transparent 60%);
-  background-size: 470px 470px;
-  animation: twinkle 6s ease-in-out infinite;
+    radial-gradient(1px 1px at 200px 430px, rgba(255, 255, 255, 0.75), transparent 60%),
+    radial-gradient(1.8px 1.8px at 520px 260px, rgba(255, 255, 255, 0.9), transparent 60%);
+  background-size: 610px 610px;
+  animation: twinkle 7s ease-in-out infinite;
 }
-@keyframes twinkle { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.75; } }
+@keyframes twinkle { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.8; } }
+@keyframes drift { from { background-position: 0 0; } to { background-position: -210px 420px; } }
+@media (prefers-reduced-motion: reduce) { html::before, body::after { animation: none; } }
 
 /* Petites touches */
 .eyebrow::before { content: '✦'; color: var(--mint); margin-right: 0.5em; }
@@ -1059,3 +1081,17 @@ a.person-link:hover { color: var(--accent-soft); }
 .pf-bio-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.82rem; }
 .pf-bio-bar > span:last-child { display: flex; gap: 8px; }
 .admin-bio { white-space: pre-line; font-weight: 500 !important; }
+
+/* Finitions du fond : barre du haut en verre fumé, cartes avec un léger reflet */
+.topbar {
+  background: linear-gradient(180deg, rgba(14, 11, 28, 0.72), rgba(14, 11, 28, 0.35));
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg, transparent, rgba(143, 107, 255, 0.35) 30%, rgba(143, 107, 255, 0.35) 70%, transparent) 1;
+  position: relative; z-index: 20;
+}
+.card:not(.pf-hero), .mode-card, .explore-card, .pf-tile, .admin-stat, .member {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0) 42%);
+}
+@media (max-width: 1000px) { .page-game .mode-label { display: none; } }
+.cg-wrap coords.files { left: 0; bottom: 3px; height: auto; } .cg-wrap coords.files coord { text-align: right; padding-right: 5px; } .cg-wrap coords.ranks { left: 5px; }

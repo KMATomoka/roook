@@ -1197,42 +1197,95 @@ a.person-link:hover { color: var(--accent-soft); }
 }
 
 /* ==========================================================================
-   Page Inventaire (js/inventaire.js)
+   Page Inventaire (js/inventaire.js) : équipement actuel, packs, fenêtre d'un pack
    ========================================================================== */
 .inv-page { max-width: 1100px; margin: 0 auto; padding: 28px clamp(16px, 4vw, 40px) 70px; }
-.inv-head h1 { font: 700 clamp(1.8rem, 4vw, 2.6rem) var(--serif); margin: 4px 0 6px; }
-.inv-head .lead { margin: 0; }
-.inv-where { margin: 10px 0 0; font-size: 0.9rem; }
+.inv-head h1 { font: 700 clamp(1.8rem, 4vw, 2.6rem) var(--serif); margin: 4px 0 4px; }
+.inv-where { margin: 4px 0 0; font-size: 0.9rem; }
 .inv-where a { color: var(--accent-soft); }
+.inv-label { margin: 0; font: 700 0.72rem var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent-soft); }
+.inv-frame { border-radius: 6px; }
+.inv-note { margin: 18px 0 0; font-size: 0.9rem; }
+
+/* Équipé en ce moment */
+.inv-current {
+  margin-top: 22px; display: grid; grid-template-columns: minmax(0, 300px) 1fr; gap: 28px; align-items: center; padding: 22px;
+  background: radial-gradient(120% 140% at 0% 0%, rgba(143, 107, 255, 0.16), transparent 60%), var(--surface);
+}
+.inv-current.custom { background: radial-gradient(120% 140% at 0% 0%, rgba(60, 242, 163, 0.1), transparent 60%), var(--surface); }
+.inv-current-board { width: 100%; }
+.inv-current-info h2 { margin: 4px 0 4px; font: 700 clamp(1.5rem, 3vw, 2rem) var(--serif); }
+.inv-current.custom .inv-current-info h2 { color: var(--mint); }
+.inv-current-info > p.muted { margin: 0 0 14px; font-size: 0.92rem; }
+.inv-slots { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.inv-slot {
+  width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 10px 12px; border-radius: 12px; cursor: pointer;
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--text); font: inherit; transition: border-color 0.15s, transform 0.15s;
+}
+.inv-slot:hover { border-color: var(--accent); transform: translateY(-1px); }
+.inv-slot-icon {
+  flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-size: 1.1rem;
+  background: rgba(143, 107, 255, 0.14); color: var(--accent-soft);
+}
+.inv-slot-text { flex: 1; min-width: 0; display: flex; flex-direction: column; font-weight: 700; font-size: 0.9rem; }
+.inv-slot-text small { color: var(--muted); font-weight: 500; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.inv-slot-pack { flex: none; font-size: 0.7rem; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 2px 8px; white-space: nowrap; }
+
+/* Les packs */
 .inv-section { margin-top: 34px; }
-.inv-section > h2 { font: 700 1.3rem var(--serif); margin: 0 0 4px; }
-.inv-note { margin: 0 0 10px; font-size: 0.9rem; }
-.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-top: 12px; }
-.inv-card { display: flex; flex-direction: column; gap: 12px; padding: 14px; position: relative; transition: border-color 0.15s, box-shadow 0.15s; }
-.inv-card.equipped { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 28px rgba(143, 107, 255, 0.22); }
-.inv-card.equipped::before {
-  content: '✓ Équipé'; position: absolute; top: 10px; right: 10px; z-index: 30;
-  font: 800 0.7rem var(--font); letter-spacing: 0.06em; text-transform: uppercase;
-  padding: 3px 9px; border-radius: 99px; background: var(--accent); color: var(--accent-ink);
+.inv-section-head h2 { font: 700 1.35rem var(--serif); margin: 0; }
+.inv-section-head p { margin: 4px 0 0; font-size: 0.92rem; }
+.inv-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-top: 16px; }
+.inv-tile {
+  position: relative; display: flex; flex-direction: column; gap: 12px; padding: 14px; text-align: left; cursor: pointer;
+  color: var(--text); font: inherit; transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
 }
-.inv-body h3 { margin: 0 0 4px; font: 700 1.08rem var(--serif); display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
-.inv-from { font: 600 0.72rem var(--font); color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
-.inv-body p { margin: 0; font-size: 0.9rem; }
-.inv-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.inv-actions .inv-equip { margin-left: auto; }
-.inv-preview { width: 100%; max-width: 300px; margin: 0 auto; }
-.inv-frame { border-radius: 5px; }
-.inv-packs { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
-.inv-pack .inv-preview { max-width: 320px; }
-.inv-pack-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 3px; font-size: 0.86rem; }
-.inv-pack-list span { display: inline-block; min-width: 7.5em; color: var(--muted); }
-/* Les 12 pièces, sur deux rangées, sur les couleurs du plateau équipé */
-.inv-preview-pieces {
-  display: grid; gap: 4px; padding: 8px; border-radius: 6px; aspect-ratio: 1; align-content: center;
-  background: linear-gradient(180deg, var(--sq-light) 0 50%, var(--sq-dark) 50% 100%); box-shadow: var(--board-shadow);
+.inv-tile:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4), 0 0 26px rgba(143, 107, 255, 0.18); }
+.inv-tile.equipped { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 26px rgba(143, 107, 255, 0.22); }
+.inv-tile-board { width: 100%; pointer-events: none; }
+.inv-tile-body { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.inv-tile-name { font: 700 1.08rem var(--serif); }
+.inv-tile-status { font-size: 0.8rem; color: var(--muted); text-align: right; }
+.inv-tile-status b { color: var(--accent-soft); }
+.inv-tile.locked .inv-tile-board { filter: saturate(0.55) brightness(0.8); }
+.inv-tile.locked .inv-tile-status { color: #f0d88f; }
+.inv-tile.locked::after { /* cadenas sur l'aperçu */
+  content: '🔒'; position: absolute; top: 22px; right: 22px; z-index: 5; display: grid; place-items: center;
+  width: 32px; height: 32px; border-radius: 50%; font-size: 1rem;
+  background: rgba(12, 9, 22, 0.8); border: 1px solid rgba(216, 176, 76, 0.55); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
-.cg-wrap.inv-pieces { display: grid; grid-template-columns: repeat(6, 1fr); }
-.cg-wrap.inv-pieces piece { position: static; width: 100%; height: auto; aspect-ratio: 1; display: block; will-change: auto; }
+.inv-tile-lock:empty { display: none; }
+
+/* Fenêtre d'un pack */
+.modal.inv-dialog { width: min(860px, calc(100vw - 24px)); max-height: calc(100vh - 24px); overflow-y: auto; text-align: left; padding: 26px; }
+.inv-d-grid { display: grid; grid-template-columns: minmax(0, 330px) 1fr; gap: 26px; align-items: start; }
+.inv-d-board { width: 100%; }
+.inv-d-hint { text-align: center; margin: 10px 0 0; font-size: 0.82rem; }
+.inv-d-main h2 { margin: 4px 0 4px; font: 700 1.7rem var(--serif); }
+.inv-d-main > p.muted { margin: 0 0 12px; font-size: 0.92rem; }
+.inv-d-items { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.inv-d-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); }
+.inv-d-item.on { border-color: rgba(143, 107, 255, 0.6); }
+.inv-d-item.focus { box-shadow: 0 0 0 2px var(--accent); }
+.inv-d-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; font-size: 0.86rem; }
+.inv-d-text small { color: var(--muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.inv-d-text b { font-size: 0.95rem; }
+.inv-d-text .muted { font-size: 0.8rem; line-height: 1.35; }
+.inv-d-actions { flex: none; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.inv-d-foot { margin-top: 16px; display: flex; justify-content: flex-end; }
+.inv-dialog.locked .inv-d-board { filter: saturate(0.6) brightness(0.85); }
+@media (max-width: 760px) {
+  .inv-current { grid-template-columns: 1fr; gap: 16px; }
+  .inv-current-board { max-width: 300px; margin: 0 auto; }
+  .inv-d-grid { grid-template-columns: 1fr; gap: 16px; }
+  .inv-d-board { max-width: 280px; margin: 0 auto; }
+  .inv-d-foot .btn { width: 100%; }
+}
+@media (max-width: 520px) {
+  .inv-slots { grid-template-columns: 1fr; }
+  .inv-d-item { flex-wrap: wrap; }
+  .inv-d-actions { width: 100%; }
+}
 /* Menu à 4 liens (avec Inventaire) : sur téléphone, liens plus serrés ; en partie, la recherche de joueurs
    laisse sa place au bouton du son */
 @media (max-width: 420px) {
@@ -1247,20 +1300,10 @@ a.person-link:hover { color: var(--accent-soft); }
 /* Particules dorées / crème du pack Royal (prise et échec et mat) */
 .fx-mote { position: absolute; border-radius: 50%; pointer-events: none; will-change: transform, opacity; z-index: 3; }
 
-/* Inventaire : packs verrouillés (grisés) et barre de progression vers le déblocage */
-.inv-card.locked .inv-preview { position: relative; filter: saturate(0.55) brightness(0.82); }
-.inv-card.locked .inv-preview::after { /* petit cadenas sur l'aperçu */
-  content: '🔒'; position: absolute; top: 8px; right: 8px; z-index: 5; display: grid; place-items: center;
-  width: 30px; height: 30px; border-radius: 50%; font-size: 0.95rem;
-  background: rgba(12, 9, 22, 0.78); border: 1px solid rgba(216, 176, 76, 0.5); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-}
-.inv-card.locked h3, .inv-card.locked > .inv-body > p { opacity: 0.7; }
-.inv-card.locked { border-style: dashed; }
-.inv-lock { margin: 10px 0 4px; padding: 10px 12px; border-radius: 12px; background: rgba(216, 176, 76, 0.07); border: 1px solid rgba(216, 176, 76, 0.28); display: flex; flex-direction: column; gap: 7px; }
+/* Inventaire : encart « pack verrouillé » et barre de progression vers le déblocage */
+.inv-lock { margin: 4px 0 8px; padding: 10px 12px; border-radius: 12px; background: rgba(216, 176, 76, 0.07); border: 1px solid rgba(216, 176, 76, 0.28); display: flex; flex-direction: column; gap: 7px; }
 .inv-lock-head { font-size: 0.86rem; color: #f0d88f; }
 .inv-lock-head b { color: #ffe28a; }
-.inv-progress { height: 9px; border-radius: 99px; background: rgba(0, 0, 0, 0.35); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(216, 176, 76, 0.25); }
+.inv-progress { height: 8px; border-radius: 99px; background: rgba(0, 0, 0, 0.35); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(216, 176, 76, 0.25); }
 .inv-progress i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #b47b16, #ffe28a); box-shadow: 0 0 10px rgba(255, 210, 110, 0.55); transition: width 0.6s ease; min-width: 2px; }
 .inv-lock-count { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-.inv-lock.done { background: rgba(60, 242, 163, 0.07); border-color: rgba(60, 242, 163, 0.3); }
-.inv-lock.done .inv-lock-head { color: var(--mint); }

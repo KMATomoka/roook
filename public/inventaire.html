@@ -28,35 +28,51 @@
     <div class="inv-head">
       <p class="eyebrow">Ton apparence</p>
       <h1>Inventaire</h1>
-      <p class="lead">Choisis le plateau, les pièces, l’animation de fin de partie et celle des prises. Équipe un pack entier d’un clic, ou mélange les éléments de packs différents.</p>
       <p class="inv-where muted" id="inv-where">&nbsp;</p>
     </div>
 
-    <section class="inv-section">
-      <h2>Packs</h2>
-      <div class="inv-grid inv-packs" id="inv-packs"></div>
+    <!-- Ce qui est équipé en ce moment -->
+    <section class="card inv-current" id="inv-current">
+      <div class="inv-current-board" id="inv-current-board"></div>
+      <div class="inv-current-info">
+        <p class="inv-label">Équipé en ce moment</p>
+        <h2 id="inv-current-name"></h2>
+        <p class="muted" id="inv-current-desc"></p>
+        <ul class="inv-slots" id="inv-current-slots"></ul>
+      </div>
     </section>
 
+    <!-- Les packs : on clique, puis on choisit -->
     <section class="inv-section">
-      <h2>Plateau</h2>
-      <div class="inv-grid" data-slot="board"></div>
-    </section>
-    <section class="inv-section">
-      <h2>Pièces</h2>
-      <div class="inv-grid" data-slot="pieces"></div>
-    </section>
-    <section class="inv-section">
-      <h2>Fin de partie</h2>
-      <p class="muted inv-note">L’animation de l’échec et mat, son son, et l’alerte d’échec.</p>
-      <div class="inv-grid" data-slot="endAnim"></div>
-    </section>
-    <section class="inv-section">
-      <h2>Prise et son</h2>
-      <p class="muted inv-note">L’animation quand une pièce est prise, et les sons des coups (déplacement, prise, échec).</p>
-      <div class="inv-grid" data-slot="capture"></div>
+      <div class="inv-section-head">
+        <h2>Packs</h2>
+        <p class="muted">Clique sur un pack pour l’équiper en entier, ou pour choisir seulement son plateau, ses pièces ou ses animations.</p>
+      </div>
+      <div class="inv-tiles" id="inv-tiles"></div>
     </section>
     <p class="muted inv-note" id="inv-muted" hidden>Le son est coupé sur ce site : réactive-le avec le bouton 🔊 de la page de partie pour entendre les aperçus.</p>
   </main>
+
+  <!-- Fenêtre d'un pack -->
+  <dialog class="modal inv-dialog" id="inv-dialog" aria-labelledby="inv-d-name">
+    <button class="modal-close" type="button" data-close aria-label="Fermer">×</button>
+    <div class="inv-d-grid">
+      <div class="inv-d-side">
+        <div class="inv-d-board" id="inv-d-board"></div>
+        <p class="muted inv-d-hint" id="inv-d-hint">Aperçu du pack</p>
+      </div>
+      <div class="inv-d-main">
+        <p class="inv-label" id="inv-d-status"></p>
+        <h2 id="inv-d-name"></h2>
+        <p class="muted" id="inv-d-desc"></p>
+        <div id="inv-d-lock"></div>
+        <ul class="inv-d-items" id="inv-d-items"></ul>
+        <div class="inv-d-foot">
+          <button class="btn btn-primary" type="button" id="inv-d-all">Équiper tout le pack</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
 
   <script type="module" src="js/inventaire.js"></script>
 </body>

@@ -22,6 +22,8 @@ const GOAL_TEXT = {
 const PIECE_HINT = { p: 'un de tes pions', n: 'un cavalier', b: 'un fou', r: 'une tour', q: 'ta dame', k: 'ton roi' };
 const INF_MODES = { hasard: 'Au hasard', 1: 'Mat en 1', 2: 'Mat en 2', 3: 'Mat en 3' };
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+const isOpening = (l) => l.chapter.startsWith('ouv-');
+const groupOf = (l) => (isOpening(l) ? 'ouvertures' : 'lecons');
 const GOOD = ['Bien !', 'Exact !', 'Oui !', 'Parfait !'];
 const noCheck = (san) => san.replace(/[+#]/g, '');
 const ESCAPE_WRONG = {
@@ -304,8 +306,10 @@ function success(text) {
     progress.lessons[L.id] = true;
     save();
     feedback(`${text || pick(BRAVO)} Leçon terminée ! 🎉`, 'good');
-    const next = LESSONS[LESSONS.indexOf(L) + 1];
-    showNext(next ? `Leçon suivante : ${next.title} →` : 'Passer aux entraînements →', next ? `#lecon/${next.id}` : '#exercices');
+    const same = LESSONS.filter((l) => groupOf(l) === groupOf(L));
+    const next = same[same.indexOf(L) + 1];
+    const after = isOpening(L) ? ['Toutes les ouvertures →', '#ouvertures'] : ['Passer aux entraînements →', '#exercices'];
+    showNext(next ? `${isOpening(L) ? 'Ouverture' : 'Leçon'} suivante : ${next.title} →` : after[0], next ? `#lecon/${next.id}` : after[1]);
   } else if (cur.kind === 'infinite') {
     const st = progress.infinite;
     if (!shownSolution) st.solved++;
@@ -465,8 +469,8 @@ function openLesson(L, step) {
   cur = { kind: 'lesson', lesson: L, step: Math.min(Math.max(step, 0), L.steps.length - 1) };
   task = L.steps[cur.step];
   const ch = CHAPTERS.find((c) => c.id === L.chapter);
-  $('#back').textContent = '← Toutes les leçons';
-  $('#back').href = '#lecons';
+  $('#back').textContent = isOpening(L) ? '← Toutes les ouvertures' : '← Toutes les leçons';
+  $('#back').href = isOpening(L) ? '#ouvertures' : '#lecons';
   $('#p-kicker').textContent = `${ch.title} · étape ${cur.step + 1} sur ${L.steps.length}`;
   $('#p-title').innerHTML = `${icon(ROLE[L.piece])} ${L.title}`;
   $('#p-intro').innerHTML = `<p>${L.intro}</p>`;
@@ -550,13 +554,17 @@ function bar(n, total, label) {
 }
 
 function renderHome(tab) {
-  const lessonsDone = LESSONS.filter((l) => progress.lessons[l.id]).length;
+  const basics = LESSONS.filter((l) => !isOpening(l));
+  const openings = LESSONS.filter(isOpening);
+  const lessonsDone = basics.filter((l) => progress.lessons[l.id]).length;
+  const openingsDone = openings.filter((l) => progress.lessons[l.id]).length;
   const puzzlesDone = PUZZLES.filter((p) => progress.puzzles[p.id]).length;
-  $('#progress').innerHTML = `<h2>Ta progression</h2>${bar(lessonsDone, LESSONS.length, '📘 Leçons')}${bar(puzzlesDone, PUZZLES.length, '🎯 Exercices')}<p class="learn-progress-inf">♾ Mats réussis : <b>${progress.infinite.solved}</b> · record <b>${progress.infinite.best}</b> d’affilée</p>`;
+  $('#progress').innerHTML = `<h2>Ta progression</h2>${bar(lessonsDone, basics.length, '📘 Leçons')}${bar(openingsDone, openings.length, '♞ Ouvertures')}${bar(puzzlesDone, PUZZLES.length, '🎯 Exercices')}<p class="learn-progress-inf">♾ Mats réussis : <b>${progress.infinite.solved}</b> · record <b>${progress.infinite.best}</b> d’affilée</p>`;
 
-  const nextLesson = LESSONS.find((l) => !progress.lessons[l.id]);
-  $('#pane-lecons').innerHTML = CHAPTERS.map((ch, ci) => {
-    const lessons = LESSONS.filter((l) => l.chapter === ch.id);
+  const chaptersHtml = (chapters, list) => {
+  const nextLesson = list.find((l) => !progress.lessons[l.id]);
+  return chapters.map((ch, ci) => {
+    const lessons = list.filter((l) => l.chapter === ch.id);
     return `<section class="learn-chapter">
       <div class="learn-chapter-head"><span class="learn-num">${ci + 1}</span><div><h2>${ch.title}</h2><p class="muted">${ch.desc}</p></div></div>
       <div class="learn-grid">${lessons
@@ -573,6 +581,11 @@ function renderHome(tab) {
         .join('')}</div>
     </section>`;
   }).join('');
+  };
+  $('#pane-lecons').innerHTML = chaptersHtml(CHAPTERS.filter((c) => !c.id.startsWith('ouv-')), basics);
+  $('#pane-ouvertures').innerHTML =
+    `<p class="lead learn-pane-lead">Apprends les grandes ouvertures coup par coup : tu joues ton camp en suivant les explications, l’adversaire répond tout seul. Chaque ouverture a aussi sa 2<sup>e</sup> étape : comment la défendre, ou l’affronter avec l’autre camp.</p>` +
+    chaptersHtml(CHAPTERS.filter((c) => c.id.startsWith('ouv-')), openings);
 
   const inf = progress.infinite;
   $('#pane-exercices').innerHTML = `<article class="card learn-infinite">
@@ -598,6 +611,7 @@ function renderHome(tab) {
 
   for (const b of document.querySelectorAll('.learn-tab')) b.setAttribute('aria-selected', String(b.dataset.tab === tab));
   $('#pane-lecons').hidden = tab !== 'lecons';
+  $('#pane-ouvertures').hidden = tab !== 'ouvertures';
   $('#pane-exercices').hidden = tab !== 'exercices';
 }
 
@@ -622,7 +636,7 @@ function route() {
     const P = PUZZLES.find((p) => p.id === id);
     if (P) return openPuzzle(P);
   }
-  showHome(kind === 'exercices' ? 'exercices' : 'lecons');
+  showHome(['exercices', 'ouvertures'].includes(kind) ? kind : 'lecons');
 }
 
 for (const b of document.querySelectorAll('.learn-tab')) b.addEventListener('click', () => (location.hash = '#' + b.dataset.tab));

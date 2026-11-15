@@ -2049,3 +2049,5 @@ body { overflow-x: clip; position: relative; }
 }
 /* Apprendre, ouvertures : les coups déjà joués */
 .learn-line { margin: 0 0 8px; padding: 6px 10px; border-radius: 8px; background: var(--bg-2); border: 1px solid var(--line); font: 600 0.9rem ui-monospace, 'SF Mono', Menlo, monospace; color: var(--accent-soft); overflow-wrap: anywhere; }
+.learn-pane-lead { margin: 0 0 22px; font-size: 1rem; }
+@media (max-width: 520px) { .learn-tab { padding: 10px 9px; font-size: 0.92rem; } }

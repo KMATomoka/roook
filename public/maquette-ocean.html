@@ -248,9 +248,9 @@
     // Géométrie de l'hippocampe (dessinée dans un repère 512 × 720, réduite dans la pièce)
     const SEAHORSE = (() => {
       const f = (n) => n.toFixed(1);
-      const poly = (pts) => pts.map(([x, y], i) => `${i ? 'L' : 'M'}${f(x)} ${f(y)}`).join(' ');
+      const pl = (pts) => pts.map(([x, y]) => `L${f(x)} ${f(y)}`).join(' ');
       const cub = (q, t) => { const u = 1 - t; return [0, 1].map((k) => u * u * u * q[0][k] + 3 * u * u * t * q[1][k] + 3 * u * t * t * q[2][k] + t * t * t * q[3][k]); };
-      // échantillonne une suite de courbes de Bézier : renvoie [x, y, dx, dy] (tangente unitaire)
+      // échantillonne des courbes de Bézier : [x, y, tx, ty] (tangente unitaire)
       function sample(segs, n) {
         const pts = [];
         segs.forEach((q, si) => { for (let i = si ? 1 : 0; i <= n; i++) pts.push(cub(q, i / n)); });
@@ -260,71 +260,86 @@
           return [pt[0], pt[1], (b[0] - a[0]) / d, (b[1] - a[1]) / d];
         });
       }
-      const body = 'M262 78 C228 76 198 98 186 140 C182 156 176 170 160 178 L128 190 C118 193 112 188 104 194 C98 199 99 214 106 219 C113 224 118 218 126 222 L168 218 C190 216 210 226 226 238 C206 262 176 300 166 345 C158 385 162 430 190 470 C210 498 235 520 262 540 L330 560 C350 500 372 430 374 350 C376 270 360 190 330 130 C312 98 290 80 262 78Z';
+      const lobe = (s, n) => Math.pow(Math.abs(Math.sin(s * Math.PI * n)), 0.55); // festons arrondis
 
-      // queue : spirale qui s'affine, tournée dans le sens des aiguilles d'une montre
-      const C = [232, 612], th0 = (-44 * Math.PI) / 180, turns = 1.55, N = 90;
+      // --- ventre : bord avant festonné (du cou vers la queue) ---
+      const front = sample([
+        [[226, 238], [198, 266], [160, 306], [151, 358]],
+        [[151, 358], [144, 410], [154, 458], [186, 492]],
+        [[186, 492], [208, 515], [236, 532], [264, 545]],
+      ], 40);
+      const F = front.length - 1;
+      const bellyEdge = front.map(([x, y, tx, ty], i) => {
+        const s = i / F, env = Math.min(1, s * 8, (1 - s) * 6);
+        const h = 9 * lobe(s, 11) * env;
+        return [x - ty * h, y + tx * h]; // normale vers l'avant
+      });
+      let belly = '';
+      for (let k = 1; k < 11; k++) {
+        const i = Math.round((k / 11) * F);
+        if (i < 6 || i > F - 8) continue;
+        const [x, y, tx, ty] = front[i];
+        const nx = ty, ny = -tx; // vers l'intérieur
+        belly += `M${f(x + nx * 12)} ${f(y + ny * 12)} Q${f(x + nx * 34 + tx * 3)} ${f(y + ny * 34 + ty * 3)} ${f(x + nx * 54 + tx * 9)} ${f(y + ny * 54 + ty * 9)} `;
+      }
+
+      // --- dos : de la queue vers la tête ---
+      const backSegs = [
+        [[330, 562], [350, 500], [372, 430], [374, 350]],
+        [[374, 350], [376, 270], [360, 190], [330, 130]],
+        [[330, 130], [312, 98], [290, 80], [262, 78]],
+      ];
+      const backPts = sample(backSegs, 40);
+
+      const body = 'M262 78 C228 76 198 98 186 140 C182 156 176 170 160 178 L128 190 C118 193 112 188 104 194 C97 200 98 214 106 219 C113 224 118 218 126 222 L168 218 C190 216 210 226 226 238 '
+        + pl(bellyEdge) + ' L330 562 ' + backSegs.map((q) => `C${q[1].join(' ')} ${q[2].join(' ')} ${q[3].join(' ')}`).join(' ') + 'Z';
+
+      // --- crête : collerette ondulée le long du dos ---
+      const crestPts = backPts.slice(8, backPts.length - 12);
+      const M = crestPts.length - 1;
+      const edge = [], root = [];
+      let crestRays = '', back = '';
+      crestPts.forEach(([x, y, tx, ty], i) => {
+        const nx = -ty, ny = tx; // vers l'extérieur
+        const s = i / M, env = Math.min(1, s * 6, (1 - s) * 4);
+        const h = (26 + 22 * lobe(s, 10)) * (0.35 + 0.65 * env);
+        edge.push([x + nx * h, y + ny * h]);
+        root.push([x - nx * 8, y - ny * 8]);
+        if (i % 3 === 1) crestRays += `M${f(x + nx * 15)} ${f(y + ny * 15)} L${f(x + nx * (h - 4))} ${f(y + ny * (h - 4))} `;
+        if (i % 5 === 2 && i > 4 && i < M - 4) back += `M${f(x - nx * 12)} ${f(y - ny * 12)} L${f(x - nx * 24 - tx * 3)} ${f(y - ny * 24 - ty * 3)} `;
+      });
+      const crest = 'M' + pl(edge).slice(1) + ' ' + pl(root.reverse()) + 'Z';
+
+      // --- queue : spirale qui s'affine, bord extérieur dentelé ---
+      const C = [232, 614], th0 = (-44 * Math.PI) / 180, turns = 1.6, N = 120;
       const mid = [];
       for (let i = 0; i <= N; i++) {
         const t = i / N, th = th0 + t * turns * 2 * Math.PI;
-        const r = 13 + 76 * Math.pow(1 - t, 1.15);
-        mid.push([C[0] + Math.cos(th) * r, C[1] + Math.sin(th) * r, 10 + 70 * Math.pow(1 - t, 1.4)]);
+        mid.push([C[0] + Math.cos(th) * (12 + 78 * Math.pow(1 - t, 1.1)), C[1] + Math.sin(th) * (12 + 78 * Math.pow(1 - t, 1.1)), 9 + 72 * Math.pow(1 - t, 1.35)]);
       }
       const inner = [], outer = [], outN = [];
       mid.forEach(([x, y, w], i) => {
         const a = mid[Math.max(0, i - 1)], b = mid[Math.min(N, i + 1)];
         const d = Math.hypot(b[0] - a[0], b[1] - a[1]);
-        const dx = (b[0] - a[0]) / d, dy = (b[1] - a[1]) / d;
-        inner.push([x - dy * w / 2, y + dx * w / 2]);
-        outer.push([x + dy * w / 2, y - dx * w / 2]);
-        outN.push([dy, -dx]);
+        const tx = (b[0] - a[0]) / d, ty = (b[1] - a[1]) / d;
+        const t = i / N, serr = t > 0.05 && t < 0.62 ? 7 * lobe(t, 26) : 0;
+        inner.push([x - ty * w / 2, y + tx * w / 2]);
+        outer.push([x + ty * (w / 2 + serr), y - tx * (w / 2 + serr)]);
+        outN.push([ty, -tx]);
       });
-      const tail = poly([...outer, ...inner.reverse()]) + 'Z';
-      inner.reverse();
-
-      // dents le long du ventre et de la queue
-      const tooth = ([x, y], [nx, ny], len, half) => {
-        const tx = -ny, ty = nx;
-        return `M${f(x + tx * half - nx * 4)} ${f(y + ty * half - ny * 4)} L${f(x + nx * len)} ${f(y + ny * len)} L${f(x - tx * half - nx * 4)} ${f(y - ty * half - ny * 4)}Z`;
-      };
-      const front = sample([[[226, 238], [206, 262], [176, 300], [166, 345]], [[166, 345], [158, 385], [162, 430], [190, 470]], [[190, 470], [210, 498], [235, 520], [262, 540]]], 30);
-      let teeth = '', belly = '';
-      for (let i = 12; i < front.length - 22; i += 6) {
-        const [x, y, dx, dy] = front[i];
-        const n = [-dy, dx]; // vers l'avant (dehors)
-        teeth += tooth([x, y], n, 32, 11);
-        belly += `M${f(x - n[0] * 10)} ${f(y - n[1] * 10)} Q${f(x - n[0] * 34 + dx * 4)} ${f(y - n[1] * 34 + dy * 4)} ${f(x - n[0] * 58 + dx * 10)} ${f(y - n[1] * 58 + dy * 10)} `;
-      }
+      const tail = 'M' + pl(outer).slice(1) + ' ' + pl([...inner].reverse()) + 'Z';
       let tailTicks = '';
-      for (let i = 6; i < 58; i += 4) {
-        const [x, y] = outer[i], [nx, ny] = outN[i], w = mid[i][2];
-        if (i % 8 === 6) teeth += tooth([x, y], [nx, ny], 26 + w * 0.1, 9);
-        tailTicks += `M${f(x - nx * 8)} ${f(y - ny * 8)} L${f(x - nx * w * 0.42)} ${f(y - ny * w * 0.42)} `;
+      for (let i = 8; i < 84; i += 5) {
+        const [x, y, w] = mid[i], [nx, ny] = outN[i];
+        tailTicks += `M${f(x + nx * w * 0.36)} ${f(y + ny * w * 0.36)} L${f(x + nx * w * 0.08)} ${f(y + ny * w * 0.08)} `;
       }
-      const tailLine = poly(mid.slice(5, N - 6).map(([x, y, w], i) => { const [nx, ny] = outN[i + 5]; return [x - nx * w * 0.12, y - ny * w * 0.12]; }));
+      const tailLine = 'M' + pl(mid.slice(4, N - 4).map(([x, y, w], i) => { const [nx, ny] = outN[i + 4]; return [x - nx * w * 0.18, y - ny * w * 0.18]; })).slice(1);
 
-      // crête festonnée le long du dos (du bas vers la tête)
-      const backPts = sample([[[330, 560], [350, 500], [372, 430], [374, 350]], [[374, 350], [376, 270], [360, 190], [330, 130]], [[330, 130], [312, 98], [290, 80], [262, 78]]], 40);
-      const crestPts = backPts.slice(10, backPts.length - 14);
-      const M = crestPts.length - 1;
-      const edge = [], base = [];
-      let crestRays = '', back = '';
-      crestPts.forEach(([x, y, dx, dy], i) => {
-        const nx = -dy, ny = dx; // vers l'extérieur (droite)
-        const s = i / M;
-        const env = Math.min(1, s * 7, (1 - s) * 5);
-        const h = 16 + (12 + 24 * Math.pow(Math.abs(Math.sin(s * Math.PI * 12)), 0.65)) * env;
-        edge.push([x + nx * h, y + ny * h]);
-        base.push([x - nx * 6, y - ny * 6]);
-        if (i % 3 === 1 && env > 0.6) crestRays += `M${f(x + nx * 20)} ${f(y + ny * 20)} L${f(x + nx * (h - 5))} ${f(y + ny * (h - 5))} `;
-        if (i % 4 === 0 && i > 4 && i < M - 4) back += `M${f(x - nx * 12)} ${f(y - ny * 12)} L${f(x - nx * 26 - dx * 4)} ${f(y - ny * 26 - dy * 4)} `;
-      });
-      const crest = poly([...edge, ...base.reverse()]) + 'Z';
-
-      const coronet = 'M222 100 C220 78 228 62 240 56 C240 42 252 34 262 38 C268 26 282 26 288 36 C298 30 312 36 310 50 C322 54 326 68 316 78 C326 86 324 100 312 104 L290 108Z';
-      const fin = 'M366 312 C390 290 420 286 436 300 C430 316 444 330 440 346 C452 362 444 380 438 390 C440 406 424 416 404 414 C392 410 378 404 362 400Z';
-      const finRays = 'M392 352 L428 304 M394 354 L434 330 M395 357 L438 350 M395 360 L436 372 M394 362 L428 394 M392 364 L408 408';
-      return { body, tail, teeth, belly, tailTicks, tailLine, crest, crestRays, back, coronet, fin, finRays };
+      const coronet = 'M224 104 C220 82 228 64 242 58 C243 44 255 36 265 41 C271 29 285 29 291 39 C301 33 315 40 313 53 C325 57 329 71 319 80 C328 88 325 101 313 105 L292 110Z';
+      const coronetRays = 'M246 92 L244 64 M258 86 L264 46 M272 84 L286 42 M284 88 L308 56 M292 96 L316 82';
+      const fin = 'M362 306 C394 278 436 272 456 290 C448 308 464 326 458 346 C472 364 462 386 454 398 C456 418 436 430 410 426 C394 420 378 412 358 406Z';
+      const finRays = 'M392 354 L444 294 M394 356 L452 326 M395 359 L458 350 M395 362 L456 376 M394 364 L446 406 M392 366 L416 422';
+      return { body, tail, belly, tailTicks, tailLine, crest, crestRays, back, coronet, coronetRays, fin, finRays };
     })();
 
     const SHAPES = {
@@ -346,32 +361,32 @@
         <circle cx="50" cy="66" r="4.2" fill="${c.acc2}" opacity=".6" stroke="none"/>
         <path d="M46.8 63.3 Q48.6 61.8 50.8 62.4" stroke="#fff" stroke-width="1.3" fill="none" opacity=".85"/>
         <g fill="${c.acc}" stroke-width="1"><circle cx="64" cy="74" r="1.8"/><circle cx="60.5" cy="77.5" r="1.3"/><circle cx="38" cy="42" r="1.4"/></g>`,
-      // Cavalier : hippocampe entier, queue enroulée, crête festonnée, ventre dentelé, nageoire à rayons
+      // Cavalier : hippocampe entier, queue enroulée, crête festonnée, ventre festonné, nageoire à rayons
       n: (c) => {
         const g = SEAHORSE;
-        const OUT = 18, DET = 8.5;
+        const OUT = 12, DET = 6;
         return `${base(c)}
         <g transform="translate(16 -1.6) scale(.135 .12)" stroke-linejoin="round" stroke-linecap="round" stroke-width="${OUT}">
-          <path d="${g.coronet}" fill="${c.acc}" stroke-width="${OUT * 0.75}"/>
-          <path d="${g.crest}" fill="${c.acc}" stroke-width="${OUT * 0.75}"/>
-          <path d="${g.fin}" fill="${c.acc}" stroke-width="${OUT * 0.75}"/>
-          <path d="${g.teeth}" fill="url(#gs)" stroke-width="${OUT * 0.75}"/>
+          <path d="${g.coronet}" fill="${c.acc}"/>
+          <path d="${g.coronetRays}" fill="none" stroke-width="${DET * 0.8}" opacity=".5"/>
+          <path d="${g.crest}" fill="${c.acc}"/>
+          <path d="${g.crestRays}" fill="none" stroke-width="${DET * 0.75}" opacity=".45"/>
+          <path d="${g.fin}" fill="${c.acc}"/>
+          <path d="${g.finRays}" fill="none" stroke-width="${DET * 0.75}" opacity=".5"/>
           <path d="${g.body}" fill="url(#gs)" stroke-width="${OUT * 2}"/>
           <path d="${g.tail}" fill="url(#gs)" stroke-width="${OUT * 2}"/>
           <path d="${g.body}" fill="url(#gs)" stroke="none"/>
           <path d="${g.tail}" fill="url(#gs)" stroke="none"/>
-          <path d="${g.crestRays}" fill="none" stroke-width="${DET * 0.8}" opacity=".55"/>
-          <path d="${g.finRays}" fill="none" stroke-width="${DET * 0.75}" opacity=".6"/>
-          <path d="${g.belly}" fill="none" stroke-width="${DET}" opacity=".6"/>
-          <path d="${g.back}" fill="none" stroke-width="${DET * 0.85}" opacity=".5"/>
-          <path d="${g.tailTicks}" fill="none" stroke-width="${DET * 0.85}" opacity=".55"/>
+          <path d="${g.belly}" fill="none" stroke-width="${DET}" opacity=".55"/>
+          <path d="${g.back}" fill="none" stroke-width="${DET}" opacity=".4"/>
+          <path d="${g.tailTicks}" fill="none" stroke-width="${DET}" opacity=".45"/>
           <path d="${g.tailLine}" fill="none" stroke-width="${DET}" opacity=".6"/>
-          <path d="M282 150 C304 225 310 330 302 430 C297 490 306 530 326 556" fill="none" stroke-width="${DET}" opacity=".7"/>
-          <path d="M176 214 C212 212 246 198 270 166" fill="none" stroke-width="${DET}" opacity=".75"/>
-          <path d="M196 142 C204 112 222 94 246 88" fill="none" stroke="#fff" stroke-width="10" opacity=".5"/>
-          <path d="M192 300 C176 340 174 400 194 450" fill="none" stroke="#fff" stroke-width="12" opacity=".3"/>
-          <circle cx="222" cy="150" r="11" fill="${c.dark}" stroke-width="5"/>
-          <circle cx="218.5" cy="146.5" r="3.6" fill="#fff" stroke="none"/>
+          <path d="M284 150 C306 228 312 330 304 430 C299 492 308 532 328 558" fill="none" stroke-width="${DET * 1.1}" opacity=".65"/>
+          <path d="M172 216 C212 214 248 200 272 166" fill="none" stroke-width="${DET * 1.1}" opacity=".7"/>
+          <path d="M198 140 C206 112 224 95 248 89" fill="none" stroke="#fff" stroke-width="9" opacity=".55"/>
+          <path d="M184 310 C168 350 166 410 190 460" fill="none" stroke="#fff" stroke-width="11" opacity=".3"/>
+          <circle cx="222" cy="150" r="10" fill="${c.dark}" stroke="none"/>
+          <circle cx="219" cy="147" r="3.2" fill="#fff" stroke="none"/>
         </g>`;
       },
       // Fou : coquillage en spirale (turritelle), une perle au sommet

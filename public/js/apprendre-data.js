@@ -12,7 +12,7 @@
 //   mate     : faire échec et mat en un coup
 // only : types de pièces qu'on a le droit de bouger (ex. 'r' pour la tour seulement).
 //
-// Exercices (goal) : mate1 (mat en 1), mate2 (mat en 2), defend (empêcher le mat adverse),
+// Exercices (goal) : defend (empêcher le mat adverse),
 //   line (suite précise : line = [coup du joueur, réponse adverse, coup du joueur…], chaque coup du joueur
 //   pouvant avoir plusieurs réponses acceptées, séparées par « | »).
 
@@ -144,23 +144,13 @@ export const LESSONS = [
 ];
 
 // ------------------------------------------------------------------ Exercices
+// Les exercices de mat sont créés au hasard, à l'infini (js/mat-gen.js) : ici, les autres thèmes.
 export const PUZZLE_CATS = [
-  { id: 'mat1', title: 'Mat en 1', desc: 'Trouve le coup qui fait échec et mat tout de suite.' },
   { id: 'gain', title: 'Gagner une pièce', desc: 'Fourchettes, enfilades… attrape une pièce adverse.' },
   { id: 'defense', title: 'Défendre', desc: 'Ton adversaire menace de te faire mat : empêche-le !' },
-  { id: 'mat2', title: 'Mat en 2', desc: 'Deux coups pour faire mat, quoi que fasse l’adversaire.' },
 ];
 
 export const PUZZLES = [
-  // Mat en 1
-  { id: 'm1-1', cat: 'mat1', goal: 'mate1', fen: '6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1', hint: 'Le roi noir n’a pas de case de fuite sur la rangée du fond.' },
-  { id: 'm1-2', cat: 'mat1', goal: 'mate1', fen: 'k7/8/1K6/8/8/8/7Q/8 w - - 0 1', hint: 'Ton roi surveille déjà a7 et b7. Il reste à attaquer la dernière rangée.' },
-  { id: 'm1-3', cat: 'mat1', goal: 'mate1', fen: '6rk/6pp/8/6N1/8/8/8/6K1 w - - 0 1', hint: 'Le roi noir est étouffé par ses propres pièces. Seul le cavalier peut l’atteindre.' },
-  { id: 'm1-4', cat: 'mat1', goal: 'mate1', fen: 'r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4', hint: 'Le pion f7 n’est défendu que par le roi, et ton fou vise aussi cette case.' },
-  { id: 'm1-5', cat: 'mat1', goal: 'mate1', fen: '2r3k1/8/8/8/8/8/5PPP/6K1 b - - 0 1', hint: 'Tu joues les Noirs. Le roi blanc est enfermé par ses pions.' },
-  { id: 'm1-6', cat: 'mat1', goal: 'mate1', fen: '6k1/5p1p/6p1/8/3Q4/2B5/5PPP/6K1 w - - 0 1', hint: 'Ta dame, protégée par le fou, peut se poser juste devant le roi.' },
-  { id: 'm1-7', cat: 'mat1', goal: 'mate1', fen: '7k/8/5N2/8/8/8/8/6RK w - - 0 1', hint: 'Le cavalier surveille g8 et h7. Ta tour fait le reste.' },
-  { id: 'm1-8', cat: 'mat1', goal: 'mate1', fen: 'k7/6R1/8/8/8/8/8/6KR w - - 0 1', hint: 'Une tour tient la 7e rangée : l’autre peut donner échec sur la 8e.' },
   // Gagner une pièce
   { id: 'g-1', cat: 'gain', goal: 'line', fen: '4k3/8/8/3n4/8/8/3R4/4K3 w - - 0 1', line: ['d2d5'], hint: 'Une pièce noire n’est défendue par personne.' },
   { id: 'g-2', cat: 'gain', goal: 'line', fen: 'r3k3/8/8/1N6/8/8/8/4K3 w - - 0 1', line: ['b5c7', 'e8d8', 'c7a8'], hint: 'Le cavalier peut attaquer le roi et la tour en même temps : c’est une fourchette.' },
@@ -172,8 +162,4 @@ export const PUZZLES = [
   { id: 'd-2', cat: 'defense', goal: 'defend', fen: 'r1bqkbnr/pppp1ppp/2n5/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 3 3', hint: 'Tu joues les Noirs. La dame et le fou blancs visent f7 : protège cette case (ou chasse la dame).' },
   { id: 'd-3', cat: 'defense', goal: 'defend', fen: '6k1/1b3ppp/8/6q1/8/2N5/5PPP/3Q2K1 w - - 0 1', hint: 'La dame noire menace de prendre en g2, avec l’aide du fou b7. Coupe la diagonale du fou.' },
   { id: 'd-4', cat: 'defense', goal: 'defend', fen: '5r1k/6pp/8/8/5n2/4B2q/5P1P/3R2K1 w - - 0 1', hint: 'La dame noire menace Dg2 mat, protégée par le cavalier f4. Débarrasse-toi de ce cavalier.' },
-  // Mat en 2
-  { id: 'm2-1', cat: 'mat2', goal: 'mate2', fen: '4k3/8/8/8/8/8/R7/1R4K1 w - - 0 1', hint: 'La technique de l’escalier : une tour bloque une rangée, l’autre donne échec juste au-dessus.' },
-  { id: 'm2-2', cat: 'mat2', goal: 'mate2', fen: 'r5k1/5ppp/8/8/8/8/3R1PPP/3R2K1 w - - 0 1', hint: 'Tes deux tours sont l’une derrière l’autre. Donne échec sur la rangée du fond : la tour noire doit prendre, et ton autre tour reprend.' },
-  { id: 'm2-3', cat: 'mat2', goal: 'mate2', fen: '3r2k1/3r1ppp/8/8/8/8/5PPP/R5K1 b - - 0 1', hint: 'Tu joues les Noirs. Même idée sur la première rangée des Blancs : sacrifie une tour, l’autre fait mat.' },
 ];

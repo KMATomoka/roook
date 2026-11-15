@@ -1813,3 +1813,22 @@ cg-board square.learn-target.done {
   .learn-play .learn-task { order: 1; }
   .learn-play .board-col { order: 2; }
 }
+
+/* Apprendre : « Mat à l'infini » (positions créées au hasard) */
+.learn-infinite {
+  display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 16px;
+  border-color: var(--accent); background: linear-gradient(150deg, rgba(143, 107, 255, 0.22), var(--surface) 60%);
+}
+.learn-infinite-text { flex: 1 1 320px; }
+.learn-infinite h2 { font: 700 1.35rem var(--serif); margin: 0 0 4px; }
+.learn-infinite p { margin: 0 0 4px; }
+.learn-infinite-stats { font-size: 0.9rem; color: var(--muted); }
+.learn-infinite-stats b, .learn-progress-inf b { color: var(--text); }
+.learn-progress-inf { margin: 12px 0 0; font-size: 0.88rem; color: var(--muted); }
+.learn-modes { display: flex; flex-wrap: wrap; gap: 8px; }
+.learn-intro .learn-modes { margin-top: 12px; }
+.learn-steps .learn-stat {
+  padding: 4px 10px; border-radius: 99px; font-size: 0.82rem; color: var(--muted);
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.learn-steps .learn-stat b { color: var(--text); margin-left: 2px; }

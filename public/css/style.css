@@ -1679,3 +1679,9 @@ a.person-link:hover { color: var(--accent-soft); }
   display: inline-block; margin-top: 4px; padding: 0.2em 0.6em; border-radius: 99px; font-size: 0.86em;
   color: #ffe2a8; background: rgba(240, 180, 60, 0.14); border: 1px solid rgba(240, 180, 60, 0.4);
 }
+
+/* Nulle par répétition : avertissement quand la position est déjà apparue 2 fois (js/jeu.js) */
+.rep-tag {
+  display: inline-block; margin-top: 4px; padding: 0.2em 0.6em; border-radius: 99px; font-size: 0.86em;
+  color: #cfe0ff; background: rgba(110, 150, 255, 0.14); border: 1px solid rgba(110, 150, 255, 0.4);
+}

@@ -8,7 +8,7 @@ import {
 import { isMuted, setMuted, lowTimeBeep } from './sound.js';
 import { createFx } from './fx.js';
 import { attachArrows } from './arrows.js';
-import { scrollMoveIntoList } from './common.js';
+import { scrollMoveIntoList, repetitions } from './common.js';
 import { session, avatarOf, profileUrl, badgeOf, badgeHtml } from './compte.js';
 import { gameSocket, AWAY_LIMIT } from './online.js';
 import { serverNow } from './fb.js';
@@ -320,6 +320,9 @@ function renderStatus() {
     txt = `Au tour de <strong>${escapeHtml(names[chess.turn()])}</strong>.`;
   }
   if (!over && chess.inCheck()) txt += ' <span class="tag-check">Échec !</span>';
+  // Nulle par répétition : on prévient quand la position est déjà apparue 2 fois
+  if (!over && !chess.isGameOver() && repetitions(chess) === 2)
+    txt += ' <span class="rep-tag">🔁 Cette position est déjà apparue 2 fois : si elle revient une 3<sup>e</sup> fois, partie nulle.</span>';
   const away = awayInfo();
   if (away) txt += ` <span class="away-tag">⏳ ${escapeHtml(names[away.color])} a quitté la partie : tu gagnes dans ${away.left} s s’il ne revient pas.</span>`;
   if (viewPly !== null) txt += ` <a href="#" id="back-live">Revenir à la position actuelle</a>`;

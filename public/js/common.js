@@ -125,6 +125,19 @@ export function resultText(result, reason, names = { w: 'Les Blancs', b: 'Les No
   return { title: 'Partie nulle', sub: why };
 }
 
+/** Nombre de fois où la position actuelle est apparue dans la partie (3 = nulle par répétition). */
+export function repetitions(chess) {
+  const key = (c) => c.fen().split(' ').slice(0, 4).join(' ');
+  const now = key(chess);
+  const c = new Chess();
+  let n = key(c) === now ? 1 : 0;
+  for (const m of chess.history({ verbose: true })) {
+    c.move(m);
+    if (key(c) === now) n++;
+  }
+  return n;
+}
+
 /** Détecte la fin d'une partie jouée localement (contre l'IA ou sur le même écran). */
 export function localGameOver(chess) {
   if (chess.isCheckmate()) return { result: chess.turn() === 'w' ? '0-1' : '1-0', reason: 'mat' };

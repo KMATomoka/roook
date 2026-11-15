@@ -15,6 +15,7 @@ const report = (good, label, extra = '') => {
 };
 const load = (fen) => new Chess(fen, { skipValidation: true });
 const uci = (m) => m.from + m.to + (m.promotion || '');
+const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 /** Même position avec les Blancs (le joueur) au trait : les pièces noires ne bougent pas dans les leçons. */
 const playerTurn = (c, color) => {
   const f = c.fen().split(' ');
@@ -62,7 +63,7 @@ function otherSideInCheck(fen) {
   const c = load(f.join(' '));
   return c.board().flat().some((p) => p && p.type === 'k' && p.color === f[1]) && c.inCheck();
 }
-for (const [label, fen] of [...LESSONS.flatMap((l) => l.steps.map((s, i) => [`Leçon ${l.title} ${i + 1}`, s.fen])), ...PUZZLES.map((p) => [`Exercice ${p.id}`, p.fen])]) {
+for (const [label, fen] of [...LESSONS.flatMap((l) => l.steps.map((s, i) => [`Leçon ${l.title} ${i + 1}`, s.fen || START])), ...PUZZLES.map((p) => [`Exercice ${p.id}`, p.fen])]) {
   if (otherSideInCheck(fen)) report(false, label, 'le camp qui ne joue pas est déjà en échec');
 }
 
@@ -123,6 +124,22 @@ for (const l of LESSONS) {
         const ms = c.moves({ verbose: true });
         const fit = ms.filter((m) => (s.how === 'king' ? m.piece === 'k' : s.how === 'capture' ? !!m.captured : m.piece !== 'k' && !m.captured));
         report(inCheck && fit.length > 0, label, `${inCheck ? 'en échec' : 'PAS en échec'} ; ${fit.map((m) => m.san).join(',')}`);
+      } else if (s.goal === 'sequence') {
+        // Ouverture : chaque coup légal et écrit exactement comme chess.js l'écrit ; une explication pour chaque coup du joueur
+        const c = new Chess(s.fen || START);
+        const problems = [];
+        s.moves.forEach(([san, say], k) => {
+          const mine = c.turn() === s.side;
+          let m = null;
+          try {
+            m = c.move(san.split('|')[0]);
+          } catch {}
+          if (!m) problems.push(`coup ${k + 1} illégal : ${san}`);
+          else if (m.san !== san.split('|')[0]) problems.push(`coup ${k + 1} : écrit ${san}, chess.js écrit ${m.san}`);
+          if (mine && !say) problems.push(`coup ${k + 1} (${san}) sans explication`);
+        });
+        if (!s.title || !s.end) problems.push('titre ou résumé manquant');
+        report(problems.length === 0, label, problems.length ? problems.join(' ; ') : `${s.moves.length} coups, ${s.side === 'w' ? 'Blancs' : 'Noirs'}`);
       } else if (s.goal === 'mate') {
         const ms = mates(c);
         const st = stalemates(c);

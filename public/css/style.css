@@ -2047,3 +2047,5 @@ body { overflow-x: clip; position: relative; }
   padding: 10px 12px; border-radius: 12px; background: #2a0d16; border: 1px solid #ff3b5c; color: #ffd9e0;
   font: 600 12px/1.4 ui-monospace, monospace; white-space: pre-wrap;
 }
+/* Apprendre, ouvertures : les coups déjà joués */
+.learn-line { margin: 0 0 8px; padding: 6px 10px; border-radius: 8px; background: var(--bg-2); border: 1px solid var(--line); font: 600 0.9rem ui-monospace, 'SF Mono', Menlo, monospace; color: var(--accent-soft); overflow-wrap: anywhere; }

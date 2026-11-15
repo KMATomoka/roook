@@ -3,7 +3,7 @@
 // vérifiées par Stockfish), gagner une pièce, défendre.
 // Le contenu est dans apprendre-data.js ; la progression est gardée dans le navigateur.
 import { Chessground } from '../vendor/chessground/chessground.min.js';
-import { $, Chess, legalDests, castleDest, isPromotion, askPromotion, getPref, setPref } from './common.js';
+import { $, Chess, legalDests, castleDest, isPromotion, askPromotion, getPref, setPref, frSan } from './common.js';
 import './compte.js'; // compte, barre du haut, apparence choisie dans l'inventaire
 import { createFx } from './fx.js';
 import { CHAPTERS, LESSONS, PUZZLE_CATS, PUZZLES } from './apprendre-data.js';
@@ -21,6 +21,9 @@ const GOAL_TEXT = {
 };
 const PIECE_HINT = { p: 'un de tes pions', n: 'un cavalier', b: 'un fou', r: 'une tour', q: 'ta dame', k: 'ton roi' };
 const INF_MODES = { hasard: 'Au hasard', 1: 'Mat en 1', 2: 'Mat en 2', 3: 'Mat en 3' };
+const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+const GOOD = ['Bien !', 'Exact !', 'Oui !', 'Parfait !'];
+const noCheck = (san) => san.replace(/[+#]/g, '');
 const ESCAPE_WRONG = {
   king: 'Tu es bien sorti de l’échec, mais ici on veut que tu bouges le roi.',
   capture: 'Tu es bien sorti de l’échec, mais ici on veut que tu prennes la pièce qui attaque.',
@@ -64,6 +67,7 @@ let visited = new Set(); // cases marquées déjà atteintes
 let shownSolution = false;
 let made = 0; // « Mat à l'infini » : coups déjà joués par le joueur
 let mistake = false; // un coup raté dans cet exercice (la série sans faute s'arrête)
+let seq = 0; // ouvertures : prochain coup de la suite
 let gen = 0; // change à chaque nouvelle tâche (pour ignorer les minuteries d'avant)
 
 const later = (ms, f) => {
@@ -199,6 +203,14 @@ function judge(m) {
     });
     return;
   }
+  if (g === 'sequence') {
+    const [san, say] = task.moves[seq];
+    const want = san.split('|').map(noCheck);
+    if (!want.includes(noCheck(m.san))) return wrong(`Pas ce coup-là. ${say}`, 1900);
+    seq++;
+    feedback(pick(GOOD), 'good');
+    return seqNext();
+  }
   if (g === 'mate' || g === 'mate1') return judgeMate();
   if (g === 'mate2') {
     if (phase === 1) return judgeMate();
@@ -285,7 +297,8 @@ function success(text) {
     const lastStep = cur.step === L.steps.length - 1;
     renderSteps(cur.step + 1);
     if (!lastStep) {
-      later(1400, () => (location.hash = `#lecon/${L.id}/${cur.step + 1}`));
+      // ouvertures : on laisse le temps de lire le résumé avant l'étape suivante
+      later(task.goal === 'sequence' ? 4200 : 1400, () => (location.hash = `#lecon/${L.id}/${cur.step + 1}`));
       return;
     }
     progress.lessons[L.id] = true;
@@ -327,6 +340,7 @@ function solutionMove() {
   const ms = chess.moves({ verbose: true });
   const g = task.goal;
   if (g === 'line') return ms.find((m) => task.line[lineIdx].split('|')[0] === uci(m));
+  if (g === 'sequence') return ms.find((m) => noCheck(m.san) === noCheck(task.moves[seq][0].split('|')[0]));
   if (g === 'move') return ms.find((m) => task.moves.includes(uci(m)));
   if (g === 'castle') return ms.find((m) => m.flags.includes(task.side));
   if (g === 'check') return ms.find((m) => copyAfter(chess, m).inCheck());
@@ -342,9 +356,11 @@ function startTask() {
   gen++;
   fx.reset();
   ground.setAutoShapes([]);
-  const fenTurn = task.fen.split(' ')[1];
-  chess = cur.kind === 'lesson' ? load(task.fen) : new Chess(task.fen);
-  player = task.pre ? other(fenTurn) : fenTurn;
+  const fen = task.fen || START;
+  const fenTurn = fen.split(' ')[1];
+  chess = task.goal === 'sequence' ? new Chess(fen) : cur.kind === 'lesson' ? load(fen) : new Chess(fen);
+  player = task.side || (task.pre ? other(fenTurn) : fenTurn);
+  seq = 0;
   orientation = player;
   visited = new Set();
   finished = false;
@@ -366,6 +382,8 @@ function startTask() {
     (task.goal === 'mateN'
       ? task.n === 1 ? 'Fais échec et mat en un seul coup.' : `Fais échec et mat en ${task.n} coups, quoi que réponde ton adversaire.`
       : GOAL_TEXT[task.goal]);
+  $('#p-line').hidden = task.goal !== 'sequence';
+  if (task.goal === 'sequence') return seqNext();
   if (task.pre) {
     busy = true;
     sync();
@@ -375,6 +393,40 @@ function startTask() {
       sync();
     });
   } else sync();
+}
+
+// --- Ouvertures : une suite de coups. Le joueur joue ses coups (avec une explication avant chacun),
+// l'adversaire répond tout seul (avec un commentaire).
+function seqLine() {
+  const h = chess.history();
+  $('#p-line').textContent = h.length
+    ? h.map((san, i) => (i % 2 === 0 ? `${i / 2 + 1}. ` : '') + frSan(san)).join(' ')
+    : 'Position de départ';
+}
+function seqNext() {
+  seqLine();
+  if (seq >= task.moves.length) {
+    busy = false;
+    return success(task.end);
+  }
+  const mine = chess.turn() === player;
+  if (mine) {
+    busy = false;
+    $('#p-text').innerHTML = `<b>${task.title}</b><br>${task.moves[seq][1]}`;
+    sync();
+    return;
+  }
+  busy = true;
+  sync();
+  later(seq === 0 ? 700 : 750, () => {
+    const [san, note] = task.moves[seq];
+    const m = chess.move(san);
+    fx.move(m, chess, { me: player });
+    seq++;
+    feedback(note ? `${frSan(m.san)} : ${note}` : '', '');
+    sync([m.from, m.to]);
+    seqNext();
+  });
 }
 
 function renderSteps(doneUpTo) {

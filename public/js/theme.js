@@ -108,7 +108,10 @@ const listeners = new Set();
 
 /** Classes « slot-pack » sur un élément (body, ou un aperçu de l'inventaire). */
 export function themeClasses(e) {
-  const c = clean(e);
+  // Pas de vérification du verrou ici : les aperçus de l'inventaire montrent aussi les packs verrouillés.
+  // (L'équipement réel, lui, est déjà filtré par clean() avant d'arriver ici.)
+  const c = {};
+  for (const s of SLOTS) c[s] = e && IDS.has(e[s]) ? e[s] : DEFAULT;
   return [`board-${c.board}`, `pieces-${c.pieces}`, `end-${c.endAnim}`, `capture-${c.capture}`];
 }
 function apply() {

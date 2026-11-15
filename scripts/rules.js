@@ -13,6 +13,54 @@ const OWNER = (v) => `auth.uid === ${v}`;
 // Profil visible : le sien, celui de quelqu'un qui n'est pas en privé, celui d'un ami, ou tout profil pour un admin
 const VISIBLE = (v) => `(auth.uid === ${v} || ${ADMIN} || root.child('users/' + ${v} + '/private').val() !== true || root.child('friends/' + ${v} + '/' + auth.uid).exists())`;
 
+// ---------------------------------------------------------------------------
+// Arbitre des parties entre amis (il n'y a pas de serveur : ce sont ces règles qui arbitrent).
+//  - un coup : seulement à son tour, jamais réécrit, numéroté dans l'ordre ;
+//  - la pendule : recalculée avec l'heure de Firebase (« now »), impossible de se rajouter du temps ;
+//  - la fin de partie : on ne peut jamais se déclarer gagnant soi-même.
+//      abandon → seul le perdant peut l'écrire ; mat → c'est le joueur maté qui le confirme ;
+//      nulle d'un commun accord → il faut la proposition de l'autre ; pat, répétition… → il faut que les deux le constatent ;
+//      temps → seulement si l'heure de Firebase montre que la pendule est vraiment tombée ;
+//      coup illégal reçu → la partie peut être annulée (personne ne gagne).
+// ---------------------------------------------------------------------------
+const G = (p) => `root.child('games/' + $g + '/${p}')`; // valeur actuelle (avant l'écriture)
+const PLAYER = `(${G('white')}.val() === auth.uid || ${G('black')}.val() === auth.uid)`;
+const SEAT = `(${G('white')}.val() === auth.uid ? 'w' : 'b')`;
+const OTHER = `(${G('white')}.val() === auth.uid ? 'b' : 'w')`;
+const PLAYING = `${G('status')}.val() === 'playing'`;
+const TURN = `(${G('ply')}.val() % 2 === 0 ? 'w' : 'b')`; // camp qui doit jouer
+const AT = `${G('clock/at')}.val()`;
+const CLOCK = (c) => `root.child('games/' + $g + '/clock/' + ${c}).val()`;
+const LEFT = (c) => `(${CLOCK(c)} - (now - ${AT}))`; // temps restant selon l'heure de Firebase
+const NEW_CLOCK = `newData.parent().child('clock/' + ${SEAT}).val()`;
+// Pendule (vérifiée au moment du coup) : avant le départ, elle ne bouge pas ; ensuite, au plus le temps restant
+// + l'incrément (+ 2 s de marge pour le réseau), et on ne joue plus une fois tombé. L'heure de départ est celle de Firebase.
+const CLOCK_OK = `(${AT} === 0 ? ${NEW_CLOCK} === ${CLOCK(SEAT)} : (${LEFT(SEAT)} > -1000 && ${NEW_CLOCK} <= ${LEFT(SEAT)} + ${G('time/inc')}.val() + 2000)) && (newData.val() >= 2 ? newData.parent().child('clock/at').val() === now : newData.parent().child('clock/at').val() === 0)`;
+// Revanche acceptée par les deux : remise à zéro, numéro de manche + 1 (champs directement sous la partie)
+const RESET = `(${PLAYER} && ${G('status')}.val() === 'over' && ${G('rematch/w')}.val() === true && ${G('rematch/b')}.val() === true && newData.parent().child('round').val() === ${G('round')}.val() + 1)`;
+const R_ = "newData.parent().child('result').val()";
+const W_ = "newData.parent().child('reason').val()";
+const LOSS_ME = `(${SEAT} === 'w' ? '0-1' : '1-0')`;
+const LOSS_TURN = `(${TURN} === 'w' ? '0-1' : '1-0')`;
+const END_OK = `((${W_} === 'abandon' && ${R_} === ${LOSS_ME})
+  || (${W_} === 'accord' && ${R_} === '1/2-1/2' && ${G('drawOffer')}.val() === ${OTHER})
+  || (${W_} === 'mat' && ${TURN} === ${SEAT} && ${R_} === ${LOSS_ME})
+  || ((${W_} === 'pat' || ${W_} === 'materiel' || ${W_} === 'repetition' || ${W_} === '50coups') && ${R_} === '1/2-1/2' && root.child('games/' + $g + '/claims/' + ${OTHER}).val() === ${W_})
+  || (${AT} > 0 && ${LEFT(TURN)} <= 0 && ((${W_} === 'temps' && ${R_} === ${LOSS_TURN}) || (${W_} === 'temps-materiel' && ${R_} === '1/2-1/2' && ${TURN} !== ${SEAT})))
+  || (${W_} === 'annulee' && ${R_} === '*' && ${TURN} === ${SEAT}))`.replace(/\n\s*/g, ' ');
+
+// Historique : une partie entre amis n'y entre que si elle existe vraiment, est terminée, et avec le même résultat
+const GH = (p) => `root.child('games/' + newData.child('game').val() + '/${p}')`;
+const AMI_OK = `(newData.child('game').isString() && newData.child('round').isNumber() && $h === newData.child('game').val() + '-' + newData.child('round').val()
+  && ${GH('status')}.val() === 'over' && newData.child('result').val() !== '*' && newData.child('date').val() === now && ${GH('round')}.val() === newData.child('round').val()
+  && ${GH('result')}.val() === newData.child('result').val() && ${GH('reason')}.val() === newData.child('reason').val()
+  && ${GH('ply')}.val() === newData.child('ply').val()
+  && newData.child('white').val() === ${GH('names/w')}.val() && newData.child('black').val() === ${GH('names/b')}.val()
+  && ((newData.child('me').val() === 'w' && ${GH('white')}.val() === $uid && newData.child('opp').val() === ${GH('black')}.val())
+   || (newData.child('me').val() === 'b' && ${GH('black')}.val() === $uid && newData.child('opp').val() === ${GH('white')}.val())))`.replace(/\n\s*/g, ' ');
+// Contre Noa : la partie se joue dans le navigateur, impossible à vérifier ; on borne au moins les valeurs
+const IA_OK = `(newData.child('level').isNumber() && newData.child('level').val() >= 1 && newData.child('level').val() <= 8 && (newData.child('me').val() === 'w' || newData.child('me').val() === 'b') && (newData.child('result').val() === '1-0' || newData.child('result').val() === '0-1' || newData.child('result').val() === '1/2-1/2') && newData.child('date').val() === now)`;
+
 const rules = {
   rules: {
     users: {
@@ -119,18 +167,74 @@ const rules = {
         },
       },
     },
+    // Parties entre amis : les règles servent d'arbitre (voir la section « Arbitre » plus haut).
     games: {
       $g: {
         '.read': ME,
-        '.write': `${ME} && ${OK} && ((!data.exists() && (newData.child('white').val() === auth.uid || newData.child('black').val() === auth.uid)) || (data.exists() && (data.child('white').val() === auth.uid || data.child('black').val() === auth.uid)))`,
-        '.validate': "newData.hasChildren(['white', 'black', 'names', 'time', 'status', 'round'])",
+        // Création seulement (par l'un des deux joueurs, qui doivent être amis) ; ensuite, chaque champ a sa règle
+        '.write': `${ME} && ${OK} && !data.exists() && (newData.child('white').val() === auth.uid || newData.child('black').val() === auth.uid) && root.child('friends/' + newData.child('white').val() + '/' + newData.child('black').val()).exists()`,
+        '.validate': `newData.hasChildren(['white', 'black', 'names', 'time', 'status', 'round', 'ply']) && (data.exists() || (newData.child('status').val() === 'playing' && newData.child('round').val() === 1 && newData.child('ply').val() === 0 && !newData.child('moves').exists() && !newData.child('result').exists() && !newData.child('reason').exists() && newData.child('time/base').isNumber() && newData.child('time/base').val() >= 60000 && newData.child('time/inc').isNumber() && newData.child('clock/w').val() === newData.child('time/base').val() && newData.child('clock/b').val() === newData.child('time/base').val() && newData.child('clock/at').val() === 0))`,
+        // Revanche : couleurs inversées
+        white: { '.write': RESET, '.validate': `!data.exists() || newData.val() === ${G('black')}.val()` },
+        black: { '.write': RESET, '.validate': `!data.exists() || newData.val() === ${G('white')}.val()` },
+        names: {
+          '.write': RESET,
+          '.validate': `!data.exists() || (newData.child('w').val() === ${G('names/b')}.val() && newData.child('b').val() === ${G('names/w')}.val())`,
+        },
+        round: { '.write': RESET, '.validate': `!data.exists() || newData.val() === data.val() + 1` },
+        // Nombre de coups joués : avance d'un à chaque coup, et c'est là qu'on vérifie la pendule
+        ply: {
+          '.write': `(${PLAYER} && ${OK} && ${PLAYING} && ${TURN} === ${SEAT} && newData.val() === data.val() + 1 && newData.parent().child('moves/' + data.val()).exists() && ${CLOCK_OK}) || (${RESET} && newData.val() === 0)`,
+        },
         moves: {
+          '.write': `${RESET} && !newData.exists()`,
           $n: {
-            '.validate': "newData.isString() && newData.val().matches(/^[a-h][1-8][a-h][1-8][qrbn]?$/) && !data.exists() && ($n.matches(/[02468]$/) ? root.child('games/' + $g + '/white').val() === auth.uid : root.child('games/' + $g + '/black').val() === auth.uid)",
+            '.write': `${PLAYER} && ${OK} && ${PLAYING} && !data.exists() && $n === '' + ${G('ply')}.val() && newData.parent().parent().child('ply').val() === ${G('ply')}.val() + 1`,
+            '.validate': "newData.isString() && newData.val().matches(/^[a-h][1-8][a-h][1-8][qrbn]?$/)",
           },
         },
+        clock: {
+          '.write': `${RESET} && newData.child('w').val() === ${G('time/base')}.val() && newData.child('b').val() === ${G('time/base')}.val() && newData.child('at').val() === 0`,
+          // Sa propre pendule, seulement en jouant un coup (la valeur est contrôlée par la règle de « ply »)
+          $c: {
+            '.write': `${PLAYER} && ${OK} && ${PLAYING} && $c === ${SEAT} && newData.parent().parent().child('ply').val() === ${G('ply')}.val() + 1`,
+            '.validate': 'newData.isNumber() && newData.val() >= 0',
+          },
+          at: {
+            '.write': `${PLAYER} && ${OK} && ${PLAYING} && newData.parent().parent().child('ply').val() === ${G('ply')}.val() + 1`,
+            '.validate': 'newData.isNumber()',
+          },
+        },
+        status: {
+          '.write': `(${PLAYER} && ${OK} && data.val() === 'playing' && newData.val() === 'over' && ${END_OK}) || (${RESET} && newData.val() === 'playing')`,
+        },
+        result: {
+          '.write': `(${PLAYER} && !data.exists() && ${PLAYING} && newData.parent().child('status').val() === 'over') || (${RESET} && !newData.exists())`,
+          '.validate': "newData.val() === '1-0' || newData.val() === '0-1' || newData.val() === '1/2-1/2' || newData.val() === '*'",
+        },
+        reason: {
+          '.write': `(${PLAYER} && !data.exists() && ${PLAYING} && newData.parent().child('status').val() === 'over') || (${RESET} && !newData.exists())`,
+          '.validate': `newData.isString() && newData.val().matches(/^(mat|abandon|accord|temps|temps-materiel|pat|materiel|repetition|50coups|annulee)$/)`,
+        },
+        // Proposer la nulle (pour soi), ou effacer une proposition
+        drawOffer: { '.write': `${PLAYER} && (!newData.exists() || (${OK} && ${PLAYING} && newData.val() === ${SEAT}))` },
+        // Nulles « automatiques » (pat, répétition…) : chaque joueur constate, il faut les deux
+        claims: {
+          '.write': `${RESET} && !newData.exists()`,
+          $c: {
+            '.write': `${PLAYER} && ${PLAYING} && $c === ${SEAT}`,
+            '.validate': "newData.isString() && newData.val().matches(/^(pat|materiel|repetition|50coups)$/)",
+          },
+        },
+        // Revanche : chacun ne coche que sa propre case
+        rematch: {
+          '.write': `(${PLAYER} && ${G('status')}.val() === 'over') || ${RESET}`,
+          '.validate': `${RESET} || ((newData.child(${OTHER}).val() === true) === (data.child(${OTHER}).val() === true))`,
+        },
+        online: { $uid: { '.write': `auth.uid === $uid && ${PLAYER}` } },
         chat: {
           $m: {
+            '.write': `${PLAYER} && ${OK} && !data.exists()`,
             '.validate': "newData.hasChildren(['from', 'text', 'at']) && newData.child('text').isString() && newData.child('text').val().length <= 300",
           },
         },
@@ -141,7 +245,11 @@ const rules = {
       $uid: {
         // Parties et statistiques : visibles sur le profil, sauf profil privé (alors seulement pour ses amis)
         '.read': `${ME} && ${VISIBLE('$uid')}`,
-        '.write': `${ME} && auth.uid === $uid`,
+        $h: {
+          // On ajoute une partie, on ne la modifie ni ne l'efface (pas de défaite qui disparaît) ; un admin peut supprimer
+          '.write': `${ME} && ((auth.uid === $uid && !data.exists() && newData.exists()) || (${ADMIN} && !newData.exists()))`,
+          '.validate': `newData.hasChildren(['white', 'black', 'me', 'mode', 'result', 'reason', 'moves', 'date']) && (newData.child('mode').val() === 'ia' ? ${IA_OK} : ${AMI_OK})`,
+        },
       },
     },
   },

@@ -713,6 +713,7 @@ async function acceptInvite(inv) {
     clock: { w: inv.base, b: inv.base, at: 0 },
     status: 'playing',
     round: 1,
+    ply: 0,
     rematch: { w: false, b: false },
     createdAt: serverTimestamp(),
   });

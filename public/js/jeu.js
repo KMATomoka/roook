@@ -303,6 +303,9 @@ function renderStatus() {
     txt = myColor ? 'En attente de ton ami…' : 'Partie en attente d’un second joueur.';
   } else if (mode === 'ami' && !myColor) {
     txt = `Tu regardes la partie en spectateur. Au tour de <strong>${escapeHtml(names[chess.turn()])}</strong>.`;
+  } else if (mode === 'ami' && chess.isGameOver()) {
+    // L'arbitre attend que le joueur maté (ou les deux joueurs, pour une nulle) le confirme : c'est automatique
+    txt = `<strong>${chess.isCheckmate() ? 'Échec et mat !' : 'Partie nulle !'}</strong> <span class="muted">Validation en cours…</span>`;
   } else if (mode === 'local') {
     txt = `Au tour des <strong>${chess.turn() === 'w' ? 'Blancs' : 'Noirs'}</strong>.`;
   } else if (aiThinking) {
@@ -390,7 +393,8 @@ function finish(end) {
   storeGame();
   const r = resultText(end.result, end.reason, names);
   let icon = '½';
-  if (end.result !== '1/2-1/2') {
+  if (end.result === '*') icon = '⚠';
+  else if (end.result !== '1/2-1/2') {
     const winner = end.result === '1-0' ? 'w' : 'b';
     const iWon = mode === 'local' || winner === myColor;
     icon = iWon ? '🏆' : '♚';

@@ -39,7 +39,7 @@ async function load(uid) {
 // ---------------------------------------------------------------------------
 const outcome = (g) => (g.result === '1/2-1/2' ? 'd' : (g.result === '1-0' && g.me === 'w') || (g.result === '0-1' && g.me === 'b') ? 'w' : 'l');
 const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
-const plies = (g) => (g.moves ? g.moves.split(' ').filter(Boolean).length : 0);
+const plies = (g) => (typeof g.ply === 'number' ? g.ply : g.moves ? g.moves.split(' ').filter(Boolean).length : 0);
 
 function record(list) {
   const r = { n: list.length, w: 0, l: 0, d: 0 };
@@ -50,10 +50,13 @@ function record(list) {
 }
 
 function stats(games) {
-  const list = [...games].sort((a, b) => (a.date || 0) - (b.date || 0)); // du plus ancien au plus récent
+  const sorted = [...games].sort((a, b) => (a.date || 0) - (b.date || 0)); // du plus ancien au plus récent
+  // Statistiques « classées » : seulement les parties entre amis, vérifiées par l'arbitre de la base.
+  // Les parties contre Noa se jouent dans le navigateur (invérifiables) : elles ont leur propre carte.
+  const list = sorted.filter((g) => g.mode !== 'ia');
   const all = record(list);
-  const friends = list.filter((g) => g.mode !== 'ia');
-  const noa = list.filter((g) => g.mode === 'ia');
+  const friends = list;
+  const noa = sorted.filter((g) => g.mode === 'ia');
 
   // Séries de victoires
   let cur = 0, best = 0, run = 0;
@@ -109,7 +112,7 @@ function stats(games) {
     bestLevel, avgMoves, fastest,
     favCadence: favCad ? cadenceLabel(Number(favCad[0].split('|')[0]), Number(favCad[0].split('|')[1])) : null,
     form: list.slice(-10).map(outcome),
-    recent: [...list].reverse().slice(0, 12),
+    recent: [...sorted].reverse().slice(0, 12),
   };
 }
 
@@ -144,7 +147,7 @@ function render(p) {
           ${p.relation === 'friend' ? '<span class="badge me">ami</span>' : ''}
         </h1>
         <p class="pf-meta">${presenceTxt}<span>Membre depuis ${date(p.createdAt, { month: 'long', year: 'numeric' })}</span>${p.friends ? `<span>${plural(p.friends.length, 'ami')}</span>` : ''}</p>
-        ${s ? `<p class="pf-headline">${s.all.n ? `<b>${s.all.rate}%</b> de victoires sur ${plural(s.all.n, 'partie')}` : 'Pas encore de partie jouée'}</p>` : ''}
+        ${s ? `<p class="pf-headline">${s.all.n ? `<b>${s.all.rate}%</b> de victoires sur ${plural(s.all.n, 'partie classée')}` : s.noa.n ? 'Pas encore de partie classée entre amis' : 'Pas encore de partie jouée'}</p>` : ''}
       </div>
       <div class="pf-actions">${actions(p)}</div>
     </section>
@@ -156,7 +159,7 @@ function render(p) {
         <div class="pf-lock">🔒</div>
         <h2>Ce profil est privé</h2>
         <p class="muted">Seuls les amis de ${escapeHtml(p.username)} voient ses statistiques et ses parties.${p.relation === 'none' ? ' Ajoute-le en ami pour les voir.' : ''}</p>
-      </section>` : s.all.n === 0 ? `
+      </section>` : s.all.n === 0 && s.noa.n === 0 ? `
       <section class="card pf-empty">
         <img src="img/noa/hmm.svg" alt="" width="80" height="80">
         <h2>Aucune partie pour l’instant</h2>
@@ -223,11 +226,20 @@ function statsHtml(p, s) {
   const streakTxt = !s.streak ? '—' : s.streakKind === 'w' ? `🔥 ${plural(s.streak, 'victoire')}` : s.streakKind === 'l' ? `${plural(s.streak, 'défaite')}` : `${plural(s.streak, 'nulle')}`;
   const lvl = s.bestLevel ? LEVELS[s.bestLevel - 1] : null;
   const rival = s.rival;
+  if (!s.all.n) {
+    return `
+    <section class="card pf-hint">
+      <h2>Statistiques classées</h2>
+      <p class="muted">Elles comptent seulement les parties contre des amis, vérifiées par l’arbitre du site. ${p.relation === 'me' ? 'Défie un ami pour lancer les tiennes !' : 'Aucune pour l’instant.'}</p>
+    </section>
+    <section class="pf-grid">${noaCard(s)}</section>
+    ${recentHtml(p, s)}`;
+  }
   return `
     <section class="pf-overview">
       <div class="card pf-ring-card">${rateRing(s.all.rate)}<p class="muted">Score : ${s.all.score}% (une nulle compte ½)</p></div>
       <div class="pf-tiles">
-        ${tile(s.all.n, s.all.n > 1 ? 'parties' : 'partie')}
+        ${tile(s.all.n, s.all.n > 1 ? 'parties classées' : 'partie classée')}
         ${tile(s.all.w, s.all.w > 1 ? 'victoires' : 'victoire', 'w')}
         ${tile(s.all.l, s.all.l > 1 ? 'défaites' : 'défaite', 'l')}
         ${tile(s.all.d, s.all.d > 1 ? 'nulles' : 'nulle', 'd')}
@@ -262,14 +274,7 @@ function statsHtml(p, s) {
         </dl>` : '<p class="muted">Aucune partie contre un ami pour l’instant.</p>'}
       </div>
 
-      <div class="card pf-card">
-        <h2>Contre Noa</h2>
-        ${s.noa.n ? `<div class="pf-noa">
-          <img src="img/noa/${lvl ? LEVEL_FACE[lvl.n - 1] : 'frime'}.svg" alt="" width="64" height="64">
-          <div><b>${lvl ? `Niveau ${lvl.n} battu` : 'Pas encore battu'}</b><small class="muted">${lvl ? `${lvl.name} · ${lvl.elo}` : 'Noa reste invaincu… pour l’instant'}</small></div>
-        </div>
-        ${bar(s.noa)}` : '<p class="muted">Aucune partie contre Noa pour l’instant.</p>'}
-      </div>
+      ${noaCard(s)}
 
       <div class="card pf-card">
         <h2>Victoires</h2>
@@ -291,7 +296,24 @@ function statsHtml(p, s) {
       </div>
     </section>
 
-    <section class="card pf-recent">
+    ${recentHtml(p, s)}`;
+}
+
+function noaCard(s) {
+  const lvl = s.bestLevel ? LEVELS[s.bestLevel - 1] : null;
+  return `
+      <div class="card pf-card">
+        <h2>Contre Noa <small class="muted">· entraînement, non classé</small></h2>
+        ${s.noa.n ? `<div class="pf-noa">
+          <img src="img/noa/${lvl ? LEVEL_FACE[lvl.n - 1] : 'frime'}.svg" alt="" width="64" height="64">
+          <div><b>${lvl ? `Niveau ${lvl.n} battu` : 'Pas encore battu'}</b><small class="muted">${lvl ? `${lvl.name} · ${lvl.elo}` : 'Noa reste invaincu… pour l’instant'}</small></div>
+        </div>
+        ${bar(s.noa)}` : '<p class="muted">Aucune partie contre Noa pour l’instant.</p>'}
+      </div>`;
+}
+
+function recentHtml(p, s) {
+  return `<section class="card pf-recent">
       <h2>Dernières parties</h2>
       <ul class="pf-games">${s.recent.map((g) => gameLine(p, g)).join('')}</ul>
     </section>`;

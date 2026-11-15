@@ -95,6 +95,7 @@ export const REASONS = {
   accord: "d'un commun accord",
   temps: 'au temps',
   'temps-materiel': 'temps écoulé, mais matériel insuffisant',
+  annulee: 'un coup illégal a été reçu, personne ne gagne',
 };
 
 export function resultText(result, reason, names = { w: 'Les Blancs', b: 'Les Noirs' }) {
@@ -103,6 +104,7 @@ export function resultText(result, reason, names = { w: 'Les Blancs', b: 'Les No
   const wins = (n) => (/^(Les )?(Blancs|Noirs)$/.test(n) ? `Les ${n.replace(/^Les /, '')} gagnent` : `${n} gagne`);
   if (result === '1-0') return { title: wins(names.w), sub: why };
   if (result === '0-1') return { title: wins(names.b), sub: why };
+  if (result === '*') return { title: 'Partie annulée', sub: why };
   return { title: 'Partie nulle', sub: why };
 }
 

@@ -2,8 +2,10 @@
 // Expose un petit objet qui imite l'ancienne connexion temps réel : on(événement), emit(action).
 //   événements : 'state' (état de la partie), 'chat', 'swap' (revanche, couleurs inversées), 'disconnect'
 //   actions    : 'join', 'move', 'resign', 'offerDraw', 'declineDraw', 'rematch', 'chat'
-// La base n'accepte un coup que du joueur dont c'est le tour (règles Firebase) ;
-// chaque navigateur vérifie aussi que le coup est légal avant de l'afficher.
+// Les règles de la base servent d'arbitre (voir scripts/rules.js) : un coup seulement à son tour,
+// pendule vérifiée avec l'heure de Firebase, et personne ne peut se déclarer gagnant tout seul
+// (le mat est confirmé par le joueur maté, l'abandon écrit par celui qui abandonne, etc.).
+// Chaque navigateur vérifie aussi que les coups sont légaux.
 import { db, ref, get, set, update, push, onValue, onChildAdded, onDisconnect, runTransaction, serverTimestamp, serverNow } from './fb.js';
 import { Chess, localGameOver } from './common.js';
 import { markPlaying } from './compte.js';
@@ -23,7 +25,7 @@ function rebuild(g) {
       break; // coup illégal (triche) : on s'arrête au dernier coup valable
     }
   }
-  return { chess, verbose, count: list.length };
+  return { chess, verbose, count: list.length, illegal: verbose.length < list.length };
 }
 
 export function gameSocket(gameId, user) {
@@ -55,7 +57,7 @@ export function gameSocket(gameId, user) {
     const running = !!(game.time.base && game.status === 'playing' && count >= 2 && game.clock?.at);
     const c = { w: game.clock?.w ?? game.time.base, b: game.clock?.b ?? game.time.base };
     if (running) {
-      const t = chess.turn();
+      const t = (game.ply || 0) % 2 === 0 ? 'w' : 'b'; // camp au trait selon la base (comme l'arbitre)
       c[t] = Math.max(0, c[t] - (serverNow() - game.clock.at));
     }
     return { clock: c, running };
@@ -86,9 +88,9 @@ export function gameSocket(gameId, user) {
     };
   }
 
-  /** Fin de partie : chaque joueur range la partie dans son propre historique. */
+  /** Fin de partie : chaque joueur range la partie dans son propre historique (vérifié par les règles). */
   function saveHistory(game) {
-    if (!color || savedRound === game.round) return;
+    if (!color || savedRound === game.round || game.result === '*') return;
     const { verbose } = rebuild(game);
     if (!verbose.length) return;
     savedRound = game.round;
@@ -97,6 +99,9 @@ export function gameSocket(gameId, user) {
       black: game.names.b,
       me: color,
       mode: 'ami',
+      game: gameId,
+      round: game.round,
+      ply: game.ply || 0,
       opp: color === 'w' ? game.black : game.white,
       result: game.result,
       reason: game.reason || '',
@@ -107,22 +112,48 @@ export function gameSocket(gameId, user) {
     }).catch(() => {});
   }
 
-  // Temps écoulé : n'importe lequel des deux navigateurs peut le constater
+  // Temps écoulé : n'importe lequel des deux navigateurs peut le constater (l'arbitre vérifie avec son heure)
   setInterval(() => {
     if (!g || g.status !== 'playing' || !color) return;
     const { chess, count } = rebuild(g);
     const { clock, running } = clockState(g, chess, count);
-    const t = chess.turn();
+    const t = (g.ply || 0) % 2 === 0 ? 'w' : 'b';
     if (!running || clock[t] > 0) return;
     const opp = other(t);
-    const hasMaterial = chess.board().flat().some((p) => p && p.color === opp && p.type !== 'k');
+    // Le camp qui n'est pas tombé gagne, sauf s'il n'a plus de quoi mater (nulle) ; celui qui est tombé ne peut écrire que sa défaite
+    const hasMaterial = t === color || chess.board().flat().some((p) => p && p.color === opp && p.type !== 'k');
     update(gRef, {
       status: 'over',
       result: hasMaterial ? (opp === 'w' ? '1-0' : '0-1') : '1/2-1/2',
       reason: hasMaterial ? 'temps' : 'temps-materiel',
-      [`clock/${t}`]: 0,
     }).catch(() => {});
-  }, 500);
+  }, 1000);
+
+  /**
+   * Fins de partie constatées sur l'échiquier. Pour qu'on ne puisse pas tricher :
+   *  - échec et mat : c'est le joueur maté qui l'écrit (son navigateur le fait tout seul) ;
+   *  - pat, répétition, 50 coups, matériel insuffisant : chaque joueur le constate, la partie se termine quand les deux l'ont fait ;
+   *  - coup illégal reçu (triche) : la partie est annulée.
+   */
+  function checkBoardEnd(game) {
+    if (!color || game.status !== 'playing') return;
+    const { chess, illegal } = rebuild(game);
+    const toMove = (game.ply || 0) % 2 === 0 ? 'w' : 'b';
+    if (illegal) {
+      if (toMove === color) update(gRef, { status: 'over', result: '*', reason: 'annulee' }).catch(() => {});
+      return;
+    }
+    const end = localGameOver(chess);
+    if (!end) return;
+    if (end.reason === 'mat') {
+      if (toMove === color) update(gRef, { status: 'over', result: end.result, reason: 'mat' }).catch(() => {});
+      return;
+    }
+    const mine = game.claims?.[color];
+    const theirs = game.claims?.[other(color)];
+    if (theirs === end.reason) update(gRef, { [`claims/${color}`]: end.reason, status: 'over', result: '1/2-1/2', reason: end.reason }).catch(() => {});
+    else if (mine !== end.reason) update(gRef, { [`claims/${color}`]: end.reason }).catch(() => {});
+  }
 
   const actions = {
     async join(_, ack) {
@@ -151,6 +182,7 @@ export function gameSocket(gameId, user) {
         round = game.round;
         g = game;
         if (game.status === 'over') saveHistory(game);
+        else checkBoardEnd(game);
         fire('state', publicState(game));
       });
       onChildAdded(ref(db, `games/${gameId}/chat`), (s) => fire('chat', s.val()));
@@ -173,15 +205,14 @@ export function gameSocket(gameId, user) {
       } catch {
         return fire('state', publicState(g)); // coup refusé : on remet l'échiquier comme avant
       }
-      const updates = { [`moves/${count}`]: m.from + m.to + (m.promotion || '') };
+      const updates = { [`moves/${count}`]: m.from + m.to + (m.promotion || ''), ply: count + 1 };
       if (g.time.base) {
         // La pendule démarre quand chaque camp a joué son premier coup ; l'incrément s'ajoute après chaque coup
         if (count >= 2 && g.clock?.at) updates[`clock/${color}`] = Math.max(0, g.clock[color] - (serverNow() - g.clock.at)) + g.time.inc;
         updates['clock/at'] = count + 1 >= 2 ? serverTimestamp() : 0;
       }
       if (g.drawOffer && g.drawOffer !== color) updates.drawOffer = null; // jouer un coup refuse la nulle
-      const end = localGameOver(chess);
-      if (end) Object.assign(updates, { status: 'over', result: end.result, reason: end.reason });
+      // La fin de partie éventuelle (mat, pat…) est constatée ensuite par checkBoardEnd, selon les règles de l'arbitre
       update(gRef, updates).catch(() => fire('state', publicState(g)));
     },
 
@@ -216,6 +247,8 @@ export function gameSocket(gameId, user) {
         black: g.white,
         names: { w: g.names.b, b: g.names.w },
         round: g.round + 1,
+        ply: 0,
+        claims: null,
         moves: null,
         clock: { w: g.time.base, b: g.time.base, at: 0 },
         status: 'playing',

@@ -1,6 +1,6 @@
-// Page « Mes amis » : demandes, défis, photo de profil, et l'historique des parties (Firebase).
-import { $, escapeHtml, gameRow, saveGame, getGame, serverGameToLocal as toLocal, historyToGame as fromHistory } from './common.js';
-import { session, challenge, toast, watchFriends, acceptFriend, declineFriend, cancelRequest, removeFriend, myHistory, picHtml, setAvatar, removeAvatar, myEmail, changeEmail, profileUrl } from './compte.js';
+// Page « Mes amis » : la liste d'amis (présence en direct, défier, retirer) et les demandes d'amis.
+import { $, escapeHtml } from './common.js';
+import { session, challenge, toast, watchFriends, acceptFriend, declineFriend, cancelRequest, removeFriend, picHtml, profileUrl } from './compte.js';
 
 const { user, banned } = await session;
 if (banned) {
@@ -13,35 +13,6 @@ let incoming = [];
 
 function start() {
   $('#friends-page').hidden = false;
-  $('#profile-name').textContent = user.username;
-  showMyPic();
-  setupEmail();
-
-  // Photo de profil : on clique sur la pastille ou sur le bouton, on choisit une image
-  $('#pic-change').addEventListener('click', () => $('#pic-input').click());
-  $('#pic-input').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    e.target.value = '';
-    if (!file) return;
-    $('#pic-change').disabled = true;
-    try {
-      await setAvatar(file);
-      showMyPic();
-      toast('Photo de profil mise à jour ✨', { cls: 'info' });
-    } catch (ex) {
-      toast(escapeHtml(ex.message), { cls: 'error' });
-    }
-    $('#pic-change').disabled = false;
-  });
-  $('#pic-remove').addEventListener('click', async () => {
-    try {
-      await removeAvatar();
-      showMyPic();
-    } catch (ex) {
-      toast(escapeHtml(ex.message), { cls: 'error' });
-    }
-  });
-
   // Tout se met à jour en direct : présence des amis, demandes reçues et envoyées
   watchFriends((data) => {
     friends = data.friends;
@@ -49,42 +20,6 @@ function start() {
     renderFriends();
     renderRequests(data);
   });
-  loadHistory();
-}
-
-/** Adresse e-mail du compte : privée, sert à se connecter et à récupérer le mot de passe. */
-function setupEmail() {
-  const show = () => {
-    const email = myEmail();
-    $('#email-text').innerHTML = email
-      ? `✉ ${escapeHtml(email)} <small class="muted">(visible par toi seul)</small>`
-      : '⚠ Pas d’adresse e-mail : ajoute-en une pour pouvoir récupérer ton mot de passe.';
-    $('#email-text').classList.toggle('warn', !email);
-    $('#email-edit').textContent = email ? 'Changer' : 'Ajouter mon e-mail';
-  };
-  show();
-  $('#email-edit').addEventListener('click', () => {
-    $('#email-form').hidden = false;
-    $('#email-form').email.focus();
-  });
-  $('#email-cancel').addEventListener('click', () => ($('#email-form').hidden = true));
-  $('#email-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = e.target.email.value.trim();
-    try {
-      await changeEmail(email);
-      $('#email-form').hidden = true;
-      e.target.reset();
-      toast(`📬 Un lien de confirmation a été envoyé à <b>${escapeHtml(email)}</b>. Clique dessus, puis reconnecte-toi avec cette adresse.`, { cls: 'info', duration: 12000 });
-    } catch (ex) {
-      toast(escapeHtml(ex.message), { cls: 'error' });
-    }
-  });
-}
-
-function showMyPic() {
-  $('#profile-initial').outerHTML = picHtml(user.username, user.avatar, 'profile-avatar').replace('<span class="', '<span id="profile-initial" class="');
-  $('#pic-remove').hidden = !user.avatar;
 }
 
 function avatar(name, status, url = null) {
@@ -150,19 +85,3 @@ document.addEventListener('click', async (e) => {
     toast(escapeHtml(ex.message), { cls: 'error' });
   }
 });
-
-async function loadHistory() {
-  const games = (await myHistory(200)).filter((g) => g.mode !== 'ia'); // seulement les parties en ligne
-  const wins = games.filter((g) => (g.result === '1-0' && g.me === 'w') || (g.result === '0-1' && g.me === 'b')).length;
-  const draws = games.filter((g) => g.result === '1/2-1/2').length;
-  const losses = games.length - wins - draws;
-  const n = games.length;
-  $('#profile-stats').textContent = n
-    ? `${n} partie${n > 1 ? 's' : ''} · ${wins} victoire${wins > 1 ? 's' : ''}, ${losses} défaite${losses > 1 ? 's' : ''}, ${draws} nulle${draws > 1 ? 's' : ''}`
-    : 'Cherche tes amis avec la barre de recherche en haut, puis défie-les quand ils sont en ligne.';
-  // Copie locale pour que le bilan s'ouvre directement
-  for (const g of games) if (!getGame(g.id)) saveGame(toLocal(fromHistory(g)));
-  $('#history').innerHTML = games.length
-    ? games.slice(0, 30).map((g) => gameRow(toLocal(fromHistory(g)))).join('')
-    : '<li class="empty">Tes parties contre tes amis apparaîtront ici.</li>';
-}

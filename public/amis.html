@@ -21,56 +21,24 @@
   </header>
 
   <main class="friends-page" id="friends-page" hidden>
-    <section class="profile">
-      <label class="profile-pic" title="Changer ma photo de profil">
-        <span id="profile-initial"></span>
-        <span class="profile-pic-edit" aria-hidden="true">📷</span>
-        <input type="file" id="pic-input" accept="image/*" hidden>
-      </label>
-      <div>
-        <h1 id="profile-name"></h1>
-        <p class="lead" id="profile-stats"></p>
-        <div class="pic-actions">
-          <a class="btn btn-ghost small" href="profil.html">👤 Voir mon profil</a>
-          <button class="btn btn-ghost small" id="pic-change" type="button">📷 Changer ma photo</button>
-          <button class="btn btn-ghost small" id="pic-remove" type="button" hidden>Retirer</button>
-        </div>
-        <div class="account-email">
-          <span id="email-text"></span>
-          <button class="link-btn" type="button" id="email-edit"></button>
-        </div>
-        <form class="email-form" id="email-form" hidden novalidate>
-          <input name="email" type="email" maxlength="200" placeholder="ton.adresse@exemple.fr" autocomplete="email" required>
-          <button class="btn btn-primary small">Envoyer le lien</button>
-          <button class="btn btn-ghost small" type="button" id="email-cancel">Annuler</button>
-        </form>
-      </div>
+    <div class="friends-head">
+      <h1>Mes amis <span class="muted" id="friends-count"></span></h1>
+      <button class="btn btn-primary" type="button" data-open-search>⌕ Ajouter un ami</button>
+    </div>
+
+    <section class="card" id="incoming-card" hidden>
+      <h2>Demandes reçues</h2>
+      <ul class="people" id="incoming"></ul>
     </section>
 
-    <div class="friends-grid">
-      <div class="friends-main">
+    <section class="card">
+      <ul class="people" id="friends"></ul>
+    </section>
 
-        <section class="card" id="incoming-card" hidden>
-          <h2>Demandes reçues</h2>
-          <ul class="people" id="incoming"></ul>
-        </section>
-
-        <section class="card">
-          <h2>Mes amis <span class="muted" id="friends-count"></span></h2>
-          <ul class="people" id="friends"></ul>
-        </section>
-
-        <section class="card" id="outgoing-card" hidden>
-          <h2>Demandes envoyées</h2>
-          <ul class="people" id="outgoing"></ul>
-        </section>
-      </div>
-
-      <section class="card friends-history">
-        <h2>Mes parties</h2>
-        <ul class="game-list" id="history"></ul>
-      </section>
-    </div>
+    <section class="card" id="outgoing-card" hidden>
+      <h2>Demandes envoyées</h2>
+      <ul class="people" id="outgoing"></ul>
+    </section>
   </main>
 
   <script type="module" src="js/amis.js"></script>

@@ -15,7 +15,7 @@ import {
 // Menu du haut (même menu sur toutes les pages) : la page en cours est mise en avant
 {
   const here = location.pathname.split('/').pop() || 'index.html';
-  const section = { 'jeu.html': 'jouer.html', 'profil.html': 'amis.html' }[here] || here;
+  const section = { 'jeu.html': 'jouer.html' }[here] || here;
   document.querySelectorAll('.topnav a').forEach((a) => {
     if (a.getAttribute('href') === section) a.setAttribute('aria-current', 'page');
   });

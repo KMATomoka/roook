@@ -3,6 +3,7 @@
 import { $, escapeHtml } from './common.js';
 import {
   session, toast, picHtml, loadProfile, setProfilePrivate, profileUrl, addFriend, acceptFriend, challenge, cadenceLabel, logout,
+  setAvatar, removeAvatar, myEmail, changeEmail,
 } from './compte.js';
 
 const page = $('#profile-page');
@@ -132,7 +133,9 @@ function render(p) {
 
   page.innerHTML = `
     <section class="card pf-hero">
-      <div class="pf-pic">${picHtml(p.username, p.avatar, 'profile-avatar', `<i class="presence ${presence}"></i>`)}</div>
+      ${me
+        ? `<label class="pf-pic pf-pic-edit" title="Changer ma photo">${picHtml(p.username, p.avatar, 'profile-avatar', `<i class="presence ${presence}"></i>`)}<span class="profile-pic-edit" aria-hidden="true">📷</span><input type="file" id="pic-input" accept="image/*" hidden></label>`
+        : `<div class="pf-pic">${picHtml(p.username, p.avatar, 'profile-avatar', `<i class="presence ${presence}"></i>`)}</div>`}
       <div class="pf-id">
         <h1>${escapeHtml(p.username)}
           ${p.admin ? '<span class="badge admin">🛡 admin</span>' : ''}
@@ -145,7 +148,7 @@ function render(p) {
       <div class="pf-actions">${actions(p)}</div>
     </section>
 
-    ${me ? privacyCard(p) : ''}
+    ${me ? privacyCard(p) + accountCard() : ''}
 
     ${!p.visible ? `
       <section class="card pf-locked">
@@ -167,7 +170,8 @@ function render(p) {
 function actions(p) {
   if (p.relation === 'me') {
     return `<a class="btn btn-ghost small" href="amis.html">👥 Mes amis</a>
-      <a class="btn btn-ghost small" href="amis.html#photo">📷 Changer ma photo</a>
+      <button class="btn btn-ghost small" data-act="photo">📷 Changer ma photo</button>
+      ${p.avatar ? '<button class="btn btn-ghost small" data-act="nophoto">Retirer la photo</button>' : ''}
       ${p.admin ? '<a class="btn btn-ghost small" href="admin.html">🛡 Administration</a>' : ''}
       <button class="btn btn-ghost small" data-act="logout">⎋ Se déconnecter</button>`;
   }
@@ -175,6 +179,23 @@ function actions(p) {
   if (p.relation === 'sent') return '<span class="search-tag">Demande d’ami envoyée</span>';
   if (p.relation === 'received') return '<button class="btn btn-primary" data-act="accept">Accepter sa demande</button>';
   return `<button class="btn btn-primary" data-act="challenge" ${p.online && !p.playing ? '' : 'disabled'} title="${p.online ? '' : 'Il doit être en ligne'}">⚔ Défier</button>`;
+}
+
+/** Mon compte : adresse e-mail (privée), pour se connecter et récupérer son mot de passe. */
+function accountCard() {
+  const email = myEmail();
+  return `<section class="card pf-account">
+    <div>
+      <h2>✉ Adresse e-mail</h2>
+      <p class="muted">${email ? `${escapeHtml(email)} · visible par toi seul. Elle sert à te connecter et à récupérer ton mot de passe.` : '<span class="warn">Pas d’adresse e-mail : ajoute-en une pour pouvoir récupérer ton mot de passe.</span>'}</p>
+      <form class="email-form" id="email-form" hidden novalidate>
+        <input name="email" type="email" maxlength="200" placeholder="nouvelle.adresse@exemple.fr" autocomplete="email" required>
+        <button class="btn btn-primary small">Envoyer le lien</button>
+        <button class="btn btn-ghost small" type="button" data-act="email-cancel">Annuler</button>
+      </form>
+    </div>
+    <button class="btn btn-ghost small" type="button" data-act="email">${email ? 'Changer' : 'Ajouter mon e-mail'}</button>
+  </section>`;
 }
 
 function privacyCard(p) {
@@ -301,6 +322,41 @@ function gameLine(p, g) {
 }
 
 function wire(p) {
+  // Photo de profil : clic sur la photo ou sur « Changer ma photo »
+  page.querySelector('#pic-input')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      await setAvatar(file);
+      toast('Photo de profil mise à jour ✨', { cls: 'info' });
+      load(p.id);
+    } catch (ex) {
+      toast(escapeHtml(ex.message), { cls: 'error' });
+    }
+  });
+  // Adresse e-mail
+  const emailForm = page.querySelector('#email-form');
+  page.querySelector('.pf-account')?.addEventListener('click', (e) => {
+    const a = e.target.closest('[data-act]')?.dataset.act;
+    if (a === 'email') {
+      emailForm.hidden = false;
+      emailForm.email.focus();
+    }
+    if (a === 'email-cancel') emailForm.hidden = true;
+  });
+  emailForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = emailForm.email.value.trim();
+    try {
+      await changeEmail(email);
+      emailForm.hidden = true;
+      emailForm.reset();
+      toast(`📬 Un lien de confirmation a été envoyé à <b>${escapeHtml(email)}</b>. Clique dessus, puis reconnecte-toi avec cette adresse.`, { cls: 'info', duration: 12000 });
+    } catch (ex) {
+      toast(escapeHtml(ex.message), { cls: 'error' });
+    }
+  });
   page.querySelector('#private-toggle')?.addEventListener('change', async (e) => {
     const on = e.target.checked;
     e.target.disabled = true;
@@ -322,6 +378,11 @@ function wire(p) {
       if (b.dataset.act === 'accept') await acceptFriend(p.id, p.username);
       if (b.dataset.act === 'challenge') return challenge({ id: p.id, username: p.username });
       if (b.dataset.act === 'logout') return logout();
+      if (b.dataset.act === 'photo') return page.querySelector('#pic-input').click();
+      if (b.dataset.act === 'nophoto') {
+        await removeAvatar();
+        toast('Photo retirée.', { cls: 'info' });
+      }
       load(p.id);
     } catch (ex) {
       toast(escapeHtml(ex.message), { cls: 'error' });

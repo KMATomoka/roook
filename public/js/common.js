@@ -6,14 +6,30 @@ export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 export const colorName = (c) => (c === 'w' ? 'white' : 'black');
 
-/** Cases de destination légales, au format attendu par l'échiquier. */
+/** Case de la tour pour un roque (le roi va en g1/c1, la tour est en h1/a1). */
+const ROOK_OF = { g1: 'h1', c1: 'a1', g8: 'h8', c8: 'a8' };
+
+/**
+ * Cases de destination légales, au format attendu par l'échiquier.
+ * Roque : on peut poser le roi deux cases sur le côté, ou directement sur sa tour.
+ */
 export function legalDests(chess) {
   const dests = new Map();
   for (const m of chess.moves({ verbose: true })) {
     if (!dests.has(m.from)) dests.set(m.from, []);
     dests.get(m.from).push(m.to);
+    if (m.flags.includes('k') || m.flags.includes('q')) dests.get(m.from).push(ROOK_OF[m.to]);
   }
   return dests;
+}
+
+/** Roi posé sur sa propre tour = roque : renvoie la vraie case d'arrivée du roi (g1/c1…). */
+export function castleDest(chess, from, to) {
+  const k = chess.get(from);
+  const r = chess.get(to);
+  if (!k || k.type !== 'k' || !r || r.type !== 'r' || r.color !== k.color) return to;
+  const king = Object.keys(ROOK_OF).find((sq) => ROOK_OF[sq] === to);
+  return king && chess.moves({ square: from, verbose: true }).some((m) => m.to === king) ? king : to;
 }
 
 export function isPromotion(chess, from, to) {

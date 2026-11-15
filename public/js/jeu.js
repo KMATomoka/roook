@@ -2,7 +2,7 @@
 import { Chessground } from '../vendor/chessground/chessground.min.js';
 import { Engine, LEVELS } from './engine.js';
 import {
-  $, $$, Chess, colorName, legalDests, isPromotion, askPromotion, saveGame, getPref, setPref,
+  $, $$, Chess, colorName, legalDests, castleDest, isPromotion, askPromotion, saveGame, getPref, setPref,
   resultText, localGameOver, formatClock, escapeHtml, material, frSan,
 } from './common.js';
 import { isMuted, setMuted, lowTimeBeep } from './sound.js';
@@ -373,6 +373,7 @@ $('#btn-resign').addEventListener('click', () => {
 // Coup joué par l'utilisateur
 // ---------------------------------------------------------------------------
 async function onUserMove(from, to) {
+  to = castleDest(chess, from, to); // roi posé sur sa tour = roque
   let promotion;
   if (isPromotion(chess, from, to)) {
     promotion = await askPromotion(chess.turn());

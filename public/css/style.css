@@ -1984,3 +1984,5 @@ body { padding-bottom: env(safe-area-inset-bottom); }
   .learn-play .learn-card h1 { font-size: 1.35rem; }
   .learn-play .learn-intro { font-size: 0.9rem; }
 }
+/* Menu ouvert : la barre du haut passe devant tout (échiquier et ses effets compris) */
+@media (max-width: 900px) { .topbar.menu-open { z-index: 1000; } }

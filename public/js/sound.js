@@ -114,34 +114,6 @@ function check() {
   tone({ freq: 2637, type: 'sine', at: 0.15, dur: 0.2, vol: 0.04 });
 }
 
-function mate(outcome) {
-  // 1. Impact : grosse basse + fracas
-  tone({ freq: 120, endFreq: 32, at: 0, dur: 1.1, vol: 0.75, attack: 0.002 });
-  tone({ freq: 60, endFreq: 30, type: 'triangle', at: 0, dur: 0.9, vol: 0.35 });
-  burst({ at: 0, dur: 0.6, vol: 0.7, type: 'lowpass', freq: 900, endFreq: 120, q: 0.7 });
-  burst({ at: 0.01, dur: 1.4, vol: 0.18, type: 'highpass', freq: 3500, endFreq: 6000 });
-  // 2. Le roi qui tombe sur l'échiquier (deux rebonds)
-  tok(0.95, 0.75);
-  tok(1.12, 0.7);
-  // 3. Fanfare (victoire) ou descente mineure (défaite)
-  const start = 0.45;
-  if (outcome === 'loss') {
-    [440, 349.2, 293.7, 220].forEach((f, i) => {
-      tone({ freq: f, type: 'triangle', at: start + i * 0.22, dur: i === 3 ? 1.4 : 0.4, vol: 0.16 });
-      tone({ freq: f / 2, type: 'sine', at: start + i * 0.22, dur: i === 3 ? 1.4 : 0.4, vol: 0.12 });
-    });
-  } else {
-    const notes = [523.3, 659.3, 784, 1046.5];
-    notes.forEach((f, i) => {
-      const last = i === notes.length - 1;
-      tone({ freq: f, type: 'triangle', at: start + i * 0.11, dur: last ? 1.6 : 0.3, vol: 0.17 });
-      tone({ freq: f * 2, type: 'sine', at: start + i * 0.11, dur: last ? 1.2 : 0.2, vol: 0.05 });
-    });
-    // accord final scintillant
-    [1046.5, 1318.5, 1568, 2093].forEach((f, i) => tone({ freq: f, type: 'sine', at: start + 0.5 + i * 0.03, dur: 1.5, vol: 0.05 }));
-  }
-}
-
 // --- Sons « Classic » : bois, feutre, rien de synthétique -----------------
 function wood(at = 0, { pitch = 1, vol = 1 } = {}) {
   // Pièce de bois posée sur l'échiquier : un toc court et mat, sans résonance métallique
@@ -260,10 +232,108 @@ function royalMate(outcome) {
   [2637, 3136, 3951].forEach((f, i) => tone({ freq: f, type: 'sine', at: 3.5 + i * 0.07, dur: 0.5, vol: 0.02 }));
 }
 
-const astrea = { move: () => tok(), capture, castle, promote, check };
-// Royal : mêmes sons qu'Astrea pour les coups, prises et échecs ; son propre échec et mat (fanfare)
-const SETS = { astrea, classic, royal: astrea };
-const MATES = { astrea: mate, classic: classicMate, royal: royalMate };
+// --- Sons « Astrea » (espace) ---------------------------------------------------
+/** Petit écho : la même note répétée, plus douce, comme dans le vide spatial. */
+function echo(opts, { times = 2, gap = 0.14, decay = 0.45 } = {}) {
+  for (let i = 0; i <= times; i++) tone({ ...opts, at: (opts.at || 0) + i * gap, vol: opts.vol * Math.pow(decay, i) });
+}
+
+/** Nappe de synthé (dents de scie désaccordées, filtre qui s'ouvre). */
+function pad(freqs, { at = 0, dur = 1.6, vol = 0.05, open = 2200 } = {}) {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + at;
+  const f = a.createBiquadFilter();
+  f.type = 'lowpass';
+  f.frequency.setValueAtTime(300, t);
+  f.frequency.exponentialRampToValueAtTime(open, t + dur * 0.5);
+  f.frequency.exponentialRampToValueAtTime(400, t + dur);
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + dur * 0.3);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  f.connect(g).connect(master);
+  for (const fr of freqs) {
+    for (const det of [-9, 9]) {
+      const o = a.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(fr, t);
+      o.detune.value = det;
+      o.connect(f);
+      o.start(t);
+      o.stop(t + dur + 0.1);
+    }
+  }
+}
+
+const space = {
+  // Déplacement : un « blip » doux qui monte
+  move() {
+    tone({ freq: 520, endFreq: 760, at: 0, dur: 0.07, vol: 0.13 });
+    tone({ freq: 1560, endFreq: 2280, at: 0, dur: 0.05, vol: 0.025 });
+    burst({ at: 0, dur: 0.02, vol: 0.12, freq: 3000, q: 2 });
+  },
+  // Prise : la pièce aspirée par le trou de ver (glissando qui plonge), puis un scintillement
+  capture() {
+    tone({ freq: 900, endFreq: 70, at: 0.05, dur: 0.42, vol: 0.28, attack: 0.01 });
+    tone({ freq: 450, endFreq: 40, type: 'triangle', at: 0.05, dur: 0.42, vol: 0.14, attack: 0.01 });
+    burst({ at: 0.04, dur: 0.4, vol: 0.22, type: 'bandpass', freq: 3200, endFreq: 260, q: 1.4 });
+    tone({ freq: 70, endFreq: 40, at: 0.42, dur: 0.25, vol: 0.3 });
+    echo({ freq: 2637, type: 'sine', at: 0.48, dur: 0.12, vol: 0.05 }, { times: 2, gap: 0.09 });
+    echo({ freq: 3520, type: 'sine', at: 0.52, dur: 0.1, vol: 0.03 }, { times: 1, gap: 0.09 });
+  },
+  castle() {
+    space.move();
+    tone({ freq: 600, endFreq: 880, at: 0.11, dur: 0.07, vol: 0.12 });
+  },
+  // Promotion : montée « power-up » qui scintille
+  promote() {
+    [523.3, 659.3, 784, 1046.5, 1318.5].forEach((f, i) => tone({ freq: f, endFreq: f * 1.02, type: 'triangle', at: i * 0.045, dur: 0.18, vol: 0.06 }));
+    echo({ freq: 2093, type: 'sine', at: 0.25, dur: 0.3, vol: 0.05 }, { times: 2, gap: 0.12 });
+  },
+  // Échec : ping de sonar, avec son écho
+  check() {
+    echo({ freq: 1244.5, type: 'sine', at: 0.05, dur: 0.35, vol: 0.16, attack: 0.003 }, { times: 2, gap: 0.2, decay: 0.4 });
+    tone({ freq: 2489, type: 'sine', at: 0.05, dur: 0.15, vol: 0.03 });
+  },
+};
+
+/**
+ * Échec et mat « Astrea ».
+ * Victoire : montée d'hyperespace, l'explosion de la supernova, puis une pluie d'étoiles qui scintille.
+ * Défaite : grondement du trou noir qui aspire ton roi, puis un accord sombre.
+ */
+function spaceMate(outcome) {
+  if (outcome === 'loss') {
+    tone({ freq: 55, at: 0.1, dur: 2.6, vol: 0.32, attack: 0.4 }); // grondement
+    tone({ freq: 82.4, type: 'triangle', at: 0.1, dur: 2.4, vol: 0.12, attack: 0.5 });
+    tone({ freq: 500, endFreq: 45, at: 0.7, dur: 1.4, vol: 0.2, attack: 0.05 }); // aspiration
+    burst({ at: 0.6, dur: 1.5, vol: 0.2, type: 'bandpass', freq: 2400, endFreq: 120, q: 1.2 });
+    burst({ at: 2.05, dur: 0.5, vol: 0.45, type: 'lowpass', freq: 500, endFreq: 60, q: 0.8 }); // le trou se referme
+    tone({ freq: 60, endFreq: 28, at: 2.05, dur: 0.8, vol: 0.45 });
+    pad([110, 130.8, 164.8], { at: 1.6, dur: 2.6, vol: 0.05, open: 1200 }); // la mineur
+    echo({ freq: 659.3, type: 'sine', at: 2.3, dur: 0.5, vol: 0.05 }, { times: 3, gap: 0.22 });
+    return;
+  }
+  // Montée d'hyperespace
+  burst({ at: 0, dur: 0.95, vol: 0.16, type: 'highpass', freq: 600, endFreq: 7000, q: 0.7 });
+  tone({ freq: 180, endFreq: 1400, type: 'sawtooth', at: 0, dur: 0.9, vol: 0.05, attack: 0.3 });
+  tone({ freq: 90, endFreq: 700, at: 0, dur: 0.9, vol: 0.12, attack: 0.3 });
+  // Supernova
+  tone({ freq: 110, endFreq: 30, at: 0.9, dur: 1.4, vol: 0.7, attack: 0.002 });
+  burst({ at: 0.9, dur: 0.9, vol: 0.6, type: 'lowpass', freq: 1400, endFreq: 90, q: 0.7 });
+  burst({ at: 0.92, dur: 1.6, vol: 0.14, type: 'highpass', freq: 4000, endFreq: 9000 });
+  // Pluie d'étoiles : arpège pentatonique avec écho, sur une nappe lumineuse
+  pad([261.6, 329.6, 392, 523.3], { at: 1.1, dur: 2.8, vol: 0.045, open: 3200 });
+  [1046.5, 1318.5, 1568, 2093, 2349.3, 2637, 3136].forEach((f, i) =>
+    echo({ freq: f, type: 'sine', at: 1.25 + i * 0.09, dur: 0.35, vol: 0.06 }, { times: 2, gap: 0.16 }),
+  );
+}
+
+// Royal : garde les sons d'origine (avant Astrea « espace ») pour les coups, prises et échecs
+const royalSet = { move: () => tok(), capture, castle, promote, check };
+const SETS = { astrea: space, classic, royal: royalSet };
+const MATES = { astrea: spaceMate, classic: classicMate, royal: royalMate };
 
 /**
  * Son d'un coup (objet « verbose » de chess.js).
@@ -273,11 +343,11 @@ const MATES = { astrea: mate, classic: classicMate, royal: royalMate };
 export function playSound(move, outcome = 'neutral', style = null) {
   if (!move || muted) return;
   const eq = { ...getEquip(), ...(style || {}) };
-  const set = SETS[eq.capture] || astrea;
+  const set = SETS[eq.capture] || space;
   if (move.san.includes('#')) {
     if (move.captured) set.capture();
     else set.move();
-    (MATES[eq.endAnim] || mate)(outcome);
+    (MATES[eq.endAnim] || spaceMate)(outcome);
     return;
   }
   if (move.captured) set.capture();

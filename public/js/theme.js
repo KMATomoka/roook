@@ -13,12 +13,12 @@ export const PACKS = [
   {
     id: 'astrea',
     name: 'Astrea chess',
-    desc: 'L’apparence d’origine de ROOOK : damier violet, pièces de l’espace, éclats et confettis.',
+    desc: 'L’apparence d’origine de ROOOK, version espace : damier violet, pièces de l’espace, trous de ver, supernova et sons de vaisseau.',
     items: {
       board: { name: 'Damier Astrea', desc: 'Cases lavande et violet.' },
       pieces: { name: 'Pièces Astrea', desc: 'Les pièces violettes « espace » de ROOOK.' },
-      endAnim: { name: 'Mat Astrea', desc: 'Le roi vacille et tombe, ondes de choc, confettis et grand titre.' },
-      capture: { name: 'Prise Astrea', desc: 'La pièce prise éclate en morceaux ; sons synthétiques de ROOOK.' },
+      endAnim: { name: 'Supernova', desc: 'Victoire : hyperespace, le roi vaincu explose en nébuleuse d’étoiles. Défaite : ton roi est aspiré par un trou noir.' },
+      capture: { name: 'Trou de ver', desc: 'La pièce prise est aspirée par un petit trou de ver qui se referme en étoiles ; blips, sonar et sons de l’espace.' },
     },
   },
   {

@@ -52,12 +52,19 @@ export function createFx(frame, getOrientation) {
   };
 
   /** Centre d'une case et taille d'une case, en pixels dans le cadre. */
+  /** Centre d'une case, en pixels dans le cadre. On mesure l'échiquier réel (cg-board) : Chessground arrondit
+   *  sa taille à un nombre entier de pixels par case, il peut donc être un peu plus petit que le cadre. */
   function at(sq) {
-    const s = frame.clientWidth / 8;
+    const fr = frame.getBoundingClientRect();
+    const board = frame.querySelector('cg-board');
+    const br = board ? board.getBoundingClientRect() : fr;
+    const s = br.width / 8;
+    const ox = br.left - fr.left;
+    const oy = br.top - fr.top;
     const f = FILES.indexOf(sq[0]);
     const r = Number(sq[1]) - 1;
     const white = getOrientation() === 'w';
-    return { x: ((white ? f : 7 - f) + 0.5) * s, y: ((white ? 7 - r : r) + 0.5) * s, s };
+    return { x: ox + ((white ? f : 7 - f) + 0.5) * s, y: oy + ((white ? 7 - r : r) + 0.5) * s, s };
   }
 
   function shake(power, duration = 380) {
@@ -285,96 +292,6 @@ export function createFx(frame, getOrientation) {
   // -------------------------------------------------------------------------
   // Échec et mat
   // -------------------------------------------------------------------------
-  async function mateFx(move, kingSq, loser, outcome, gen, royal = false) {
-    const { x, y, s } = at(kingSq);
-    const W = frame.clientWidth;
-    const calm = reduceMotion();
-    await wait(140);
-    if (gen !== generation) return;
-
-    // Flash blanc sur tout l'échiquier
-    const flash = el(over, 'fx-screen-flash');
-    once(flash, [{ opacity: 0.75 }, { opacity: 0 }], { duration: 380, easing: 'ease-out' });
-
-    // Le vrai roi est caché, un double vacille puis tombe
-    frame.classList.add('mated-' + loser);
-    const king = el(over, 'cg-wrap fx-king', { left: `${x - s / 2}px`, top: `${y - s / 2}px`, width: `${s}px`, height: `${s}px` }, `<piece class="king ${COLOR[loser]}"></piece>`);
-    const attackerFile = FILES.indexOf(move.to[0]);
-    const kingFile = FILES.indexOf(kingSq[0]);
-    let dir = attackerFile === kingFile ? pick([-1, 1]) : attackerFile < kingFile ? 1 : -1; // tombe à l'opposé de l'attaquant
-    if (getOrientation() === 'b') dir = -dir;
-    if (calm) {
-      king.animate([{ filter: 'none' }, { filter: 'grayscale(.7) brightness(.75)' }], { duration: 600, fill: 'forwards' });
-    } else {
-      king.animate(
-        [
-          { transform: 'rotate(0deg)', filter: 'none' },
-          { transform: 'rotate(-11deg)', offset: 0.1 },
-          { transform: 'rotate(9deg)', offset: 0.2 },
-          { transform: 'rotate(-6deg)', offset: 0.3 },
-          { transform: 'rotate(3deg)', offset: 0.38 },
-          { transform: 'rotate(0deg)', offset: 0.44, easing: 'cubic-bezier(.55,0,.9,.5)' },
-          { transform: `translateY(14%) rotate(${dir * 94}deg)`, offset: 0.78, easing: 'ease-out' },
-          { transform: `translateY(10%) rotate(${dir * 82}deg)`, offset: 0.86, easing: 'ease-in' },
-          { transform: `translateY(14%) rotate(${dir * 90}deg)`, filter: 'grayscale(.65) brightness(.72) drop-shadow(0 4px 6px rgba(0,0,0,.5))' },
-        ],
-        { duration: 1500, fill: 'forwards' },
-      );
-    }
-
-    // Ondes de choc et secousse
-    ring(kingSq, { color: 'rgba(235,70,60,1)', size: 2.4, width: 0.07, duration: 700 });
-    ring(kingSq, { color: royal ? 'rgba(240,216,143,.95)' : 'rgba(143,107,255,.95)', delay: 120, size: 4, width: 0.05, duration: 900 });
-    ring(kingSq, { color: royal ? 'rgba(255,246,220,.85)' : 'rgba(60,242,163,.8)', delay: 200, size: 5, width: 0.03, duration: 1000 });
-    ring(kingSq, { color: 'rgba(255,255,255,.7)', delay: 260, size: 6, width: 0.03, duration: 1100 });
-    flashSquare(kingSq, 'rgba(255,60,50,.95)', 0, 700);
-    shake(10, 750);
-
-    // Assombrissement autour de l'échiquier
-    const vignette = el(over, 'fx-vignette');
-    vignette.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 700, fill: 'forwards' });
-
-    // Explosion : confettis pour une victoire, éclats sombres pour une défaite
-    setTimeout(() => {
-      if (gen !== generation || calm) return;
-      const winColors = royal ? [...ROYAL.b, ...ROYAL.w] : ['#8f6bff', '#b9a6ff', '#cdbeff', '#3cf2a3', '#ffffff', '#ff8a95'];
-      const lossColors = ['#2b2b29', '#45443f', '#8a1f17', '#e0584c', '#6b6a63'];
-      const colors = outcome === 'loss' ? lossColors : winColors;
-      confetti(x, y, s, W, colors, outcome === 'loss' ? 45 : 90);
-      shards(kingSq, { count: 18, colors: royal ? ROYAL[loser] : loser === 'w' ? ['#fbf8ee', '#e9e4d3'] : ['#2b2b29', '#45443f'], spread: [0.6, 1.6], delay: 0 });
-      if (royal) {
-        motes(kingSq, loser, { count: 26, spread: 1.8, rise: 1.6 });
-        motes(kingSq, loser === 'w' ? 'b' : 'w', { count: 22, spread: 2.4, rise: 2, delay: 180 });
-      }
-    }, 380);
-
-    // Grand titre
-    setTimeout(() => {
-      if (gen !== generation) return;
-      const sub = outcome === 'win' ? 'Victoire !' : outcome === 'loss' ? 'Défaite' : `${loser === 'w' ? 'Les Noirs' : 'Les Blancs'} gagnent`;
-      const banner = el(over, 'fx-mate-banner ' + outcome, { fontSize: `${Math.max(26, W * 0.105)}px` }, `<div class="t">Échec et mat</div><div class="s">${sub}</div>`);
-      const t = banner.querySelector('.t');
-      const sb = banner.querySelector('.s');
-      t.animate(
-        [
-          { transform: 'scale(2.8)', opacity: 0, filter: 'blur(14px)', letterSpacing: '.3em' },
-          { transform: 'scale(.9)', opacity: 1, filter: 'blur(0)', letterSpacing: '0em', offset: 0.6 },
-          { transform: 'scale(1.04)', offset: 0.8 },
-          { transform: 'scale(1)', opacity: 1, filter: 'blur(0)', letterSpacing: '0em' },
-        ],
-        { duration: calm ? 300 : 650, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'both' },
-      );
-      if (!calm) setTimeout(() => shake(6, 380), 390);
-      sb.animate([{ opacity: 0, transform: 'translateY(30%)' }, { opacity: 1, transform: 'none' }], { duration: 450, delay: 420, easing: 'ease-out', fill: 'both' });
-      // Le titre et l'assombrissement s'effacent après quelques secondes
-      setTimeout(() => {
-        if (gen !== generation) return;
-        once(banner, [{ opacity: 1 }, { opacity: 0 }], { duration: 700, fill: 'forwards' });
-        once(vignette, [{ opacity: 1 }, { opacity: 0 }], { duration: 900, fill: 'forwards' });
-      }, 4200);
-    }, 520);
-  }
-
   // -------------------------------------------------------------------------
   // Échec et mat « Royal » : le Couronnement
   //  lumière dorée, le roi vaincu s'incline et se pétrifie, sa couronne s'envole et se pose sur le roi vainqueur,
@@ -516,6 +433,208 @@ export function createFx(frame, getOrientation) {
     }, calm ? 300 : 700);
   }
 
+  // -------------------------------------------------------------------------
+  // Astrea (espace) : étoiles à 4 branches, trou de ver, supernova, trou noir
+  // -------------------------------------------------------------------------
+  const SPACE = ['#ffffff', '#e6e0fa', '#b9a6ff', '#8f6bff', '#3cf2a3', '#7fd8ff'];
+
+  /** Petites étoiles à 4 branches qui jaillissent d'un point (avec une traînée). */
+  function starBurst(x, y, s, { count = 14, colors = SPACE, spread = [0.5, 1.4], size = [0.09, 0.2], delay = 0, duration = [600, 1000] } = {}) {
+    if (reduceMotion()) return;
+    for (let i = 0; i < count; i++) {
+      const w = s * rand(size[0], size[1]);
+      const c = pick(colors);
+      const d = el(over, 'fx-star', { left: `${x}px`, top: `${y}px`, width: `${w}px`, height: `${w}px`, background: c, filter: `drop-shadow(0 0 ${w * 0.5}px ${c})` });
+      const ang = rand(0, Math.PI * 2);
+      const dist = s * rand(spread[0], spread[1]);
+      once(
+        d,
+        [
+          { transform: 'translate(-50%,-50%) scale(.2) rotate(0deg)', opacity: 0 },
+          { transform: `translate(calc(-50% + ${Math.cos(ang) * dist * 0.35}px), calc(-50% + ${Math.sin(ang) * dist * 0.35}px)) scale(1.2) rotate(45deg)`, opacity: 1, offset: 0.2 },
+          { transform: `translate(calc(-50% + ${Math.cos(ang) * dist}px), calc(-50% + ${Math.sin(ang) * dist}px)) scale(.3) rotate(${rand(90, 200)}deg)`, opacity: 0 },
+        ],
+        { duration: rand(duration[0], duration[1]), delay: delay + rand(0, 80), easing: 'cubic-bezier(.15,.75,.3,1)', fill: 'backwards' },
+      );
+    }
+  }
+
+  /** Trou noir / trou de ver : disque sombre et anneau d'accrétion qui tourne. */
+  function blackHole(x, y, size, { hot = false, delay = 0, life = 700 } = {}) {
+    const d = el(over, 'fx-hole' + (hot ? ' hot' : ''), { left: `${x}px`, top: `${y}px`, width: `${size}px`, height: `${size}px` });
+    once(
+      d,
+      [
+        { transform: 'translate(-50%,-50%) scale(0) rotate(0deg)', opacity: 0 },
+        { transform: 'translate(-50%,-50%) scale(1) rotate(160deg)', opacity: 1, offset: 0.3 },
+        { transform: 'translate(-50%,-50%) scale(1.08) rotate(420deg)', opacity: 1, offset: 0.78 },
+        { transform: 'translate(-50%,-50%) scale(0) rotate(620deg)', opacity: 0 },
+      ],
+      { duration: life, delay, easing: 'cubic-bezier(.35,.1,.3,1)', fill: 'backwards' },
+    );
+  }
+
+  /** Une pièce aspirée en spirale (vers le centre de sa case). */
+  function spiralIn(holder, { duration = 560, delay = 0 } = {}) {
+    once(
+      holder,
+      [
+        { transform: 'scale(1) rotate(0deg)', opacity: 1, filter: 'brightness(1)' },
+        { transform: 'scale(.85) rotate(120deg) skewX(8deg)', opacity: 1, filter: 'brightness(1.6) hue-rotate(20deg)', offset: 0.35 },
+        { transform: 'scale(.35) rotate(380deg) skewX(18deg)', opacity: 0.85, filter: 'brightness(2.4) hue-rotate(60deg) blur(1px)', offset: 0.75 },
+        { transform: 'scale(0) rotate(560deg)', opacity: 0, filter: 'brightness(3) blur(2px)' },
+      ],
+      { duration, delay, easing: 'cubic-bezier(.5,0,.75,.5)', fill: 'both' },
+    );
+  }
+
+  /** Prise « Astrea » : la pièce prise est aspirée par un petit trou de ver, qui se referme dans un éclat d'étoiles. */
+  function spaceCaptureFx(move) {
+    const sq = move.flags.includes('e') ? move.to[0] + move.from[1] : move.to;
+    const victim = move.color === 'w' ? 'b' : 'w';
+    const { x, y, s } = at(sq);
+    const value = VALUE[move.captured] || 1;
+    const impact = 120;
+    const life = 520 + value * 30;
+    if (reduceMotion()) {
+      const g = el(under, 'cg-wrap fx-ghost', { left: `${x - s / 2}px`, top: `${y - s / 2}px`, width: `${s}px`, height: `${s}px` }, `<piece class="${ROLE[move.captured]} ${COLOR[victim]}"></piece>`);
+      once(g, [{ opacity: 1 }, { opacity: 0 }], { duration: 250 });
+      return;
+    }
+    blackHole(x, y, s * (0.9 + value * 0.05), { delay: impact - 60, life });
+    const ghost = el(over, 'cg-wrap fx-ghost', { left: `${x - s / 2}px`, top: `${y - s / 2}px`, width: `${s}px`, height: `${s}px` }, `<piece class="${ROLE[move.captured]} ${COLOR[victim]}"></piece>`);
+    spiralIn(ghost, { duration: life * 0.8, delay: impact });
+    const close = impact + life * 0.78;
+    flashSquare(sq, 'rgba(230,220,255,.95)', close, 300);
+    starBurst(x, y, s, { count: 7 + value * 2, delay: close, size: [0.13, 0.26], spread: [0.5, 1.6] });
+    ring(sq, { delay: close, size: 1.3 + value * 0.06, width: 0.035, duration: 520, color: 'rgba(185,166,255,.9)' });
+    if (value >= 5) ring(sq, { delay: close + 80, size: 2, width: 0.025, color: 'rgba(60,242,163,.7)', duration: 680 });
+    if (value >= 3) setTimeout(() => shake(value >= 9 ? 3.5 : value >= 5 ? 2.2 : 1.2, 260), close);
+  }
+
+  /** Traînées d'hyperespace qui partent d'un point. */
+  function warpStreaks(x, y, W, { count = 26, delay = 0 } = {}) {
+    if (reduceMotion()) return;
+    for (let i = 0; i < count; i++) {
+      const ang = rand(0, 360);
+      const len = W * rand(0.12, 0.3);
+      const d = el(over, 'fx-streak', { left: `${x}px`, top: `${y}px`, width: `${len}px`, transform: `rotate(${ang}deg)` });
+      const d0 = W * rand(0.02, 0.1);
+      const d1 = W * rand(0.6, 0.95);
+      once(
+        d,
+        [
+          { transform: `rotate(${ang}deg) translateX(${d0}px) scaleX(.1)`, opacity: 0 },
+          { transform: `rotate(${ang}deg) translateX(${d0 + (d1 - d0) * 0.3}px) scaleX(1)`, opacity: 1, offset: 0.3 },
+          { transform: `rotate(${ang}deg) translateX(${d1}px) scaleX(.4)`, opacity: 0 },
+        ],
+        { duration: rand(500, 800), delay: delay + rand(0, 260), easing: 'cubic-bezier(.4,0,.8,.6)', fill: 'backwards' },
+      );
+    }
+  }
+
+  /** Titre de fin « espace » : dégradé nébuleuse et petite planète en orbite autour. */
+  function spaceBanner(outcome, loser, W, gen, calm, vignette) {
+    const sub = outcome === 'win' ? 'Victoire !' : outcome === 'loss' ? 'Défaite' : `${loser === 'w' ? 'Les Noirs' : 'Les Blancs'} gagnent`;
+    const banner = el(over, 'fx-mate-banner space ' + outcome, { fontSize: `${Math.max(26, W * 0.1)}px` },
+      `<div class="orbit"><span class="spin"><i></i></span></div><div class="t">Échec et mat</div><div class="s">${sub}</div>`);
+    const t = banner.querySelector('.t');
+    t.animate(
+      [
+        { opacity: 0, transform: 'scale(.6)', filter: 'blur(12px)', letterSpacing: '.35em' },
+        { opacity: 1, transform: 'scale(1.06)', filter: 'blur(0)', letterSpacing: '.02em', offset: 0.7 },
+        { opacity: 1, transform: 'scale(1)', filter: 'blur(0)', letterSpacing: '.02em' },
+      ],
+      { duration: calm ? 300 : 900, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'both' },
+    );
+    banner.querySelector('.orbit').animate([{ opacity: 0, transform: 'rotate(-12deg) scale(.6, .18)' }, { opacity: 1, transform: 'rotate(-12deg) scale(1, .3)' }], { duration: 700, delay: 250, easing: 'ease-out', fill: 'both' });
+    banner.querySelector('.s').animate([{ opacity: 0, transform: 'translateY(40%)' }, { opacity: 1, transform: 'none' }], { duration: 500, delay: 500, easing: 'ease-out', fill: 'both' });
+    setTimeout(() => {
+      if (gen !== generation) return;
+      once(banner, [{ opacity: 1 }, { opacity: 0 }], { duration: 800, fill: 'forwards' });
+      once(vignette, [{ opacity: 1 }, { opacity: 0 }], { duration: 1000, fill: 'forwards' });
+    }, 4800);
+  }
+
+  /**
+   * Échec et mat « Astrea » :
+   *  - victoire (ou spectateur) : SUPERNOVA — hyperespace, le roi vaincu surchauffe et explose en nébuleuse d'étoiles ;
+   *  - défaite : TROU NOIR — ton roi est aspiré par un trou noir.
+   */
+  async function spaceMateFx(move, kingSq, loser, outcome, gen) {
+    const { x, y, s } = at(kingSq);
+    const W = frame.clientWidth;
+    const calm = reduceMotion();
+    await wait(120);
+    if (gen !== generation) return;
+    const loss = outcome === 'loss';
+
+    const vignette = el(over, 'fx-vignette fx-space-vignette' + (loss ? ' cold' : ''));
+    vignette.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 900, fill: 'forwards' });
+    frame.classList.add('mated-' + loser);
+    const king = el(over, 'cg-wrap fx-king', { left: `${x - s / 2}px`, top: `${y - s / 2}px`, width: `${s}px`, height: `${s}px` }, `<piece class="king ${COLOR[loser]}"></piece>`);
+
+    if (calm) {
+      king.animate([{ opacity: 1 }, { opacity: 0.25, filter: 'grayscale(1)' }], { duration: 600, fill: 'forwards' });
+      setTimeout(() => gen === generation && spaceBanner(outcome, loser, W, gen, calm, vignette), 300);
+      return;
+    }
+
+    if (loss) {
+      // TROU NOIR : il grossit sous ton roi, qui tremble puis est aspiré en spirale
+      king.style.zIndex = '4';
+      blackHole(x, y, s * 2.6, { hot: true, delay: 100, life: 2300 });
+      king.animate(
+        [
+          { transform: 'translate(0,0) rotate(0deg)' },
+          { transform: 'translate(1px,-1px) rotate(-4deg)', offset: 0.1 },
+          { transform: 'translate(-1px,1px) rotate(5deg)', offset: 0.2 },
+          { transform: 'translate(1px,0) rotate(-3deg)', offset: 0.3 },
+        ],
+        { duration: 800, iterations: 1, easing: 'linear' },
+      );
+      spiralIn(king, { duration: 1300, delay: 700 });
+      warpStreaks(x, y, W * 0.7, { count: 18, delay: 500 });
+      // les traînées « tombent » vers le trou : on les inverse
+      setTimeout(() => gen === generation && ring(kingSq, { color: 'rgba(255,90,110,.9)', size: 3.2, width: 0.04, duration: 900 }), 2000);
+      setTimeout(() => gen === generation && starBurst(x, y, s, { count: 10, colors: ['#ff8a95', '#b9a6ff', '#ffffff'], spread: [0.3, 0.9] }), 2050);
+      setTimeout(() => gen === generation && shake(4, 400), 2000);
+      setTimeout(() => gen === generation && spaceBanner(outcome, loser, W, gen, calm, vignette), 1500);
+      return;
+    }
+
+    // SUPERNOVA : hyperespace, le roi surchauffe, puis explose en nébuleuse
+    warpStreaks(x, y, W, { count: 30 });
+    king.animate(
+      [
+        { transform: 'scale(1)', filter: 'brightness(1)' },
+        { transform: 'scale(1.06) translate(1px,0)', filter: 'brightness(1.8) drop-shadow(0 0 6px #b9a6ff)', offset: 0.4 },
+        { transform: 'scale(1.12) translate(-1px,0)', filter: 'brightness(3) drop-shadow(0 0 14px #ffffff)', offset: 0.85 },
+        { transform: 'scale(1.3)', filter: 'brightness(5) drop-shadow(0 0 22px #ffffff)', opacity: 0 },
+      ],
+      { duration: 900, easing: 'cubic-bezier(.5,0,.9,.4)', fill: 'forwards' },
+    );
+    setTimeout(() => {
+      if (gen !== generation) return;
+      const flash = el(over, 'fx-screen-flash');
+      once(flash, [{ opacity: 0.85 }, { opacity: 0 }], { duration: 450, easing: 'ease-out' });
+      const nova = el(over, 'fx-nova', { left: `${x}px`, top: `${y}px`, width: `${s}px`, height: `${s}px` });
+      once(nova, [
+        { transform: 'translate(-50%,-50%) scale(.2)', opacity: 1 },
+        { transform: 'translate(-50%,-50%) scale(4)', opacity: 0.9, offset: 0.35 },
+        { transform: 'translate(-50%,-50%) scale(7)', opacity: 0 },
+      ], { duration: 1600, easing: 'cubic-bezier(.1,.7,.3,1)' });
+      ring(kingSq, { color: 'rgba(255,255,255,.95)', size: 3, width: 0.06, duration: 700 });
+      ring(kingSq, { color: 'rgba(143,107,255,.95)', delay: 90, size: 5.2, width: 0.045, duration: 1000 });
+      ring(kingSq, { color: 'rgba(60,242,163,.8)', delay: 170, size: 7, width: 0.03, duration: 1200 });
+      starBurst(x, y, s, { count: 60, spread: [1, 4.5], size: [0.08, 0.2], duration: [900, 1600] });
+      // Débris du roi qui flottent en apesanteur
+      shards(kingSq, { count: 16, colors: loser === 'w' ? ['#fbf8ee', '#e9e4d3', '#b9a6ff'] : ['#2b2b29', '#45443f', '#8f6bff'], spread: [0.5, 1.4], gravity: -0.15, duration: [1400, 2200] });
+      shake(7, 650);
+    }, 900);
+    setTimeout(() => gen === generation && spaceBanner(outcome, loser, W, gen, calm, vignette), 1250);
+  }
+
   function confetti(x, y, s, W, colors, count) {
     for (let i = 0; i < count; i++) {
       const w = rand(5, 10) * (W / 600);
@@ -562,12 +681,16 @@ export function createFx(frame, getOrientation) {
       playSound(move, outcome, eq);
       if (!visual) return;
       const gen = generation;
-      if (move.captured) eq.capture === 'classic' ? classicCaptureFx(move) : captureFx(move, eq.capture === 'royal');
+      if (move.captured) {
+        if (eq.capture === 'classic') classicCaptureFx(move);
+        else if (eq.capture === 'royal') captureFx(move, true); // l'ancienne prise (éclats) avec les particules d'or
+        else spaceCaptureFx(move);
+      }
       const kSq = move.san.includes('+') || mated ? kingSquare(chess, loser) : null;
       if (mated && kSq) {
         if (classicEnd) classicMateFx(move, kSq, loser, outcome, gen);
         else if (eq.endAnim === 'royal') royalMateFx(move, kSq, kingSquare(chess, loser === 'w' ? 'b' : 'w'), loser, outcome, gen);
-        else mateFx(move, kSq, loser, outcome, gen);
+        else spaceMateFx(move, kSq, loser, outcome, gen);
       }
       else if (kSq) (classicEnd ? classicCheckFx : checkFx)(kSq);
     },

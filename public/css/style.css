@@ -1373,3 +1373,53 @@ a.person-link:hover { color: var(--accent-soft); }
   background: none; backdrop-filter: none; padding: 0; color: #f7eed6; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
 }
 .inv-demo-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+/* Astrea (espace) : étoiles à 4 branches, trou de ver / trou noir, hyperespace, supernova (js/fx.js) */
+.fx-star { position: absolute; pointer-events: none; will-change: transform, opacity; z-index: 3;
+  clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%); }
+.fx-hole {
+  position: absolute; border-radius: 50%; pointer-events: none; will-change: transform, opacity;
+  background:
+    radial-gradient(circle, #05030c 0 30%, rgba(5, 3, 12, 0.9) 36%, transparent 37%),
+    conic-gradient(from 0deg, rgba(143, 107, 255, 0) 0deg, rgba(185, 166, 255, 0.95) 70deg, rgba(60, 242, 163, 0.85) 140deg, rgba(143, 107, 255, 0) 200deg, rgba(127, 216, 255, 0.8) 280deg, rgba(143, 107, 255, 0) 360deg);
+  -webkit-mask: radial-gradient(circle, #000 52%, transparent 70%);
+  mask: radial-gradient(circle, #000 52%, transparent 70%);
+  box-shadow: 0 0 24px rgba(143, 107, 255, 0.6);
+}
+.fx-hole.hot {
+  background:
+    radial-gradient(circle, #020106 0 24%, rgba(2, 1, 6, 0.92) 30%, transparent 31%),
+    conic-gradient(from 0deg, rgba(255, 90, 110, 0) 0deg, rgba(255, 140, 90, 0.95) 80deg, rgba(255, 90, 110, 0.9) 160deg, rgba(143, 107, 255, 0.6) 240deg, rgba(255, 90, 110, 0) 360deg);
+  box-shadow: 0 0 40px rgba(255, 90, 110, 0.5);
+}
+.fx-streak {
+  position: absolute; height: 2px; border-radius: 2px; pointer-events: none; transform-origin: 0 50%; z-index: 2; will-change: transform, opacity;
+  background: linear-gradient(90deg, rgba(185, 166, 255, 0), rgba(230, 224, 250, 0.95));
+  box-shadow: 0 0 6px rgba(185, 166, 255, 0.8);
+}
+.fx-nova {
+  position: absolute; border-radius: 50%; pointer-events: none; will-change: transform, opacity; mix-blend-mode: screen;
+  background: radial-gradient(circle, #ffffff 0%, rgba(230, 224, 250, 0.95) 12%, rgba(143, 107, 255, 0.75) 32%, rgba(60, 242, 163, 0.35) 52%, rgba(127, 216, 255, 0.15) 64%, transparent 72%);
+}
+.fx-space-vignette { background: radial-gradient(ellipse at center, rgba(10, 6, 30, 0.1) 25%, rgba(6, 4, 22, 0.82) 100%); }
+.fx-space-vignette.cold { background: radial-gradient(ellipse at center, rgba(30, 6, 14, 0.15) 25%, rgba(8, 2, 10, 0.88) 100%); }
+.fx-mate-banner.space .t {
+  background-image: linear-gradient(100deg, #e6e0fa 0%, #b9a6ff 22%, #ffffff 45%, #7fd8ff 60%, #3cf2a3 78%, #e6e0fa 100%);
+  filter: drop-shadow(0 0 18px rgba(143, 107, 255, 0.8)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.7));
+}
+.fx-mate-banner.space.loss .t { background-image: linear-gradient(100deg, #f3d2cc 0%, #ff5a6a 30%, #ffffff 48%, #b9a6ff 66%, #ff5a6a 85%, #f3d2cc 100%); filter: drop-shadow(0 0 18px rgba(255, 90, 110, 0.6)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.7)); }
+/* Orbite : un cercle aplati (scaleY .3) ; la planète tourne avec .spin (allongée pour compenser l'aplatissement) */
+.fx-mate-banner.space .orbit {
+  position: absolute; width: 7.4em; height: 7.4em; border-radius: 50%; border: 2px solid rgba(185, 166, 255, 0.5);
+  box-shadow: 0 0 14px rgba(143, 107, 255, 0.35); pointer-events: none; transform: rotate(-12deg) scale(1, .3);
+}
+.fx-mate-banner.space .orbit .spin { position: absolute; inset: 0; animation: fx-spin 3.2s linear infinite; }
+.fx-mate-banner.space .orbit i {
+  position: absolute; left: 50%; top: -0.12em; width: 0.24em; height: 0.8em; margin-left: -0.12em; border-radius: 50%;
+  background: radial-gradient(ellipse at 35% 35%, #ffffff, #3cf2a3 45%, #1d7d63); box-shadow: 0 0 10px #3cf2a3;
+}
+.fx-mate-banner.space.loss .orbit { border-color: rgba(255, 90, 110, 0.45); }
+.fx-mate-banner.space.loss .orbit i { background: radial-gradient(ellipse at 35% 35%, #ffffff, #ff8a95 45%, #8a1f2b); box-shadow: 0 0 10px #ff5a6a; }
+@keyframes fx-spin { to { transform: rotate(360deg); } }
+.fx-mate-banner.space .s { position: relative; }
+.fx-mate-banner.space.win .s { background: linear-gradient(90deg, #8f6bff, #3cf2a3); color: #0c0a16; }

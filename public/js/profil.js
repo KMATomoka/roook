@@ -191,7 +191,7 @@ function bioHtml(p, me) {
 
 /** Victoires en ligne de mon historique (pour le badge Royal). */
 const myWins = (p) => (p.games ? winKeys(Object.fromEntries(p.games.map((g) => [g.id, g]))).length : 0);
-/** Badges possédés : pour soi, Royal compte dès 10 victoires (la preuve est jointe en le choisissant). */
+/** Badges possédés : pour soi, Royal compte dès 100 victoires (la preuve est jointe en le choisissant). */
 const badgesOf = (p, me) => ownedBadges({ role: p.role, royal: p.hasRoyalProof || (me && myWins(p) >= ROYAL_WINS) });
 
 /** Les badges du joueur, avec leur nom ; celui affiché en partie est marqué. */

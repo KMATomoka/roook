@@ -36,8 +36,8 @@ export const PACKS = [
     id: 'royal',
     name: 'Royal chess',
     desc: 'Or et crème, esprit chevalier : plateau ivoire et brun liseré d’or, pièces couronnées et joyaux.',
-    // Se débloque avec 10 victoires en ligne contre des amis (parties vérifiées par l'arbitre)
-    unlock: { wins: 10 },
+    // Se débloque avec 100 victoires en ligne contre des amis (parties vérifiées par l'arbitre)
+    unlock: { wins: 100 },
     items: {
       board: { name: 'Damier royal', desc: 'Ivoire et brun profond, liseré d’or.' },
       pieces: { name: 'Pièces royales', desc: 'Crème pour les Blancs, or pour les Noirs : couronnes, joyaux, cavalier en armure.' },

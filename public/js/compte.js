@@ -225,9 +225,9 @@ export function roleBadge(role) {
 export const BADGES = {
   fondateur: { name: 'Fondateur', emoji: '👑', cls: 'founder', how: 'Réservé au fondateur de ROOOK.' },
   admin: { name: 'Admin', emoji: '🛡️', cls: 'admin', how: 'Réservé aux administrateurs.' },
-  royal: { name: 'Royal', emoji: '⚜️', cls: 'royal', how: 'Débloqué avec 10 victoires en ligne (le pack Royal chess).' },
+  royal: { name: 'Royal', emoji: '⚜️', cls: 'royal', how: 'Débloqué avec 100 victoires en ligne (le pack Royal chess).' },
 };
-export const ROYAL_WINS = 10;
+export const ROYAL_WINS = 100;
 
 /** Pastille d'un badge : emoji + nom (profil), ou seulement l'emoji (en partie). */
 export function badgeHtml(id, { name = true } = {}) {
@@ -246,7 +246,7 @@ export function winKeys(history) {
     .map(([k]) => k);
 }
 
-/** Badges qu'un joueur possède : selon son rôle, et Royal s'il a sa preuve de 10 victoires (ou s'il peut la donner). */
+/** Badges qu'un joueur possède : selon son rôle, et Royal s'il a sa preuve de 100 victoires (ou s'il peut la donner). */
 export function ownedBadges({ role, royal }) {
   const out = [];
   if (role === 'fondateur') out.push('fondateur');
@@ -271,13 +271,20 @@ export async function badgeOf(uid) {
   return shownBadge(badge, role, !!proof);
 }
 
-/** Choisit le badge affiché en partie (null = aucun). Pour Royal, on joint la preuve : 10 victoires de son historique. */
+/** Choisit le badge affiché en partie (null = aucun). Pour Royal, on joint la preuve : 100 victoires de son historique,
+ *  rangées par date strictement croissante (c'est ce que vérifient les règles). */
 export async function chooseBadge(id) {
   if (!currentUser) return;
   const uid = currentUser.id;
   if (!id) return set(ref(db, `users/${uid}/badge`), null);
   if (id === 'royal') {
-    const keys = winKeys((await get(ref(db, `history/${uid}`))).val()).slice(0, ROYAL_WINS);
+    const hist = (await get(ref(db, `history/${uid}`))).val() || {};
+    const keys = [];
+    for (const k of winKeys(hist)) {
+      const prev = keys.length ? hist[keys[keys.length - 1]].date : -Infinity;
+      if (typeof hist[k].date === 'number' && hist[k].date > prev) keys.push(k);
+      if (keys.length === ROYAL_WINS) break;
+    }
     if (keys.length < ROYAL_WINS) throw new Error(`Il te faut ${ROYAL_WINS} victoires en ligne pour ce badge (tu en as ${keys.length}).`);
     return update(ref(db, `users/${uid}`), { royalProof: Object.fromEntries(keys.map((k, i) => ['p' + i, k])), badge: 'royal' });
   }

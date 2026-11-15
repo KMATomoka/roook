@@ -63,13 +63,17 @@ const AMI_OK = `(newData.child('game').isString() && newData.child('round').isNu
    || (newData.child('me').val() === 'b' && ${GH('black')}.val() === $uid && newData.child('opp').val() === ${GH('white')}.val())))`.replace(/\n\s*/g, ' ');
 // (Les parties contre Noa ne vont plus dans l'historique : elles ne comptent pas dans les statistiques.)
 
-// Badge Royal : il faut prouver 10 victoires en ligne. La preuve = 10 clés de l'historique du joueur (p0…p9),
-// toutes différentes, chacune pointant vers une partie entre amis GAGNÉE (l'historique est lui-même vérifié).
-const PROOF = Array.from({ length: 10 }, (_, i) => 'p' + i);
+// Badge Royal : il faut prouver 100 victoires en ligne. La preuve = 100 clés de l'historique du joueur (p0…p99),
+// chacune pointant vers une partie entre amis GAGNÉE (l'historique est lui-même vérifié), rangées par date
+// strictement croissante : elles sont donc toutes différentes (99 comparaisons au lieu de 4 950).
+// (ROYAL_N ne sert qu'aux tests : node scripts/rules.js avec ROYAL_N=3.)
+const ROYAL_N = Number(process.env.ROYAL_N) || 100;
+const PROOF = Array.from({ length: ROYAL_N }, (_, i) => 'p' + i);
 const WIN = (k) => `(root.child('history/' + $uid + '/' + ${k}).child('mode').val() === 'ami' && ((root.child('history/' + $uid + '/' + ${k}).child('me').val() === 'w' && root.child('history/' + $uid + '/' + ${k}).child('result').val() === '1-0') || (root.child('history/' + $uid + '/' + ${k}).child('me').val() === 'b' && root.child('history/' + $uid + '/' + ${k}).child('result').val() === '0-1')))`;
-const DISTINCT = [];
-for (let i = 0; i < 10; i++) for (let j = i + 1; j < 10; j++) DISTINCT.push(`newData.child('p${i}').val() !== newData.child('p${j}').val()`);
-const PROOF_OK = `newData.hasChildren([${PROOF.map((k) => `'${k}'`).join(', ')}]) && ${DISTINCT.join(' && ')}`;
+const DATE = (i) => `root.child('history/' + $uid + '/' + newData.child('p${i}').val() + '/date').val()`;
+const ORDERED = [];
+for (let i = 1; i < ROYAL_N; i++) ORDERED.push(`${DATE(i)} > ${DATE(i - 1)}`);
+const PROOF_OK = `newData.hasChildren([${PROOF.map((k) => `'${k}'`).join(', ')}]) && ${ORDERED.join(' && ')}`;
 
 const rules = {
   rules: {
@@ -88,10 +92,10 @@ const rules = {
         badge: {
           '.validate': `newData.isString() && ((newData.val() === 'fondateur' && root.child('roles/' + $uid).val() === 'fondateur') || (newData.val() === 'admin' && root.child('roles/' + $uid).val() === 'admin') || (newData.val() === 'royal' && newData.parent().child('royalProof').exists()))`,
         },
-        // Preuve du badge Royal (10 victoires différentes)
+        // Preuve du badge Royal (100 victoires différentes)
         royalProof: {
           '.validate': PROOF_OK,
-          $p: { '.validate': `$p.matches(/^p[0-9]$/) && newData.isString() && ${WIN('newData.val()')}` },
+          $p: { '.validate': `$p.matches(/^p[0-9]{1,2}$/) && newData.isString() && ${WIN('newData.val()')}` },
         },
       },
     },

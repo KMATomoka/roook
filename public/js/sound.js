@@ -345,9 +345,124 @@ function spaceMate(outcome) {
 }
 
 // Royal : garde les sons d'origine (avant Astrea « espace ») pour les coups, prises et échecs
+// --- Sons « Sakura » (Japon) : bois de shogi, sabre, taiko, koto, shakuhachi, cloche de temple -------
+/** Pièce de shogi claquée sur un plateau en bois de kaya : un « pachi » sec et clair. */
+function pachi(at = 0, { pitch = 1, vol = 1 } = {}) {
+  burst({ at, dur: 0.018, vol: 0.55 * vol, freq: 3400 * pitch, q: 5 });
+  burst({ at, dur: 0.04, vol: 0.28 * vol, type: 'lowpass', freq: 900 * pitch, q: 1 });
+  tone({ freq: 620 * pitch, endFreq: 520 * pitch, type: 'sine', at, dur: 0.06, vol: 0.12 * vol });
+}
+
+/** Taiko : grand tambour, coup grave et rond. */
+function taiko(at = 0, vol = 0.5, pitch = 1) {
+  tone({ freq: 120 * pitch, endFreq: 58 * pitch, at, dur: 0.55, vol, attack: 0.002 });
+  tone({ freq: 240 * pitch, endFreq: 110 * pitch, at, dur: 0.12, vol: vol * 0.3 });
+  burst({ at, dur: 0.12, vol: vol * 0.55, type: 'lowpass', freq: 500, endFreq: 150, q: 0.7 });
+}
+
+/** Koto : corde pincée, harmoniques qui s'éteignent vite, petit glissé vers la note. */
+function koto(freq, at = 0, vol = 0.09, dur = 1.4) {
+  tone({ freq: freq * 1.012, endFreq: freq, type: 'triangle', at, dur, vol, attack: 0.002 });
+  tone({ freq: freq * 2, type: 'sine', at, dur: dur * 0.5, vol: vol * 0.45, attack: 0.002 });
+  tone({ freq: freq * 3.01, type: 'sine', at, dur: dur * 0.25, vol: vol * 0.25, attack: 0.002 });
+  burst({ at, dur: 0.02, vol: vol * 1.2, freq: freq * 4, q: 4 });
+}
+
+/** Sabre : un souffle qui monte (la lame fend l'air), puis l'acier qui chante. */
+function katana(at = 0, vol = 1) {
+  burst({ at, dur: 0.16, vol: 0.22 * vol, type: 'bandpass', freq: 900, endFreq: 7000, q: 1.6 });
+  [[2760, 0.5], [4130, 0.35], [5530, 0.22]].forEach(([f, d], i) => tone({ freq: f, type: 'sine', at: at + 0.11, dur: d, vol: (0.05 / (i + 1)) * vol, attack: 0.002 }));
+}
+
+/** Shakuhachi : flûte de bambou, attaque soufflée et vibrato qui s'installe. */
+function shakuhachi(freq, at = 0, dur = 0.8, vol = 0.07, endFreq = null) {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + at;
+  const o = a.createOscillator();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(freq * 0.96, t);
+  o.frequency.exponentialRampToValueAtTime(freq, t + 0.12);
+  if (endFreq) {
+    o.frequency.setValueAtTime(freq, t + dur * 0.6);
+    o.frequency.exponentialRampToValueAtTime(endFreq, t + dur);
+  }
+  const lfo = a.createOscillator();
+  lfo.frequency.value = 5.2;
+  const depth = a.createGain();
+  depth.gain.setValueAtTime(0, t);
+  depth.gain.linearRampToValueAtTime(freq * 0.012, t + dur * 0.6);
+  lfo.connect(depth).connect(o.frequency);
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.14);
+  g.gain.setValueAtTime(vol, t + dur * 0.7);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(master);
+  o.start(t);
+  o.stop(t + dur + 0.05);
+  lfo.start(t);
+  lfo.stop(t + dur + 0.05);
+  burst({ at, dur: Math.min(0.5, dur * 0.6), vol: vol * 0.6, type: 'bandpass', freq: freq * 2, q: 2.5 }); // le souffle
+}
+
+/** Cloche de temple (bonshō) : grave, longue, aux harmoniques irrégulières. */
+function templeBell(at = 0, vol = 0.12) {
+  [[1, 4.5], [2.32, 3.2], [3.01, 2.4], [4.17, 1.6], [5.43, 1.1]].forEach(([m, d], i) => tone({ freq: 98 * m, type: 'sine', at, dur: d, vol: vol / (i + 1), attack: 0.004 }));
+  burst({ at, dur: 0.08, vol, type: 'lowpass', freq: 400, q: 0.7 });
+}
+
+const sakura = {
+  move: () => pachi(),
+  // Le sabre fend l'air au moment où l'éclair traverse la case, puis la pièce se pose
+  capture: () => {
+    katana(0);
+    pachi(0.11, { pitch: 0.9, vol: 1.1 });
+  },
+  castle: () => {
+    pachi(0);
+    pachi(0.12, { pitch: 0.92 });
+  },
+  promote: () => {
+    pachi(0);
+    [587.3, 659.3, 880, 987.8].forEach((f, i) => koto(f, 0.08 + i * 0.07, 0.07, 0.9));
+  },
+  // Échec (王手) : deux coups de taiko
+  check: () => {
+    taiko(0.04, 0.45);
+    pachi(0.04, { pitch: 1.4, vol: 0.6 });
+    taiko(0.2, 0.3, 1.08);
+  },
+};
+
+/**
+ * Échec et mat « Hanami ». Victoire : taiko qui s'accélère pendant que le roi tremble, coup de sabre,
+ * arpège de koto (gamme yo, lumineuse), coup de tambour quand le sceau 勝 s'appose.
+ * Défaite : cloche de temple, shakuhachi qui descend (gamme in, mélancolique), sceau 負.
+ */
+function sakuraMate(outcome) {
+  if (outcome === 'loss') {
+    templeBell(0.15, 0.13);
+    shakuhachi(440, 0.7, 0.7, 0.06);
+    shakuhachi(349.2, 1.35, 0.6, 0.06);
+    shakuhachi(329.6, 1.9, 1.7, 0.065, 311.1);
+    taiko(1.62, 0.35, 0.85); // le sceau
+    templeBell(2.8, 0.07);
+    return;
+  }
+  [0.14, 0.4, 0.58, 0.7, 0.78].forEach((t, i) => taiko(t, 0.22 + i * 0.06));
+  katana(0.8, 1.3);
+  taiko(0.92, 0.7, 0.9);
+  [293.7, 329.6, 392, 440, 493.9, 587.3, 659.3, 784].forEach((f, i) => koto(f, 1.05 + i * 0.075, 0.08, 1.6));
+  taiko(1.5, 0.6); // le sceau 勝
+  pachi(1.5, { pitch: 0.7, vol: 1.2 });
+  [587.3, 784, 880].forEach((f) => koto(f, 1.95, 0.06, 2.2));
+  shakuhachi(880, 2.0, 1.7, 0.045);
+}
+
 const royalSet = { move: () => tok(), capture, castle, promote, check };
-const SETS = { astrea: space, classic, royal: royalSet };
-const MATES = { astrea: spaceMate, classic: classicMate, royal: royalMate };
+const SETS = { astrea: space, classic, royal: royalSet, japon: sakura };
+const MATES = { astrea: spaceMate, classic: classicMate, royal: royalMate, japon: sakuraMate };
 
 /**
  * Son d'un coup (objet « verbose » de chess.js).

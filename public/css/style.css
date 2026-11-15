@@ -549,6 +549,22 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   --coord-on-light-shadow: 0 1px 0 rgba(255, 250, 235, 0.6);
   --board-shadow: 0 0 0 2px #d8b04c, 0 0 0 5px #2a170b, 0 0 0 6px rgba(227, 196, 106, 0.55), 0 18px 45px rgba(0, 0, 0, 0.55), 0 0 50px rgba(216, 176, 76, 0.16);
 }
+/* Pack Sakura : papier washi et indigo (ai), vagues seigaiha discrètes sur les cases sombres, cadre de laque vermillon */
+.board-japon {
+  --sq-light: #f0e4cc;
+  --sq-dark: #4a5a7e;
+  --sq-last: rgba(226, 92, 64, 0.42);
+  --sq-selected: rgba(240, 190, 90, 0.58);
+  --coord-on-dark: #f6efe0;
+  --coord-on-dark-shadow: 0 1px 2px rgba(10, 16, 34, 0.6);
+  --coord-on-light: #3a4664;
+  --coord-on-light-shadow: 0 1px 0 rgba(255, 252, 244, 0.6);
+  --board-shadow: 0 0 0 3px #c8372d, 0 0 0 6px #1b1414, 0 0 0 7px rgba(200, 55, 45, 0.45), 0 18px 45px rgba(0, 0, 0, 0.55), 0 0 50px rgba(200, 55, 45, 0.14);
+}
+.board-japon cg-board {
+  background-image: url('../img/seigaiha.svg'), conic-gradient(var(--sq-dark) 0 25%, transparent 0 50%, var(--sq-dark) 0 75%, transparent 0);
+  background-size: 25% 25%, 25% 25%;
+}
 /* Échiquier violet (remplace le thème bois) : damier en conic-gradient, a8 toujours clair */
 cg-board {
   background-color: var(--sq-light);
@@ -790,6 +806,21 @@ body::after {
   --p-bR: url('../img/pieces-royal/bR.svg');
   --p-bQ: url('../img/pieces-royal/bQ.svg');
   --p-bK: url('../img/pieces-royal/bK.svg');
+}
+/* Pack Sakura : ivoire et encre (Blancs), laque noire et or (Noirs), générées par scripts/pieces-japon.js */
+.pieces-japon {
+  --p-wP: url('../img/pieces-japon/wP.svg');
+  --p-wN: url('../img/pieces-japon/wN.svg');
+  --p-wB: url('../img/pieces-japon/wB.svg');
+  --p-wR: url('../img/pieces-japon/wR.svg');
+  --p-wQ: url('../img/pieces-japon/wQ.svg');
+  --p-wK: url('../img/pieces-japon/wK.svg');
+  --p-bP: url('../img/pieces-japon/bP.svg');
+  --p-bN: url('../img/pieces-japon/bN.svg');
+  --p-bB: url('../img/pieces-japon/bB.svg');
+  --p-bR: url('../img/pieces-japon/bR.svg');
+  --p-bQ: url('../img/pieces-japon/bQ.svg');
+  --p-bK: url('../img/pieces-japon/bK.svg');
 }
 .cg-wrap piece.pawn.white { background-image: var(--p-wP); }
 .cg-wrap piece.knight.white { background-image: var(--p-wN); }
@@ -1470,3 +1501,55 @@ a.person-link:hover { color: var(--accent-soft); }
 .pf-badge-state { font-size: 0.74rem; color: var(--muted); font-weight: 600; }
 .pf-badge-opt.on .pf-badge-state { color: var(--c); }
 .pf-badge-lock { font-size: 0.74rem; color: #f0d88f; }
+
+/* ==========================================================================
+   Pack Sakura (Japon) : effets de js/fx.js (japonCaptureFx, japonCheckFx, japonMateFx)
+   ========================================================================== */
+.fx-petal {
+  position: absolute; z-index: 3; will-change: transform, opacity;
+  border-radius: 85% 15% 85% 15% / 70% 30% 70% 30%;
+  box-shadow: inset -1px -1px 0 rgba(200, 80, 110, 0.35), 0 1px 2px rgba(80, 20, 40, 0.25);
+}
+.fx-slash {
+  position: absolute; z-index: 4; border-radius: 99px; will-change: transform, opacity, clip-path;
+  background: linear-gradient(90deg, transparent, #fff 18%, #fff 82%, transparent);
+  box-shadow: 0 0 6px 1px rgba(255, 255, 255, 0.9), 0 0 16px 4px rgba(255, 140, 120, 0.55);
+}
+.fx-japon-vignette { background: radial-gradient(ellipse at center, rgba(40, 10, 20, 0.18) 30%, rgba(26, 8, 16, 0.75) 100%); }
+.fx-japon-vignette.loss { background: radial-gradient(ellipse at center, rgba(10, 10, 12, 0.2) 30%, rgba(6, 6, 8, 0.82) 100%); }
+.fx-japon-sun {
+  position: absolute; border-radius: 50%; opacity: 0; mix-blend-mode: multiply; pointer-events: none;
+  background: radial-gradient(circle, #e8402c 0%, #e0402c 60%, rgba(224, 64, 44, 0.55) 67%, rgba(224, 64, 44, 0) 71%);
+}
+.fx-japon-sun.loss { background: radial-gradient(circle, #9a3a30 0%, #8a3328 60%, rgba(138, 51, 40, 0.5) 67%, rgba(138, 51, 40, 0) 71%); }
+.fx-ink {
+  position: absolute; border-radius: 47% 53% 44% 56% / 55% 45% 58% 42%; opacity: 0; mix-blend-mode: multiply;
+  background: radial-gradient(circle at 45% 45%, #0d0a0b 0%, #17110f 55%, rgba(23, 17, 15, 0.7) 68%, rgba(23, 17, 15, 0) 72%);
+  filter: blur(1.5px);
+}
+.fx-check-tag.japon {
+  display: flex; flex-direction: column; align-items: center; gap: 0.1em; padding: 0.3em 0.45em 0.25em;
+  border-radius: 0.2em; background: #c8372d; color: #fff6ec; text-transform: none; letter-spacing: 0;
+  box-shadow: inset 0 0 0 0.08em rgba(255, 240, 225, 0.55), 0 6px 18px rgba(120, 20, 10, 0.55);
+}
+.fx-check-tag.japon b { font: 400 1.25em/1 'Yuji Syuku', serif; letter-spacing: 0.05em; }
+.fx-check-tag.japon i { font: 700 0.5em/1 var(--font); font-style: normal; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.9; }
+.fx-mate-banner.japon { gap: 0.2em; }
+.fx-mate-banner.japon .hanko {
+  display: grid; place-items: center; width: 1.45em; height: 1.45em; margin-bottom: 0.08em;
+  font: 400 1.05em/1 'Yuji Syuku', serif; color: #fff6ec; background: #c8372d; border-radius: 0.14em;
+  box-shadow: inset 0 0 0 0.05em rgba(255, 238, 220, 0.6), inset 0 0 0.25em rgba(90, 10, 5, 0.6), 0 10px 30px rgba(0, 0, 0, 0.55);
+}
+.fx-mate-banner.japon.loss .hanko { background: #2a2321; color: #e8ddcb; box-shadow: inset 0 0 0 0.05em rgba(232, 221, 203, 0.4), 0 10px 30px rgba(0, 0, 0, 0.6); }
+.fx-mate-banner.japon .t {
+  color: #fff8ee; -webkit-background-clip: border-box; background-clip: border-box; animation: none;
+  background: linear-gradient(90deg, transparent, rgba(14, 9, 11, 0.82) 14%, rgba(14, 9, 11, 0.82) 86%, transparent);
+  padding: 0.12em 0.9em 0.16em;
+  font: 400 0.62em/1.1 'Yuji Syuku', serif; text-transform: none; letter-spacing: 0.04em;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.45)) drop-shadow(0 8px 24px rgba(0, 0, 0, 0.7));
+}
+.fx-mate-banner.japon .s, .fx-mate-banner.japon.win .s, .fx-mate-banner.japon.loss .s {
+  font: 400 0.26em 'Yuji Syuku', serif; letter-spacing: 0.25em; color: #ffece4; text-transform: none;
+  background: rgba(24, 14, 16, 0.72); border: 1px solid rgba(232, 85, 63, 0.65); border-radius: 0.2em;
+}
+.fx-mate-banner.japon.loss .s { border-color: rgba(232, 221, 203, 0.35); color: #e8ddcb; }

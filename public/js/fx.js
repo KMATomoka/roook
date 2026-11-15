@@ -1,7 +1,7 @@
 // Effets visuels des coups : prises, échec, échec et mat.
 // Tout passe par l'API Web Animations : rien ne reste dans la page une fois l'effet terminé.
-// L'inventaire (js/theme.js) choisit la variante : « astrea » (éclats, confettis), « classic » (sobre)
-// ou « royal » (comme Astrea, avec des particules dorées pour les pièces noires et crème pour les blanches).
+// L'inventaire (js/theme.js) choisit la variante : « astrea » (espace), « classic » (sobre), « royal » (couronnement,
+// particules d'or) ou « japon » (Sakura : coup de sabre, pétales de cerisier, soleil rouge, sceaux 勝 / 負).
 import { playSound } from './sound.js';
 import { getEquip } from './theme.js';
 
@@ -712,6 +712,282 @@ export function createFx(frame, getOrientation) {
   }
 
   // -------------------------------------------------------------------------
+  // Sakura (Japon) : coup de sabre (iaï), pétales de cerisier, soleil rouge, encre, sceaux 勝 / 負
+  // -------------------------------------------------------------------------
+  const SAKURA = ['#ffd3de', '#ffbccd', '#ffc8d5', '#fde6ec', '#f7a3bb'];
+  const WILTED = ['#cdb7b4', '#b9a19d', '#a99390', '#d9cbc6'];
+
+  /** Pétales qui jaillissent d'un point puis retombent en se balançant. */
+  function petals(px, py, s, { count = 12, spread = 1, delay = 0, colors = SAKURA, rise = 0.7, fall = 2.4, dur = [1500, 2600] } = {}) {
+    if (reduceMotion()) return;
+    for (let i = 0; i < count; i++) {
+      const w = s * rand(0.1, 0.17);
+      const d = el(over, 'fx-petal', { left: `${px}px`, top: `${py}px`, width: `${w}px`, height: `${w * 0.8}px`, background: pick(colors) });
+      const ang = rand(0, Math.PI * 2);
+      const dist = s * rand(0.35, 1.1) * spread;
+      const dx = Math.cos(ang) * dist;
+      const dy = Math.sin(ang) * dist * 0.7 - s * rise * rand(0.3, 1);
+      const sway = s * rand(0.25, 0.6) * (Math.random() < 0.5 ? -1 : 1);
+      const down = s * fall * rand(0.6, 1.1);
+      const r0 = rand(0, 360);
+      const flip = rand(360, 900);
+      once(
+        d,
+        [
+          { transform: `translate(-50%,-50%) rotate(${r0}deg) rotateX(0deg) scale(.3)`, opacity: 0 },
+          { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(${r0 + 90}deg) rotateX(${flip * 0.25}deg) scale(1)`, opacity: 1, offset: 0.22 },
+          { transform: `translate(calc(-50% + ${dx + sway}px), calc(-50% + ${dy + down * 0.5}px)) rotate(${r0 + 180}deg) rotateX(${flip * 0.6}deg) scale(1)`, opacity: 1, offset: 0.6 },
+          { transform: `translate(calc(-50% + ${dx - sway * 0.4}px), calc(-50% + ${dy + down}px)) rotate(${r0 + 260}deg) rotateX(${flip}deg) scale(.9)`, opacity: 0 },
+        ],
+        { duration: rand(dur[0], dur[1]), delay: delay + rand(0, 160), easing: 'cubic-bezier(.2,.6,.4,1)', fill: 'backwards' },
+      );
+    }
+  }
+
+  /** Tempête de pétales poussée par le vent, de gauche à droite, sur tout l'échiquier. */
+  function petalStorm(gen, { count = 60, duration = 4200, delay = 0, colors = SAKURA, slow = 1 } = {}) {
+    if (reduceMotion()) return;
+    const W = frame.clientWidth;
+    const H = frame.clientHeight;
+    const s = W / 8;
+    for (let i = 0; i < count; i++) {
+      const start = delay + (i / count) * duration * 0.75 + rand(0, 200);
+      setTimeout(() => {
+        if (gen !== generation) return;
+        const w = s * rand(0.1, 0.18);
+        const x0 = rand(-0.15, 0.75) * W;
+        const y0 = -s * rand(0.2, 0.8);
+        const d = el(over, 'fx-petal', { left: `${x0}px`, top: `${y0}px`, width: `${w}px`, height: `${w * 0.8}px`, background: pick(colors) });
+        const tx = W * rand(0.35, 0.8);
+        const ty = H + s;
+        const sway = s * rand(0.4, 0.9);
+        const r0 = rand(0, 360);
+        const flip = rand(540, 1260);
+        once(
+          d,
+          [
+            { transform: `translate(-50%,-50%) rotate(${r0}deg) rotateX(0deg)`, opacity: 0 },
+            { transform: `translate(calc(-50% + ${tx * 0.3 + sway}px), calc(-50% + ${ty * 0.3}px)) rotate(${r0 + 120}deg) rotateX(${flip * 0.3}deg)`, opacity: 1, offset: 0.25 },
+            { transform: `translate(calc(-50% + ${tx * 0.65 - sway}px), calc(-50% + ${ty * 0.62}px)) rotate(${r0 + 230}deg) rotateX(${flip * 0.65}deg)`, opacity: 1, offset: 0.62 },
+            { transform: `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) rotate(${r0 + 330}deg) rotateX(${flip}deg)`, opacity: 0 },
+          ],
+          { duration: rand(2600, 4000) * slow, easing: 'linear' },
+        );
+      }, start);
+    }
+  }
+
+  /** Éclair de sabre : une ligne de lumière qui se trace en diagonale à travers un point. */
+  function slash(x, y, len, angle, { delay = 0, duration = 240, thick = 3 } = {}) {
+    const d = el(over, 'fx-slash', { left: `${x}px`, top: `${y}px`, width: `${len}px`, height: `${thick}px` });
+    once(
+      d,
+      [
+        { transform: `translate(-50%,-50%) rotate(${angle}deg)`, clipPath: 'inset(0 100% 0 0)', opacity: 1 },
+        { transform: `translate(-50%,-50%) rotate(${angle}deg)`, clipPath: 'inset(0 0 0 0)', opacity: 1, offset: 0.35 },
+        { transform: `translate(-50%,-50%) rotate(${angle}deg) scaleY(.4)`, clipPath: 'inset(0 0 0 0)', opacity: 0 },
+      ],
+      { duration, delay, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'backwards' },
+    );
+  }
+
+  /** Une pièce tranchée en deux le long d'une diagonale : les deux moitiés glissent et tombent. */
+  function splitPiece(layer, x, y, s, role, color, cut, { delay = 0, duration = 750, push = 0.32, drop = 0.35, dim = false } = {}) {
+    // cut '/' : moitiés haut-gauche et bas-droite ; '\\' : haut-droite et bas-gauche
+    const halves = cut === '/'
+      ? [['polygon(0 0, 100% 0, 0 100%)', -1, -1], ['polygon(100% 0, 100% 100%, 0 100%)', 1, 1]]
+      : [['polygon(0 0, 100% 0, 100% 100%)', 1, -1], ['polygon(0 0, 0 100%, 100% 100%)', -1, 1]];
+    for (const [clip, sx, sy] of halves) {
+      const g = el(layer, 'cg-wrap fx-ghost', { left: `${x - s / 2}px`, top: `${y - s / 2}px`, width: `${s}px`, height: `${s}px`, clipPath: clip }, `<piece class="${role} ${color}"></piece>`);
+      const px = sx * s * push * 0.7;
+      const py = sy * s * push * 0.7;
+      once(
+        g,
+        [
+          { transform: 'translate(0,0) rotate(0deg)', opacity: 1, filter: 'none' },
+          { transform: 'translate(0,0) rotate(0deg)', opacity: 1, filter: 'brightness(1.6)', offset: 0.08 },
+          { transform: `translate(${px * 0.6}px, ${py * 0.6}px) rotate(${sx * 6}deg)`, opacity: 1, filter: dim ? 'grayscale(.6)' : 'none', offset: 0.4 },
+          { transform: `translate(${px}px, ${py + s * drop}px) rotate(${sx * 14}deg)`, opacity: 0, filter: dim ? 'grayscale(1) brightness(.6)' : 'none' },
+        ],
+        { duration, delay, easing: 'cubic-bezier(.3,.2,.4,1)', fill: 'backwards' },
+      );
+    }
+  }
+
+  /** Prise « Iaï » : un éclair de sabre, la pièce prise tranchée en deux, quelques pétales. */
+  function japonCaptureFx(move) {
+    const sq = move.flags.includes('e') ? move.to[0] + move.from[1] : move.to;
+    const victim = move.color === 'w' ? 'b' : 'w';
+    const { x, y, s } = at(sq);
+    const value = VALUE[move.captured] || 1;
+    const impact = 120;
+    const cut = Math.random() < 0.5 ? '/' : '\\';
+    if (reduceMotion()) {
+      splitPiece(under, x, y, s, ROLE[move.captured], COLOR[victim], cut, { duration: 300, push: 0, drop: 0 });
+      return;
+    }
+    slash(x, y, s * (1.5 + value * 0.04), cut === '/' ? -45 : 45, { delay: impact, thick: Math.max(2, s * 0.035) });
+    splitPiece(under, x, y, s, ROLE[move.captured], COLOR[victim], cut, { delay: impact + 40, duration: 680 + value * 20 });
+    petals(x, y, s, { count: 4 + value * 2, delay: impact + 60, spread: 0.8 + value * 0.04 });
+    if (value >= 5) ring(sq, { color: 'rgba(232,85,63,.85)', delay: impact + 40, size: 1.8, width: 0.03, duration: 620 });
+    setTimeout(() => shake(value >= 9 ? 3.5 : value >= 5 ? 2.2 : 0, 260), impact);
+  }
+
+  /** Échec « Sakura » : coup de taiko (onde rouge) et sceau 王手 (« échec » au shogi). */
+  function japonCheckFx(kingSq) {
+    const delay = 120;
+    ring(kingSq, { color: 'rgba(232,85,63,.95)', delay, size: 1.6, width: 0.06, duration: 560 });
+    ring(kingSq, { color: 'rgba(232,85,63,.6)', delay: delay + 220, size: 2.1, width: 0.03, duration: 620 });
+    setTimeout(() => shake(2.4, 240), delay);
+    const { x, y, s } = at(kingSq);
+    const above = y - s * 0.75 > s * 0.3;
+    const tag = el(over, 'fx-check-tag japon', { left: `${Math.min(Math.max(x, s * 0.9), frame.clientWidth - s * 0.9)}px`, top: `${above ? y - s * 0.74 : y + s * 0.74}px`, fontSize: `${Math.max(12, s * 0.24)}px` }, '<b>王手</b><i>échec</i>');
+    once(
+      tag,
+      [
+        { transform: 'translate(-50%,-50%) scale(1.8) rotate(-10deg)', opacity: 0 },
+        { transform: 'translate(-50%,-50%) scale(.95) rotate(-4deg)', opacity: 1, offset: 0.1 },
+        { transform: 'translate(-50%,-50%) scale(1) rotate(-4deg)', opacity: 1, offset: 0.16 },
+        { transform: 'translate(-50%,-50%) scale(1) rotate(-4deg)', opacity: 1, offset: 0.8 },
+        { transform: 'translate(-50%,-50%) scale(1) rotate(-4deg)', opacity: 0 },
+      ],
+      { duration: 1400, delay, easing: 'ease-out', fill: 'backwards' },
+    );
+  }
+
+  /** Sceau rouge (hanko) qu'on appose : 勝 la victoire, 負 la défaite. */
+  function hankoBanner(outcome, loser, W, calm) {
+    const lose = outcome === 'loss';
+    const sub = outcome === 'win' ? 'Victoire' : lose ? 'Défaite' : `${loser === 'w' ? 'Les Noirs' : 'Les Blancs'} l’emportent`;
+    const banner = el(over, 'fx-mate-banner japon ' + outcome, { fontSize: `${Math.max(24, W * 0.09)}px` },
+      `<div class="hanko">${lose ? '負' : '勝'}</div><div class="t">Échec et mat</div><div class="s">${sub}</div>`);
+    const [hanko, t, s] = banner.children;
+    hanko.animate(
+      calm
+        ? [{ opacity: 0 }, { opacity: 1 }]
+        : [
+            { transform: 'scale(2.6) rotate(-16deg)', opacity: 0 },
+            { transform: 'scale(.92) rotate(-6deg)', opacity: 1, offset: 0.55 },
+            { transform: 'scale(1) rotate(-6deg)', opacity: 1 },
+          ],
+      { duration: calm ? 300 : 420, easing: 'cubic-bezier(.5,0,.7,1)', fill: 'both' },
+    );
+    if (!calm) setTimeout(() => shake(4, 260), 230);
+    [t, s].forEach((p, i) =>
+      p.animate([{ opacity: 0, transform: 'translateY(14%)', filter: 'blur(5px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' }], {
+        duration: calm ? 300 : 900, delay: calm ? 0 : 380 + i * 200, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'both',
+      }),
+    );
+    return banner;
+  }
+
+  /**
+   * Mat « Hanami ».
+   * Victoire : le roi vaincu tremble, un coup de sabre le tranche en deux, un soleil rouge se lève sous une
+   * tempête de pétales, et le sceau 勝 s'appose. Défaite : ton roi se dissout dans une tache d'encre,
+   * le soleil se couche, des pétales fanés tombent lentement, sceau 負.
+   */
+  async function japonMateFx(move, kingSq, loser, outcome, gen, winnerSq = null) {
+    const { x, y, s } = at(kingSq);
+    const W = frame.clientWidth;
+    const H = frame.clientHeight;
+    const calm = reduceMotion();
+    await wait(140);
+    if (gen !== generation) return;
+    frame.classList.add('mated-' + loser);
+    const vignette = el(over, 'fx-vignette fx-japon-vignette' + (outcome === 'loss' ? ' loss' : ''));
+    vignette.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1000, fill: 'forwards' });
+    const sun = el(under, 'fx-japon-sun' + (outcome === 'loss' ? ' loss' : ''), { left: `${W / 2}px`, top: `${H / 2}px`, width: `${W * 0.6}px`, height: `${W * 0.6}px` });
+    let king = null;
+
+    if (outcome !== 'loss') {
+      // Le roi vaincu tremble, puis il est tranché
+      king = el(over, 'cg-wrap fx-king', { left: `${x - s / 2}px`, top: `${y - s / 2}px`, width: `${s}px`, height: `${s}px` }, `<piece class="king ${COLOR[loser]}"></piece>`);
+      if (!calm) {
+        const tremble = [];
+        for (let i = 0; i <= 10; i++) tremble.push({ transform: i === 10 ? 'none' : `translateX(${(i % 2 ? 1 : -1) * s * 0.025}px)` });
+        king.animate(tremble, { duration: 650, easing: 'linear' });
+      }
+      setTimeout(() => {
+        if (gen !== generation) return;
+        const cut = Math.random() < 0.5 ? '/' : '\\';
+        if (!calm) {
+          const flash = el(over, 'fx-screen-flash');
+          once(flash, [{ opacity: 0 }, { opacity: 0.45, offset: 0.12 }, { opacity: 0 }], { duration: 420, easing: 'ease-out' });
+          slash(x, y, s * 3.2, cut === '/' ? -45 : 45, { duration: 380, thick: Math.max(3, s * 0.05) });
+          shake(6, 380);
+        }
+        king.remove();
+        splitPiece(over, x, y, s, 'king', COLOR[loser], cut, { duration: calm ? 400 : 1500, push: calm ? 0 : 0.5, drop: calm ? 0 : 0.7, dim: true });
+        petals(x, y, s, { count: calm ? 0 : 26, spread: 1.6, rise: 1, delay: 60 });
+        // Le soleil se lève
+        sun.animate(
+          [
+            { transform: 'translate(-50%,-30%) scale(.7)', opacity: 0 },
+            { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+          ],
+          { duration: calm ? 300 : 1600, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' },
+        );
+        if (winnerSq) {
+          ring(winnerSq, { color: 'rgba(255,214,222,.95)', delay: 500, size: 2.4, width: 0.035, duration: 1100 });
+          const w = at(winnerSq);
+          setTimeout(() => gen === generation && petals(w.x, w.y, w.s, { count: calm ? 0 : 16, spread: 1.3, rise: 1.4 }), 500);
+        }
+        petalStorm(gen, { count: calm ? 0 : 70, duration: 4200, delay: 300 });
+      }, calm ? 0 : 760);
+    } else {
+      // Défaite : ton roi se dissout dans une tache d'encre qui s'étend
+      king = el(over, 'cg-wrap fx-king', { left: `${x - s / 2}px`, top: `${y - s / 2}px`, width: `${s}px`, height: `${s}px` }, `<piece class="king ${COLOR[loser]}"></piece>`);
+      for (let i = 0; i < (calm ? 1 : 7); i++) {
+        const r = s * (i === 0 ? 1.5 : rand(0.5, 1.1));
+        const ox = i === 0 ? 0 : rand(-1, 1) * s * 0.9;
+        const oy = i === 0 ? 0 : rand(-1, 1) * s * 0.9;
+        const blot = el(under, 'fx-ink', { left: `${x + ox}px`, top: `${y + oy}px`, width: `${r * 2}px`, height: `${r * 2}px` });
+        blot.animate(
+          [
+            { transform: 'translate(-50%,-50%) scale(.05)', opacity: 0 },
+            { transform: 'translate(-50%,-50%) scale(.7)', opacity: 0.9, offset: 0.3 },
+            { transform: 'translate(-50%,-50%) scale(1)', opacity: 0.85 },
+          ],
+          { duration: calm ? 400 : 1900, delay: calm ? 0 : 200 + i * 160, easing: 'cubic-bezier(.15,.7,.3,1)', fill: 'both' },
+        );
+      }
+      king.animate(
+        calm
+          ? [{ filter: 'none' }, { filter: 'grayscale(1) brightness(.5)', opacity: 0.5 }]
+          : [
+              { transform: 'translateY(0) scale(1)', filter: 'none', opacity: 1 },
+              { transform: 'translateY(4%) scale(.97)', filter: 'grayscale(.8) brightness(.6) blur(.5px)', opacity: 0.9, offset: 0.45 },
+              { transform: 'translateY(14%) scale(.9)', filter: 'grayscale(1) brightness(.3) blur(2.5px)', opacity: 0.15 },
+            ],
+        { duration: calm ? 500 : 2600, delay: calm ? 0 : 500, easing: 'cubic-bezier(.4,0,.3,1)', fill: 'forwards' },
+      );
+      // Le soleil se couche
+      sun.animate(
+        [
+          { transform: 'translate(-50%,-55%) scale(1)', opacity: 0 },
+          { transform: 'translate(-50%,-50%) scale(1)', opacity: 0.8, offset: 0.25 },
+          { transform: 'translate(-50%,-5%) scale(.95)', opacity: 0 },
+        ],
+        { duration: calm ? 400 : 4200, delay: calm ? 0 : 300, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'forwards' },
+      );
+      petalStorm(gen, { count: calm ? 0 : 26, duration: 4600, delay: 600, colors: WILTED, slow: 1.5 });
+    }
+
+    // Le sceau
+    setTimeout(() => {
+      if (gen !== generation) return;
+      const banner = hankoBanner(outcome, loser, W, calm);
+      setTimeout(() => {
+        if (gen !== generation) return;
+        once(banner, [{ opacity: 1 }, { opacity: 0 }], { duration: 900, fill: 'forwards' });
+        once(vignette, [{ opacity: 1 }, { opacity: 0 }], { duration: 1100, fill: 'forwards' });
+        once(sun, [{ opacity: getComputedStyle(sun).opacity }, { opacity: 0 }], { duration: 1100, fill: 'forwards' });
+      }, 5400);
+    }, calm ? 300 : outcome === 'loss' ? 1500 : 1350);
+  }
+
+  // -------------------------------------------------------------------------
   // API
   // -------------------------------------------------------------------------
   function kingSquare(chess, color) {
@@ -740,15 +1016,17 @@ export function createFx(frame, getOrientation) {
       if (move.captured) {
         if (eq.capture === 'classic') classicCaptureFx(move);
         else if (eq.capture === 'royal') captureFx(move, true); // l'ancienne prise (éclats) avec les particules d'or
+        else if (eq.capture === 'japon') japonCaptureFx(move);
         else spaceCaptureFx(move);
       }
       const kSq = move.san.includes('+') || mated ? kingSquare(chess, loser) : null;
       if (mated && kSq) {
         if (classicEnd) classicMateFx(move, kSq, loser, outcome, gen);
         else if (eq.endAnim === 'royal') royalMateFx(move, kSq, kingSquare(chess, loser === 'w' ? 'b' : 'w'), loser, outcome, gen);
+        else if (eq.endAnim === 'japon') japonMateFx(move, kSq, loser, outcome, gen, kingSquare(chess, loser === 'w' ? 'b' : 'w'));
         else spaceMateFx(move, kSq, loser, outcome, gen, kingSquare(chess, loser === 'w' ? 'b' : 'w'));
       }
-      else if (kSq) (classicEnd ? classicCheckFx : checkFx)(kSq);
+      else if (kSq) (classicEnd ? classicCheckFx : eq.endAnim === 'japon' ? japonCheckFx : checkFx)(kSq);
     },
     /** Efface tout (nouvelle partie). */
     reset() {

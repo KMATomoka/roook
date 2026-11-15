@@ -160,7 +160,11 @@ function renderDetail(autoplay = false) {
   }
   $('#inv-d-extra').innerHTML = extra;
 
-  const demo = !isPack && DEMOS[tab] ? `<button type="button" class="btn btn-ghost" data-demo>▶ Revoir ${DEMOS[tab].label}</button>` : '';
+  const demo = isPack || !DEMOS[tab]
+    ? ''
+    : tab === 'endAnim'
+      ? '<div class="inv-demo-row"><button type="button" class="btn btn-ghost" data-demo="win">▶ Quand tu gagnes</button><button type="button" class="btn btn-ghost" data-demo="loss">▶ Quand tu perds</button></div>'
+      : `<button type="button" class="btn btn-ghost" data-demo="win">▶ Revoir ${DEMOS[tab].label}</button>`;
   const main = locked
     ? '<button type="button" class="btn inv-equip-btn" disabled>🔒 Verrouillé</button>'
     : on
@@ -178,7 +182,7 @@ function renderDetail(autoplay = false) {
 }
 
 /** Rejoue le coup de démonstration avec l'animation (et le son) de l'élément choisi. */
-function playDemo(delay = 300) {
+function playDemo(delay = 300, outcome = 'win') {
   const demo = DEMOS[tab];
   if (!demo) return;
   const chess = new Chess(demo.fen);
@@ -189,7 +193,8 @@ function playDemo(delay = 300) {
     const m = chess.move(demo.san);
     detail.ground.move(m.from, m.to);
     detail.ground.set({ fen: chess.fen(), lastMove: [m.from, m.to], check: chess.inCheck() ? (chess.turn() === 'w' ? 'white' : 'black') : false });
-    dFx.move(m, chess, { me: 'w', style: { [tab]: selected } });
+    // Les Blancs matent : en « défaite », on regarde la partie du côté des Noirs (celui qui est maté)
+    dFx.move(m, chess, { me: outcome === 'loss' ? 'b' : 'w', style: { [tab]: selected } });
   }, delay);
 }
 
@@ -217,7 +222,8 @@ $('main').addEventListener('click', async (e) => {
     if (matchMedia('(max-width: 860px)').matches) $('#inv-detail').scrollIntoView({ behavior: 'smooth', block: 'start' });
     return;
   }
-  if (e.target.closest('[data-demo]')) return playDemo();
+  const demoBtn = e.target.closest('[data-demo]');
+  if (demoBtn) return playDemo(300, demoBtn.dataset.demo);
   if (e.target.closest('[data-equip]')) {
     try {
       if (tab === 'packs') {

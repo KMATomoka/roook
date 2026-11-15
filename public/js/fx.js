@@ -455,10 +455,12 @@ export function createFx(frame, getOrientation) {
     // Sa couronne s'envole et va couronner le roi vainqueur
     if (!calm && winnerSq) {
       const w = at(winnerSq);
-      const cw = s * 0.72;
-      const crown = el(over, 'fx-crown', { left: `${x}px`, top: `${y - s * 0.62}px`, width: `${cw}px`, height: `${cw * 0.72}px` }, crownSvg());
+      // Couronne posée SUR la tête du roi vainqueur (elle recouvre le haut de la pièce, comme portée)
+      const cw = s * 0.44;
+      const HEAD = 0.38; // centre de la couronne, au-dessus du centre de la case (en fraction de case)
+      const crown = el(over, 'fx-crown', { left: `${x}px`, top: `${y - s * HEAD}px`, width: `${cw}px`, height: `${cw * 0.72}px` }, crownSvg());
       const dx = w.x - x;
-      const dy = w.y - s * 0.66 - (y - s * 0.62);
+      const dy = w.y - y;
       const peak = -Math.max(s * 1.6, Math.abs(dx) * 0.35);
       crown.animate(
         [

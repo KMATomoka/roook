@@ -1372,3 +1372,4 @@ a.person-link:hover { color: var(--accent-soft); }
   font: 600 0.3em 'Cinzel', Georgia, serif; letter-spacing: 0.32em; text-transform: uppercase;
   background: none; backdrop-filter: none; padding: 0; color: #f7eed6; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
 }
+.inv-demo-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }

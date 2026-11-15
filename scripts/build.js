@@ -74,11 +74,21 @@ fs.writeFileSync(path.join(dist, 'version.json'), JSON.stringify({ v: version })
 const updater = `<script>
 (function () {
   var v = '${version}';
+  // Après une mise à jour, on retire le petit paramètre « maj » de l'adresse
+  try {
+    var here = new URL(location.href);
+    if (here.searchParams.has('maj')) { here.searchParams.delete('maj'); history.replaceState(history.state, '', here.toString()); }
+  } catch (e) {}
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
     if (!d || d.v === v) return;
     var key = 'roook-maj-' + d.v;
     try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch (e) { return; }
-    fetch(location.href, { cache: 'reload' }).then(function () { location.reload(); }, function () { location.reload(); });
+    // Recharge vers une adresse neuve (?maj=…) : le navigateur ne peut pas resservir l'ancienne page de son cache
+    try {
+      var u = new URL(location.href);
+      u.searchParams.set('maj', d.v);
+      location.replace(u.toString());
+    } catch (e) { location.reload(); }
   }).catch(function () {});
 })();
 </script>`;

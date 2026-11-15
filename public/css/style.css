@@ -551,7 +551,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 }
 /* Pack Sakura : rose sakura et indigo (ai) ; étoiles asanoha sur les cases roses, vagues seigaiha sur les indigo (scripts/damier-japon.js), cadre de laque vermillon */
 .board-japon {
-  --sq-light: #f8d3dc;
+  --sq-light: #fbe2e8;
   --sq-dark: #6683c4;
   --sq-last: rgba(246, 200, 96, 0.5);
   --sq-selected: rgba(255, 232, 140, 0.62);

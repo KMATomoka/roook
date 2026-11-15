@@ -2034,3 +2034,15 @@ body { padding-bottom: env(safe-area-inset-bottom); }
 .mm-search.found .mm-radar span:last-child { box-shadow: 0 0 0 2px var(--mint), 0 0 30px rgba(60, 242, 163, 0.45); }
 @keyframes mm-ping { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(1.35); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .mm-radar span { animation: none; } }
+
+/* Sûreté : rien ne peut élargir la page (sur téléphone, un élément trop large faisait dézoomer tout le site).
+   « clip » coupe ce qui dépasse sans créer de zone de défilement (les barres collées en haut restent collées). */
+body { overflow-x: clip; }
+@media (max-width: 760px) { .player-search.open .search-box { width: auto; max-width: calc(100vw - 32px); } }
+/* Diagnostic (?debug=largeur, js/compte.js) : ce qui dépasse à droite est entouré en rouge */
+.debug-wide { outline: 2px solid #ff3b5c !important; outline-offset: -2px; }
+.debug-wide-list {
+  position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 9999; max-height: 40vh; overflow: auto;
+  padding: 10px 12px; border-radius: 12px; background: #2a0d16; border: 1px solid #ff3b5c; color: #ffd9e0;
+  font: 600 12px/1.4 ui-monospace, monospace; white-space: pre-wrap;
+}

@@ -63,6 +63,34 @@ import {
   }
 }
 
+// Diagnostic : adresse avec ?debug=largeur → ce qui dépasse à droite de l'écran est entouré en rouge et listé
+if (new URLSearchParams(location.search).get('debug') === 'largeur') {
+  const scan = () => {
+    const w = document.documentElement.clientWidth;
+    const out = [];
+    for (const el of document.querySelectorAll('body *')) {
+      if (el.closest('.debug-wide-list')) continue;
+      const r = el.getBoundingClientRect();
+      if (!r.width || r.right <= w + 1) continue;
+      if (el.parentElement && el.parentElement.getBoundingClientRect().right > w + 1) continue; // seulement le plus haut
+      // dans une zone qui défile ou coupe (onglets, listes) : normal
+      let a = el.parentElement;
+      while (a && a !== document.body && !/(auto|scroll|hidden|clip)/.test(getComputedStyle(a).overflowX)) a = a.parentElement;
+      if (a && a !== document.body) continue;
+      el.classList.add('debug-wide');
+      const name = el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + [...el.classList].filter((c) => c !== 'debug-wide').map((c) => '.' + c).join('');
+      out.push(`${name} → dépasse de ${Math.round(r.right - w)} px (largeur ${Math.round(r.width)})`);
+    }
+    document.querySelector('.debug-wide-list')?.remove();
+    const box = document.createElement('div');
+    box.className = 'debug-wide-list';
+    const NL = String.fromCharCode(10);
+    box.textContent = `Écran : ${w} px` + NL + (out.length ? out.slice(0, 12).join(NL) : 'Rien ne dépasse.');
+    document.body.appendChild(box);
+  };
+  addEventListener('load', () => setTimeout(scan, 2500));
+}
+
 // Téléphone et tablette : le menu devient un menu déroulant, ouvert par le bouton ☰
 {
   const bar = document.querySelector('.topbar');

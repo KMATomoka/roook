@@ -179,7 +179,8 @@ export function serverGameToLocal(g) {
   return {
     id: g.id,
     date: g.date,
-    mode: 'ami',
+    mode: g.mode || 'ami',
+    level: g.level,
     white: g.white,
     black: g.black,
     me: g.me,
@@ -198,6 +199,8 @@ export function historyToGame(g) {
     white: g.white,
     black: g.black,
     me: g.me,
+    mode: g.mode || 'ami',
+    level: g.level,
     result: g.result,
     reason: g.reason,
     moves: g.moves ? g.moves.split(' ') : [],

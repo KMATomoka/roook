@@ -9,7 +9,7 @@ import { isMuted, setMuted, lowTimeBeep } from './sound.js';
 import { createFx } from './fx.js';
 import { attachArrows } from './arrows.js';
 import { scrollMoveIntoList } from './common.js';
-import { session, avatarOf } from './compte.js';
+import { session, avatarOf, saveAiGame, profileUrl } from './compte.js';
 import { gameSocket } from './online.js';
 const account = await session;
 
@@ -170,9 +170,16 @@ function playerHtml(c) {
     : '';
   const face = playerFace(c);
   return `${face}
-    <div class="pinfo"><div class="pname">${dot}${escapeHtml(names[c] || '…')} ${sub}</div>
+    <div class="pinfo"><div class="pname">${dot}${playerName(c)} ${sub}</div>
     <div class="captured cg-wrap">${capHtml}${adv > 0 ? `<span class="adv">+${adv}</span>` : ''}</div></div>
     ${clock}`;
+}
+
+/** Pseudo du joueur : lien vers son profil quand c'est un vrai compte. */
+function playerName(c) {
+  const name = escapeHtml(names[c] || '…');
+  const id = mode === 'ami' ? online.ids?.[c] : mode === 'ia' && c === myColor ? account.user?.id : null;
+  return id ? `<a href="${profileUrl(id)}" target="_blank" rel="noopener" title="Voir le profil">${name}</a>` : name;
 }
 
 /** Visage du joueur : Noa, la photo de profil, l'initiale du pseudo, ou un simple carré de couleur. */
@@ -422,7 +429,7 @@ function storeGame() {
   const tc = mode === 'ami' ? online.time : cadence;
   if (tc?.base) pgnChess.setHeader('TimeControl', `${tc.base / 1000}+${tc.inc / 1000}`);
   for (const m of history()) pgnChess.move(m);
-  saveGame({
+  const record = {
     id: gameId,
     date: Date.now(),
     mode,
@@ -435,7 +442,9 @@ function storeGame() {
     pgn: pgnChess.pgn() + ' ' + over.result,
     level: mode === 'ia' ? level.n : undefined,
     cadence: mode === 'ami' ? online.time : { base: cadence.base, inc: cadence.inc },
-  });
+  };
+  saveGame(record);
+  if (mode === 'ia') saveAiGame(record); // compte dans les statistiques du profil
 }
 
 function openReview() {

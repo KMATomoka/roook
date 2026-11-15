@@ -255,7 +255,7 @@ function renderAccount(user) {
     el.innerHTML = `
       ${SEARCH_HTML}
       ${user.role === 'admin' ? '<a class="icon-btn admin-link" href="admin.html" title="Administration" aria-label="Administration">🛡</a>' : ''}
-      <a class="account-chip" href="amis.html" title="Mes amis et mes parties">
+      <a class="account-chip" href="profil.html" title="Mon profil">
         ${picHtml(user.username, user.avatar, 'account-initial')}
         <span class="account-name">${escapeHtml(user.username)}</span>
         <span class="account-badge" hidden></span>
@@ -346,8 +346,10 @@ function setupSearch(box) {
           .map((p) => {
             const status = p.relation !== 'friend' ? '' : p.playing ? 'playing' : p.online ? 'online' : 'offline';
             return `<div class="search-row" data-id="${p.id}">
-              ${picHtml(p.username, p.avatar, 'person-avatar', status ? `<i class="presence ${status}"></i>` : '')}
-              <span class="search-name">${escapeHtml(p.username)}${p.relation === 'friend' ? ' <small>ami</small>' : ''}</span>
+              <a class="search-link" href="${profileUrl(p.id)}" title="Voir le profil de ${escapeHtml(p.username)}">
+                ${picHtml(p.username, p.avatar, 'person-avatar', status ? `<i class="presence ${status}"></i>` : '')}
+                <span class="search-name">${escapeHtml(p.username)}${p.relation === 'friend' ? ' <small>ami</small>' : ''}</span>
+              </a>
               ${action(p)}
             </div>`;
           })
@@ -382,7 +384,7 @@ function setupSearch(box) {
     }
     if (e.key === 'Enter') {
       e.preventDefault();
-      list.querySelector('.search-row button')?.click();
+      list.querySelector('.search-link')?.click(); // ouvre le profil du premier joueur trouvé
     }
   });
   box.querySelector('.search-toggle').addEventListener('click', () => (box.classList.contains('open') ? close() : openPlayerSearch()));
@@ -822,10 +824,79 @@ export async function myHistory(limit = 100) {
     .sort((a, b) => (b.date || 0) - (a.date || 0));
 }
 
-export async function historyGame(id) {
+/** Une partie de l'historique : la mienne, ou celle d'un autre joueur si son profil m'est visible. */
+export async function historyGame(id, uid = null) {
   if (!currentUser) return null;
-  const g = (await get(ref(db, `history/${currentUser.id}/${id}`))).val();
+  const g = (await get(ref(db, `history/${uid || currentUser.id}/${id}`))).val();
   return g ? { id, ...g } : null;
 }
 
+/** Range une partie contre Noa dans l'historique du compte (pour les statistiques du profil). */
+export function saveAiGame(g) {
+  if (!currentUser || !g.moves.length) return;
+  set(ref(db, `history/${currentUser.id}/${g.id}`), {
+    white: g.white,
+    black: g.black,
+    me: g.me,
+    mode: 'ia',
+    level: g.level,
+    result: g.result,
+    reason: g.reason || '',
+    moves: g.moves.join(' '),
+    base: g.cadence?.base || 0,
+    inc: g.cadence?.inc || 0,
+    date: serverTimestamp(),
+  }).catch(() => {});
+}
+
 export const me = () => currentUser;
+
+// ---------------------------------------------------------------------------
+// Profils
+// ---------------------------------------------------------------------------
+export const profileUrl = (uid) => `profil.html?id=${encodeURIComponent(uid)}`;
+
+/**
+ * Tout ce qu'il faut pour afficher le profil d'un joueur.
+ * Si le profil est privé (et qu'on n'est ni lui, ni son ami, ni admin), games et friends valent null.
+ */
+export async function loadProfile(uid) {
+  const val = (path) => get(ref(db, path)).then((s) => s.val());
+  const soft = (path) => val(path).catch(() => undefined); // undefined = lecture refusée (profil privé)
+  const user = await val(`users/${uid}`).catch(() => null);
+  if (!user || !user.username) return null;
+  const meId = currentUser?.id;
+  const [avatar, status, role, history, friends, rel] = await Promise.all([
+    avatarOf(uid),
+    soft(`status/${uid}`),
+    soft(`roles/${uid}`),
+    soft(`history/${uid}`),
+    soft(`friends/${uid}`),
+    meId && meId !== uid
+      ? Promise.all([soft(`friends/${meId}/${uid}`), soft(`sentRequests/${meId}/${uid}`), soft(`friendRequests/${meId}/${uid}`)])
+      : null,
+  ]);
+  const visible = history !== undefined;
+  const relation = !rel ? 'me' : rel[0] ? 'friend' : rel[1] ? 'sent' : rel[2] ? 'received' : 'none';
+  return {
+    id: uid,
+    username: user.username,
+    createdAt: user.createdAt || 0,
+    isPrivate: user.private === true,
+    avatar,
+    online: !!status?.connections,
+    playing: !!status?.playing,
+    lastSeen: status?.lastSeen || 0,
+    admin: role === 'admin',
+    relation,
+    visible,
+    games: visible ? Object.entries(history || {}).map(([id, g]) => ({ id, ...g })) : null,
+    friends: friends === undefined ? null : Object.entries(friends || {}).map(([id, f]) => ({ id, username: f.username })),
+  };
+}
+
+/** Rend mon profil privé (seuls mes amis voient mes statistiques et mes parties) ou public. */
+export async function setProfilePrivate(isPrivate) {
+  if (!currentUser) return;
+  await set(ref(db, `users/${currentUser.id}/private`), !!isPrivate);
+}

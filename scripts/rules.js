@@ -10,6 +10,8 @@ const BAN = "root.child('bans/' + auth.uid)";
 // Pas banni : aucun bannissement, ou un bannissement temporaire déjà terminé (until = 0 → définitif)
 const OK = `(!${BAN}.exists() || (${BAN}.child('until').val() > 0 && ${BAN}.child('until').val() < now))`;
 const OWNER = (v) => `auth.uid === ${v}`;
+// Profil visible : le sien, celui de quelqu'un qui n'est pas en privé, celui d'un ami, ou tout profil pour un admin
+const VISIBLE = (v) => `(auth.uid === ${v} || ${ADMIN} || root.child('users/' + ${v} + '/private').val() !== true || root.child('friends/' + ${v} + '/' + auth.uid).exists())`;
 
 const rules = {
   rules: {
@@ -18,7 +20,7 @@ const rules = {
       $uid: {
         '.read': ME,
         '.write': `${ME} && ${OWNER('$uid')} && ${OK}`,
-        '.validate': "newData.hasChildren(['username']) && newData.child('username').val().matches(/^[A-Za-z0-9_-]{3,20}$/)",
+        '.validate': "newData.hasChildren(['username']) && newData.child('username').val().matches(/^[A-Za-z0-9_-]{3,20}$/) && (!newData.child('private').exists() || newData.child('private').isBoolean())",
       },
     },
     // Adresse e-mail : visible par le joueur lui-même et par les admins seulement
@@ -92,7 +94,8 @@ const rules = {
     friends: {
       '.read': `${ME} && ${ADMIN}`,
       $uid: {
-        '.read': `${ME} && (auth.uid === $uid || ${ADMIN})`,
+        // Liste d'amis : visible sur le profil, sauf profil privé (alors seulement pour ses amis)
+        '.read': `${ME} && ${VISIBLE('$uid')}`,
         $fid: {
           '.write': `${ME} && ${OK} && $uid !== $fid && (!newData.exists() ? (auth.uid === $uid || auth.uid === $fid) : ((auth.uid === $uid && root.child('friendRequests/' + $uid + '/' + $fid).exists()) || (auth.uid === $fid && root.child('friendRequests/' + $fid + '/' + $uid).exists())))`,
           '.validate': "newData.hasChildren(['username', 'since'])",
@@ -136,7 +139,8 @@ const rules = {
     history: {
       '.read': `${ME} && ${ADMIN}`,
       $uid: {
-        '.read': `${ME} && (auth.uid === $uid || ${ADMIN})`,
+        // Parties et statistiques : visibles sur le profil, sauf profil privé (alors seulement pour ses amis)
+        '.read': `${ME} && ${VISIBLE('$uid')}`,
         '.write': `${ME} && auth.uid === $uid`,
       },
     },

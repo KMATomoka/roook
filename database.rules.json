@@ -5,7 +5,7 @@
       "$uid": {
         ".read": "auth != null",
         ".write": "auth != null && auth.uid === $uid && (!root.child('bans/' + auth.uid).exists() || (root.child('bans/' + auth.uid).child('until').val() > 0 && root.child('bans/' + auth.uid).child('until').val() < now))",
-        ".validate": "newData.hasChildren(['username']) && newData.child('username').val().matches(/^[A-Za-z0-9_-]{3,20}$/)"
+        ".validate": "newData.hasChildren(['username']) && newData.child('username').val().matches(/^[A-Za-z0-9_-]{3,20}$/) && (!newData.child('private').exists() || newData.child('private').isBoolean())"
       }
     },
     "private": {
@@ -74,7 +74,7 @@
     "friends": {
       ".read": "auth != null && root.child('roles/' + auth.uid).val() === 'admin'",
       "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || root.child('roles/' + auth.uid).val() === 'admin')",
+        ".read": "auth != null && (auth.uid === $uid || root.child('roles/' + auth.uid).val() === 'admin' || root.child('users/' + $uid + '/private').val() !== true || root.child('friends/' + $uid + '/' + auth.uid).exists())",
         "$fid": {
           ".write": "auth != null && (!root.child('bans/' + auth.uid).exists() || (root.child('bans/' + auth.uid).child('until').val() > 0 && root.child('bans/' + auth.uid).child('until').val() < now)) && $uid !== $fid && (!newData.exists() ? (auth.uid === $uid || auth.uid === $fid) : ((auth.uid === $uid && root.child('friendRequests/' + $uid + '/' + $fid).exists()) || (auth.uid === $fid && root.child('friendRequests/' + $fid + '/' + $uid).exists())))",
           ".validate": "newData.hasChildren(['username', 'since'])"
@@ -118,7 +118,7 @@
     "history": {
       ".read": "auth != null && root.child('roles/' + auth.uid).val() === 'admin'",
       "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || root.child('roles/' + auth.uid).val() === 'admin')",
+        ".read": "auth != null && (auth.uid === $uid || root.child('roles/' + auth.uid).val() === 'admin' || root.child('users/' + $uid + '/private').val() !== true || root.child('friends/' + $uid + '/' + auth.uid).exists())",
         ".write": "auth != null && auth.uid === $uid"
       }
     }

@@ -2,7 +2,7 @@
 // (bannir / débannir, retirer une photo, réinitialiser un mot de passe, nommer ou retirer un admin).
 // Les vraies protections sont dans les règles de la base : seul un admin peut lire ces données et agir.
 import { $, escapeHtml } from './common.js';
-import { session, toast, picHtml, isBanActive, banEndText } from './compte.js';
+import { session, toast, picHtml, isBanActive, banEndText, profileUrl } from './compte.js';
 import { db, ref, get, set, remove, onValue, serverTimestamp, serverNow, sendPasswordResetEmail, auth } from './fb.js';
 
 const { user, banned } = await session;
@@ -175,6 +175,7 @@ function details(m, me) {
   else if (!me && !m.admin) actions.push('<button class="btn btn-danger small" data-a="ban">⛔ Bannir…</button>');
   if (m.avatar) actions.push('<button class="btn btn-ghost small" data-a="photo">🖼 Retirer la photo</button>');
   if (m.email) actions.push('<button class="btn btn-ghost small" data-a="reset">✉ Envoyer un lien « nouveau mot de passe »</button>');
+  actions.unshift(`<a class="btn btn-ghost small" href="${profileUrl(m.id)}">👤 Voir le profil</a>`);
   if (!me) actions.push(m.admin ? '<button class="btn btn-ghost small" data-a="demote">Retirer le rôle admin</button>' : '<button class="btn btn-ghost small" data-a="promote">🛡 Nommer admin</button>');
   return `<div class="member-details">
     ${banInfo}

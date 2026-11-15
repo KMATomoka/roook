@@ -96,6 +96,8 @@ export function gameSocket(gameId, user) {
       white: game.names.w,
       black: game.names.b,
       me: color,
+      mode: 'ami',
+      opp: color === 'w' ? game.black : game.white,
       result: game.result,
       reason: game.reason || '',
       moves: verbose.map((m) => m.san).join(' '),

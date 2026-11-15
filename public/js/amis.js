@@ -1,6 +1,6 @@
 // Page « Mes amis » : demandes, défis, photo de profil, et l'historique des parties (Firebase).
 import { $, escapeHtml, gameRow, saveGame, getGame, serverGameToLocal as toLocal, historyToGame as fromHistory } from './common.js';
-import { session, challenge, toast, watchFriends, acceptFriend, declineFriend, cancelRequest, removeFriend, myHistory, picHtml, setAvatar, removeAvatar, myEmail, changeEmail } from './compte.js';
+import { session, challenge, toast, watchFriends, acceptFriend, declineFriend, cancelRequest, removeFriend, myHistory, picHtml, setAvatar, removeAvatar, myEmail, changeEmail, profileUrl } from './compte.js';
 
 const { user, banned } = await session;
 if (banned) {
@@ -95,7 +95,7 @@ function renderRequests({ incoming, outgoing }) {
   $('#incoming-card').hidden = !incoming.length;
   $('#incoming').innerHTML = incoming
     .map(
-      (u) => `<li class="person">${avatar(u.username)}<span class="person-name">${escapeHtml(u.username)}</span>
+      (u) => `<li class="person">${avatar(u.username)}<span class="person-name"><a class="person-link" href="${profileUrl(u.id)}">${escapeHtml(u.username)}</a></span>
         <span class="person-actions"><button class="btn btn-primary small" data-accept="${u.id}">Accepter</button>
         <button class="btn btn-ghost small" data-decline="${u.id}">Refuser</button></span></li>`,
     )
@@ -103,7 +103,7 @@ function renderRequests({ incoming, outgoing }) {
   $('#outgoing-card').hidden = !outgoing.length;
   $('#outgoing').innerHTML = outgoing
     .map(
-      (u) => `<li class="person">${avatar(u.username)}<span class="person-name">${escapeHtml(u.username)} <small class="muted">en attente</small></span>
+      (u) => `<li class="person">${avatar(u.username)}<span class="person-name"><a class="person-link" href="${profileUrl(u.id)}">${escapeHtml(u.username)}</a> <small class="muted">en attente</small></span>
         <span class="person-actions"><button class="btn btn-ghost small" data-cancel="${u.id}">Annuler</button></span></li>`,
     )
     .join('');
@@ -120,7 +120,7 @@ function renderFriends() {
           const status = f.playing ? 'playing' : f.online ? 'online' : 'offline';
           const label = f.playing ? 'en partie' : f.online ? 'en ligne' : 'hors ligne';
           return `<li class="person">${avatar(f.username, status, f.avatar)}
-            <span class="person-name">${escapeHtml(f.username)} <small class="status-${status}">${label}</small></span>
+            <span class="person-name"><a class="person-link" href="${profileUrl(f.id)}">${escapeHtml(f.username)}</a> <small class="status-${status}">${label}</small></span>
             <span class="person-actions">
               <button class="btn btn-primary small" data-challenge="${f.id}" ${status === 'online' ? '' : 'disabled'}>⚔ Défier</button>
               <button class="icon-btn" data-remove="${f.id}" title="Retirer de mes amis" aria-label="Retirer ${escapeHtml(f.username)} de mes amis">✕</button>

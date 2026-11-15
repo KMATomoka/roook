@@ -541,15 +541,16 @@ function drawGraph() {
 // Démarrage (à la fin du fichier, une fois toutes les fonctions et constantes prêtes)
 // ---------------------------------------------------------------------------
 const id = new URLSearchParams(location.search).get('partie');
-if (id && getGame(id)) start(getGame(id));
+const owner = new URLSearchParams(location.search).get('joueur'); // partie d'un autre joueur (depuis son profil)
+if (id && !owner && getGame(id)) start(getGame(id));
 else if (id) {
-  // Partie jouée contre un ami : on la récupère sur le serveur
+  // Partie rangée sur le serveur (la mienne, ou celle du profil qu'on regarde)
   session
-    .then(() => historyGame(id))
+    .then(() => historyGame(id, owner))
     .then((h) => {
       if (!h) return showPicker();
       const g = serverGameToLocal(historyToGame(h));
-      saveGame(g);
+      if (!owner) saveGame(g); // la partie d'un autre joueur ne va pas dans « mes parties »
       start(g);
     })
     .catch(showPicker);

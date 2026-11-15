@@ -46,10 +46,10 @@ export const PACKS = [
   {
     id: 'western',
     name: 'Western chess',
-    desc: 'Le Far West : sable du désert et cuir de selle, planches de saloon, cowboys et shérif, duels au revolver et virevoltants.',
+    desc: 'Le Far West : turquoise et terre cuite du Sud-Ouest, motifs navajos, étoile de shérif, duels au revolver et virevoltants.',
     items: {
-      board: { name: 'Damier Saloon', desc: 'Sable du désert et planches de saloon cloutées, cadre de cuir liseré de laiton.' },
-      pieces: { name: 'Pièces Frontier', desc: 'Sable pour les Blancs, cuir de selle pour les Noirs : pion cowboy, cactus, fortin, couronne de balles, roi shérif.' },
+      board: { name: 'Damier Canyon', desc: 'Turquoise pâle et terre cuite à motif navajo, cadre de cuir liseré de turquoise.' },
+      pieces: { name: 'Pièces Frontier', desc: 'Turquoise pour les Blancs, terre cuite pour les Noirs : foulards, fer à cheval, étoiles de shérif, dame à couronne de balles.' },
       endAnim: { name: 'Règlement de comptes', desc: 'Le viseur se resserre, BANG : le roi vaincu tombe dans la poussière, un virevoltant passe, pancarte de saloon et sifflement de western. Défaite : pancarte trouée, vent du désert et harmonica.' },
       capture: { name: 'Duel', desc: 'Coup de revolver sur la pièce prise : éclair du canon, impact, la pièce est projetée, poussière, douille qui tinte ; bottes à éperons et chien qu’on arme à l’échec.' },
     },

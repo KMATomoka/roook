@@ -565,18 +565,18 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   background-image: url('../img/damier-japon.svg'), conic-gradient(var(--sq-dark) 0 25%, transparent 0 50%, var(--sq-dark) 0 75%, transparent 0);
   background-size: 25% 25%, 25% 25%;
 }
-/* Pack Western : sable du désert et cuir de selle ; planches de saloon et grains de sable (scripts/damier-western.js),
-   cadre de cuir liseré de laiton */
+/* Pack Western : turquoise (bijoux navajos) et terre cuite (roches des canyons) ; motif navajo et grains de sable
+   (scripts/damier-western.js), cadre de cuir sombre liseré de turquoise */
 .board-western {
-  --sq-light: #ecd3a3;
-  --sq-dark: #a86d3c;
-  --sq-last: rgba(226, 128, 52, 0.45);
-  --sq-selected: rgba(250, 214, 120, 0.6);
-  --coord-on-dark: #fcedcf;
-  --coord-on-dark-shadow: 0 1px 2px rgba(40, 18, 4, 0.6);
-  --coord-on-light: #6b3f1d;
-  --coord-on-light-shadow: 0 1px 0 rgba(255, 248, 230, 0.6);
-  --board-shadow: 0 0 0 3px #c8943e, 0 0 0 7px #3b2212, 0 0 0 8px rgba(200, 148, 62, 0.5), 0 18px 45px rgba(0, 0, 0, 0.55), 0 0 50px rgba(220, 140, 60, 0.14);
+  --sq-light: #cfe9e1;
+  --sq-dark: #c46f45;
+  --sq-last: rgba(240, 190, 70, 0.5);
+  --sq-selected: rgba(250, 214, 110, 0.62);
+  --coord-on-dark: #fff1e2;
+  --coord-on-dark-shadow: 0 1px 2px rgba(60, 20, 6, 0.6);
+  --coord-on-light: #1d5a52;
+  --coord-on-light-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  --board-shadow: 0 0 0 3px #3fb3a3, 0 0 0 7px #3a1a0e, 0 0 0 8px rgba(63, 179, 163, 0.45), 0 18px 45px rgba(0, 0, 0, 0.55), 0 0 50px rgba(196, 111, 69, 0.18);
 }
 .board-western cg-board {
   background-image: url('../img/damier-western.svg'), conic-gradient(var(--sq-dark) 0 25%, transparent 0 50%, var(--sq-dark) 0 75%, transparent 0);
@@ -839,7 +839,7 @@ body::after {
   --p-bQ: url('../img/pieces-japon/bQ.svg');
   --p-bK: url('../img/pieces-japon/bK.svg');
 }
-/* Pack Western : sable (Blancs) et cuir de selle (Noirs), générées par scripts/pieces-western.js */
+/* Pack Western : turquoise (Blancs) et terre cuite (Noirs), générées par scripts/pieces-western.js */
 .pieces-western {
   --p-wP: url('../img/pieces-western/wP.svg');
   --p-wN: url('../img/pieces-western/wN.svg');
@@ -1624,30 +1624,30 @@ a.person-link:hover { color: var(--accent-soft); }
 .fx-check-tag.western {
   font: 400 1em/1 'Rye', serif; letter-spacing: 0.04em; text-transform: none; color: #fbe7c2;
   padding: 0.35em 0.75em 0.3em; border-radius: 0.12em; border: 2px solid #2e1a0c;
-  background: linear-gradient(180deg, #b97a44, #7a4724 60%, #5a321a);
-  box-shadow: inset 0 0 0 1px rgba(255, 220, 160, 0.3), 0 6px 16px rgba(30, 12, 2, 0.6);
+  background: linear-gradient(180deg, #d27b4f, #9c4424 60%, #6e2c15);
+  box-shadow: inset 0 0 0 1px rgba(120, 220, 205, 0.55), 0 6px 16px rgba(30, 12, 2, 0.6);
 }
 .fx-mate-banner.western .sign {
   position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.12em;
   padding: 0.4em 0.95em 0.45em; border-radius: 0.08em; transform-origin: 50% -0.9em;
-  background: linear-gradient(180deg, #c08048, #7a4724 55%, #5a321a);
-  border: 0.06em solid #2e1a0c;
-  box-shadow: inset 0 0 0 0.04em rgba(255, 220, 160, 0.35), inset 0 -0.3em 0.5em rgba(40, 18, 4, 0.35), 0 0.3em 0.7em rgba(0, 0, 0, 0.6);
+  background: linear-gradient(180deg, #d88a5c, #9c4424 55%, #6e2c15);
+  border: 0.06em solid #2e1208;
+  box-shadow: inset 0 0 0 0.045em rgba(120, 220, 205, 0.6), inset 0 -0.3em 0.5em rgba(40, 18, 4, 0.35), 0 0.3em 0.7em rgba(0, 0, 0, 0.6);
 }
 .fx-mate-banner.western .sign::before, .fx-mate-banner.western .sign::after {
   content: ''; position: absolute; top: -0.9em; width: 0.06em; height: 0.9em; background: linear-gradient(#e2c38c, #a07a42);
 }
 .fx-mate-banner.western .sign::before { left: 16%; }
 .fx-mate-banner.western .sign::after { right: 16%; }
-.fx-mate-banner.western .star { font-size: 0.62em; line-height: 1; color: #f6cf6a; text-shadow: 0 0 10px rgba(255, 200, 90, 0.8), 0 2px 0 #6b4512; }
+.fx-mate-banner.western .star { font-size: 0.62em; line-height: 1; color: #7fe3d4; text-shadow: 0 0 10px rgba(90, 220, 200, 0.8), 0 2px 0 #1d5a52; }
 .fx-mate-banner.western .t {
   font: 400 0.6em/1.05 'Rye', serif; text-transform: none; letter-spacing: 0.02em;
   color: #fbe7c2; background: none; -webkit-background-clip: border-box; background-clip: border-box; animation: none;
   filter: drop-shadow(0 2px 0 rgba(40, 18, 4, 0.8));
 }
 .fx-mate-banner.western .s, .fx-mate-banner.western.win .s, .fx-mate-banner.western.loss .s {
-  font: 400 0.24em 'Rye', serif; letter-spacing: 0.14em; text-transform: none; color: #2e1a0c;
-  background: #f0c27a; border: 0; border-radius: 0.15em; padding: 0.35em 1em; backdrop-filter: none;
+  font: 400 0.24em 'Rye', serif; letter-spacing: 0.14em; text-transform: none; color: #0f2f2b;
+  background: #7fd6c8; border: 0; border-radius: 0.15em; padding: 0.35em 1em; backdrop-filter: none;
 }
 .fx-mate-banner.western.loss .s { background: #cbb9a0; }
 .fx-mate-banner.western .hole {

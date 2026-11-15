@@ -736,9 +736,10 @@ const western = {
   move: () => boot(),
   // Le coup de feu (au moment où l'éclair du canon apparaît), parfois un ricochet, puis la douille
   capture: () => {
-    gunshot(0.1, 0.7); // la prise : plus discrète que le BANG de fin de partie
-    if (Math.random() < 0.35) ricochet(0.2, 0.6);
-    shell(0.45, 0.7);
+    // La prise : réglée au même niveau que les prises des autres packs (mesuré), le BANG de fin reste plus fort
+    gunshot(0.1, 0.3);
+    if (Math.random() < 0.35) ricochet(0.2, 0.5);
+    shell(0.45, 0.6);
   },
   castle: () => {
     boot(0);

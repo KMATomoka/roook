@@ -5,6 +5,7 @@
 // - défis en direct : notification où qu'on soit sur le site, fenêtre « Défier »
 import { escapeHtml, getPref, setPref } from './common.js';
 import './theme.js'; // apparence choisie dans l'inventaire (plateau, pièces…)
+import { watchBoxes } from './box.js'; // box gagnées (compteur dans la barre du haut)
 import {
   auth, db, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   sendPasswordResetEmail, verifyBeforeUpdateEmail, deleteUser,
@@ -485,6 +486,7 @@ function renderAccount(user) {
     el.innerHTML = `
       ${SEARCH_HTML}
       ${user.role === 'admin' || user.role === 'fondateur' ? '<a class="icon-btn admin-link" href="admin.html" title="Administration" aria-label="Administration">🛡</a>' : ''}
+      <a class="box-chip" href="box.html" title="Mes box" aria-label="Mes box"><span class="box-chip-ico" aria-hidden="true">🎁</span><b class="box-chip-n">0</b></a>
       <a class="account-chip" href="profil.html" title="Mon profil">
         ${picHtml(user.username, user.avatar, 'account-initial')}
         <span class="account-name">${escapeHtml(user.username)}</span>
@@ -498,6 +500,19 @@ function renderAccount(user) {
   }
   bar.appendChild(el);
   if (user) setupSearch(el.querySelector('.player-search'));
+  // Compteur de box (en direct : une victoire en ligne en ajoute une, l'ouverture en retire une)
+  if (user) {
+    watchBoxes(user.id, (st) => {
+      const n = st.keys.length;
+      for (const c of document.querySelectorAll('.box-chip')) {
+        c.querySelector('.box-chip-n').textContent = n;
+        c.classList.toggle('has', n > 0);
+        c.title = n ? `${n} box à ouvrir` : 'Mes box';
+      }
+      const navN = document.querySelector('.nav-box-n');
+      if (navN) navN.textContent = n ? ` (${n})` : '';
+    });
+  }
 
   // Menu déroulant (téléphone, tablette) : profil, administration et déconnexion, cachés dans la barre sur petit écran
   const nav = bar.querySelector('.topnav');
@@ -506,6 +521,7 @@ function renderAccount(user) {
     nav.insertAdjacentHTML(
       'beforeend',
       `<div class="nav-extra">
+        <a href="box.html"${location.pathname.endsWith('/box.html') ? ' aria-current="page"' : ''}><span class="nav-ico" aria-hidden="true">🎁</span>Mes box<span class="nav-box-n"></span></a>
         <a href="profil.html"${location.pathname.endsWith('/profil.html') && !location.search ? ' aria-current="page"' : ''}><span class="nav-ico" aria-hidden="true">👤</span>Mon profil</a>
         ${isStaff ? `<a href="admin.html"${location.pathname.endsWith('/admin.html') ? ' aria-current="page"' : ''}><span class="nav-ico" aria-hidden="true">🛡</span>Administration</a>` : ''}
         <button type="button" class="nav-logout"><span class="nav-ico" aria-hidden="true">⎋</span>Se déconnecter</button>

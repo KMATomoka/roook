@@ -3,16 +3,28 @@
 // - Sans compte : dans le navigateur (localStorage).
 // Ce module pose des classes sur <body> (board-classic, pieces-astrea…) ; le CSS change le damier et les
 // pièces selon ces classes, et fx.js / sound.js lisent l'animation et les sons équipés avec getEquip().
-import { auth, db, onAuthStateChanged, ref, get, update } from './fb.js';
+import { auth, db, onAuthStateChanged, ref, get, update, onValue } from './fb.js';
 
 export const SLOTS = ['board', 'pieces', 'endAnim', 'capture'];
 export const SLOT_NAMES = { board: 'Plateau', pieces: 'Pièces', endAnim: 'Fin de partie', capture: 'Prise et son' };
 
-/** Les packs. Tout le monde possède ces deux-là. Astrea est l'apparence d'origine du site. */
+/**
+ * Raretés. Commun : à tout le monde dès le début. Rare et épique : chaque élément se trouve dans les box (js/box.js).
+ * Légendaire : une mission spéciale (Royal chess, 100 victoires), jamais dans les box.
+ */
+export const RARITY = {
+  commun: { name: 'Commun', color: '#c4c8d0' },
+  rare: { name: 'Rare', color: '#4fa8ff' },
+  epique: { name: 'Épique', color: '#b26bff' },
+  legendaire: { name: 'Légendaire', color: '#f5b83d' },
+};
+
+/** Les packs. Astrea est l'apparence d'origine du site. */
 export const PACKS = [
   {
     id: 'astrea',
     name: 'Astrea chess',
+    rarity: 'commun',
     desc: 'L’apparence d’origine de ROOOK, version espace : damier violet, pièces de l’espace, trous de ver, supernova et sons de vaisseau.',
     items: {
       board: { name: 'Damier Astrea', desc: 'Cases lavande et violet.' },
@@ -24,6 +36,7 @@ export const PACKS = [
   {
     id: 'classic',
     name: 'Classic chess',
+    rarity: 'commun',
     desc: 'Le noir et blanc de toujours : damier neutre, pièces Staunton, gestes sobres et sons de bois.',
     items: {
       board: { name: 'Damier classique', desc: 'Blanc cassé et gris anthracite.' },
@@ -35,6 +48,8 @@ export const PACKS = [
   {
     id: 'japon',
     name: 'Sakura chess',
+    rarity: 'rare',
+    box: true,
     desc: 'Le Japon : papier washi rose sakura et indigo, pièces de laque, coups de sabre, cerisiers en fleur et sons de taiko et de koto.',
     items: {
       board: { name: 'Damier Washi', desc: 'Rose sakura à étoiles asanoha blanches, comme un papier washi, et bleu à vagues seigaiha, cadre de laque vermillon.' },
@@ -46,6 +61,8 @@ export const PACKS = [
   {
     id: 'western',
     name: 'Western chess',
+    rarity: 'rare',
+    box: true,
     desc: 'Le Far West : turquoise et terre cuite du Sud-Ouest, motifs navajos, étoile de shérif, duels au revolver et virevoltants.',
     items: {
       board: { name: 'Damier Canyon', desc: 'Turquoise pâle et terre cuite à motif navajo, cadre de cuir liseré de cuivre.' },
@@ -57,6 +74,8 @@ export const PACKS = [
   {
     id: 'ocean',
     name: 'Océan',
+    rarity: 'epique',
+    box: true,
     desc: 'Une partie au fond de la mer : eau claire et eau profonde, pièces de nacre et des abysses, siphon, aileron de requin, baleine et kraken.',
     items: {
       board: { name: 'Grand Bleu', desc: 'Eau claire traversée de reflets et eau profonde, des reflets de lumière qui ondulent ; cadre bleu nuit cerclé de nacre.' },
@@ -68,6 +87,7 @@ export const PACKS = [
   {
     id: 'royal',
     name: 'Royal chess',
+    rarity: 'legendaire',
     desc: 'Or et crème, esprit chevalier : plateau ivoire et brun liseré d’or, pièces couronnées et joyaux.',
     // Se débloque avec 100 victoires en ligne contre des amis (parties vérifiées par l'arbitre) ;
     // débloqué d'office pour les admins et le fondateur (staff)
@@ -87,17 +107,29 @@ const LOCAL = 'roque:equip'; // sans compte
 const CACHE = 'roque:equip-dernier'; // dernier équipement affiché (pour éviter un « flash » au chargement)
 const WINS_CACHE = 'roque:victoires'; // dernier nombre de victoires connu (même raison)
 const STAFF_CACHE = 'roque:staff'; // admin ou fondateur (même raison)
+const OWNED_CACHE = 'roque:objets'; // éléments trouvés dans les box (même raison)
 
 // Victoires en ligne du joueur (parties entre amis, vérifiées par l'arbitre) : débloquent des packs
 let wins = Number(readLocal(WINS_CACHE)) || 0;
 // Admin ou fondateur : certains packs (Royal) sont débloqués d'office
 let staff = !!readLocal(STAFF_CACHE);
 const packById = (id) => PACKS.find((p) => p.id === id);
-/** Un pack est-il débloqué pour ce joueur ? */
-export const isUnlocked = (id) => {
+// Éléments trouvés dans les box : { japon: { board: true, … }, … } (loot/{uid}/owned)
+let owned = readLocal(OWNED_CACHE) || {};
+/** Mission spéciale (Royal) accomplie ? */
+const missionDone = (p) => wins >= p.unlock.wins || (!!p.unlock.staff && staff);
+/** Un élément (plateau, pièces…) d'un pack est-il à ce joueur ? */
+export const isItemUnlocked = (id, slot) => {
   const p = packById(id);
-  return !!p && (!p.unlock || wins >= p.unlock.wins || (!!p.unlock.staff && staff));
+  if (!p) return false;
+  if (p.rarity === 'commun') return true;
+  if (p.unlock) return missionDone(p);
+  return !!owned[id]?.[slot];
 };
+/** Le pack entier est-il débloqué (ses 4 éléments) ? */
+export const isUnlocked = (id) => SLOTS.every((s) => isItemUnlocked(id, s));
+/** Nombre d'éléments débloqués dans un pack (0 à 4). */
+export const unlockedCount = (id) => SLOTS.filter((s) => isItemUnlocked(id, s)).length;
 /** Progression vers un pack verrouillé : { wins, need, unlocked }. */
 export const unlockProgress = (id) => {
   const need = packById(id)?.unlock?.wins || 0;
@@ -106,7 +138,7 @@ export const unlockProgress = (id) => {
 
 function clean(e) {
   const out = {};
-  for (const s of SLOTS) out[s] = e && IDS.has(e[s]) && isUnlocked(e[s]) ? e[s] : DEFAULT;
+  for (const s of SLOTS) out[s] = e && IDS.has(e[s]) && isItemUnlocked(e[s], s) ? e[s] : DEFAULT;
   return out;
 }
 
@@ -200,6 +232,24 @@ function changed() {
 export const getEquip = () => ({ ...equip });
 export const onEquipChange = (f) => (listeners.add(f), () => listeners.delete(f));
 
+/** Éléments trouvés dans les box, suivis en direct (une box ouverte débloque tout de suite l'élément partout). */
+let ownedOff = null;
+function watchOwned(u) {
+  ownedOff?.();
+  ownedOff = null;
+  if (!u) return;
+  ownedOff = onValue(
+    ref(db, `loot/${u}/owned`),
+    (s) => {
+      owned = s.val() || {};
+      writeLocal(OWNED_CACHE, owned);
+      equip = clean(equip);
+      changed();
+    },
+    () => {},
+  );
+}
+
 /** Prêt quand on sait si le joueur a un compte (et que son équipement est chargé). */
 export const ready = new Promise((resolve) => {
   let first = true;
@@ -207,12 +257,20 @@ export const ready = new Promise((resolve) => {
     uid = u ? u.uid : null;
     if (u) {
       try {
-        const [snap] = await Promise.all([get(ref(db, `users/${u.uid}/equip`)), loadWins(u.uid), loadStaff(u.uid)]);
+        const [snap, own] = await Promise.all([get(ref(db, `users/${u.uid}/equip`)), get(ref(db, `loot/${u.uid}/owned`)).catch(() => null), loadWins(u.uid), loadStaff(u.uid)]);
+        if (own) {
+          owned = own.val() || {};
+          writeLocal(OWNED_CACHE, owned);
+        }
         equip = clean(snap.val());
       } catch {
         // hors ligne ou base injoignable : on garde le dernier équipement connu
       }
+      watchOwned(u.uid);
     } else {
+      watchOwned(null);
+      owned = {};
+      writeLocal(OWNED_CACHE, {});
       wins = 0; // sans compte, pas de victoires en ligne
       staff = false;
       writeLocal(STAFF_CACHE, false);
@@ -228,8 +286,8 @@ export const ready = new Promise((resolve) => {
 
 /** Équipe un ou plusieurs éléments, par ex. { pieces: 'classic' } ou un pack entier. */
 export async function setEquip(partial) {
-  for (const id of Object.values(partial)) {
-    if (!isUnlocked(id)) throw new Error('Ce pack est encore verrouillé.');
+  for (const [slot, id] of Object.entries(partial)) {
+    if (!isItemUnlocked(id, slot)) throw new Error('Cet élément est encore verrouillé : trouve-le dans une box.');
   }
   const next = clean({ ...equip, ...partial });
   equip = next;

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0e0b1c">
+  <title>Mes box — ROOOK</title>
+  <meta name="description" content="Gagne une box à chaque victoire en ligne et débloque des plateaux, des pièces et des animations.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="vendor/chessground-assets/chessground.base.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="vendor/chessground-assets/chessground.cburnett.css">
+</head>
+<body class="page-box">
+  <header class="topbar">
+    <a class="logo" href="./"><span class="logo-mark">♜</span> ROOOK</a>
+    <nav class="topnav">
+      <a href="jouer.html">Jouer</a>
+      <a href="apprendre.html">Apprendre</a>
+      <a href="amis.html">Amis</a>
+      <a href="bilan.html">Analyser</a>
+      <a href="inventaire.html">Inventaire</a>
+    </nav>
+  </header>
+
+  <main class="bx-page">
+    <div class="bx-head">
+      <p class="eyebrow">Récompenses</p>
+      <h1>Mes box</h1>
+      <p class="muted">Une box à chaque victoire en ligne, contre un ami ou un adversaire au hasard. Ouvre-la pour débloquer des plateaux, des pièces et des animations.</p>
+    </div>
+
+    <section class="bx-main" id="bx-main">
+      <p class="muted">Chargement…</p>
+    </section>
+
+    <section class="bx-section">
+      <h2>Taux de drop · Box classique</h2>
+      <p class="muted">Chaque box donne un élément d’un pack : plateau, pièces, fin de partie ou prise et son.</p>
+      <ul class="bx-rates" id="bx-rates"></ul>
+    </section>
+
+    <section class="bx-section">
+      <h2>Ta collection</h2>
+      <p class="muted">Les éléments à trouver dans les box. Un élément trouvé se débloque tout de suite dans ton <a href="inventaire.html">inventaire</a>.</p>
+      <div class="bx-collection" id="bx-collection"></div>
+    </section>
+  </main>
+
+  <!-- Ouverture d'une box -->
+  <div class="bx-stage" id="bx-stage" hidden>
+    <div class="bx-stage-inner">
+      <div class="bx-burst" id="bx-burst" aria-hidden="true"></div>
+      <div class="bx-stage-box" id="bx-stage-box"></div>
+      <div class="bx-result" id="bx-result" hidden></div>
+    </div>
+  </div>
+
+  <script type="module" src="js/box-page.js"></script>
+</body>
+</html>

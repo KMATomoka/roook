@@ -6,7 +6,7 @@
 import { Chessground } from '../vendor/chessground/chessground.min.js';
 import { $, $$, Chess, escapeHtml } from './common.js';
 import { toast } from './compte.js';
-import { PACKS, SLOTS, SLOT_NAMES, getEquip, setEquip, equipPack, onEquipChange, themeClasses, ready, isUnlocked, unlockProgress, loadPackFont } from './theme.js';
+import { PACKS, SLOTS, SLOT_NAMES, RARITY, getEquip, setEquip, equipPack, onEquipChange, themeClasses, ready, isUnlocked, isItemUnlocked, unlockedCount, unlockProgress, loadPackFont } from './theme.js';
 import { createFx } from './fx.js';
 import { playSound, isMuted } from './sound.js';
 
@@ -26,6 +26,17 @@ const TABS = [{ id: 'packs', name: 'Packs' }, ...SLOTS.map((s) => ({ id: s, name
 const TIER = { astrea: '#9b7bff', classic: '#c4c8d0', japon: '#e8553f', western: '#d27b4f', ocean: '#46e6d4', royal: '#e2b64e' };
 const packById = (id) => PACKS.find((p) => p.id === id);
 const whole = (id) => Object.fromEntries(SLOTS.map((s) => [s, id]));
+/** Verrouillé dans l'onglet courant : le pack entier (onglet Packs) ou cet élément. */
+const lockedHere = (p) => (tab === 'packs' ? !isUnlocked(p.id) : !isItemUnlocked(p.id, tab));
+/** Petit texte du cadenas : mission (Royal) ou box. */
+function lockLabel(p) {
+  if (p.unlock) {
+    const pr = unlockProgress(p.id);
+    return `🔒 ${pr.wins}/${pr.need}`;
+  }
+  return tab === 'packs' ? `🔒 ${unlockedCount(p.id)}/${SLOTS.length}` : '🔒 Box';
+}
+const rarityTag = (p) => `<span class="inv-rarity" style="--r:${RARITY[p.rarity].color}">${RARITY[p.rarity].name}</span>`;
 
 let tab = 'packs';
 let selected = getEquip().board; // pack sélectionné dans l'onglet courant
@@ -104,8 +115,7 @@ function renderGrid() {
   grid.innerHTML = PACKS.map((p) => {
     const name = tab === 'packs' ? p.name : p.items[tab].name;
     const on = tab === 'packs' ? SLOTS.every((s) => eq[s] === p.id) : eq[tab] === p.id;
-    const locked = !isUnlocked(p.id);
-    const pr = unlockProgress(p.id);
+    const locked = lockedHere(p);
     return `<button type="button" role="option" class="inv-item ${on ? 'equipped' : ''} ${p.id === selected ? 'selected' : ''} ${locked ? 'locked' : ''}"
         aria-selected="${p.id === selected}" data-pick="${p.id}" style="--tier:${TIER[p.id]}">
       <span class="inv-item-preview" data-preview></span>
@@ -114,7 +124,8 @@ function renderGrid() {
         <span class="inv-item-pack">${tab === 'packs' ? '4 éléments' : escapeHtml(p.name)}</span>
       </span>
       ${on ? '<span class="inv-item-tag">Équipé</span>' : ''}
-      ${locked ? `<span class="inv-item-lock">🔒 ${pr.wins}/${pr.need}</span>` : ''}
+      ${locked ? `<span class="inv-item-lock">${lockLabel(p)}</span>` : ''}
+      ${rarityTag(p)}
     </button>`;
   }).join('');
   for (const item of $$('.inv-item', grid)) {
@@ -137,20 +148,27 @@ let demoTimer = null;
 function renderDetail(autoplay = false) {
   const p = packById(selected) || PACKS[0];
   const eq = getEquip();
-  const locked = !isUnlocked(p.id);
+  const locked = lockedHere(p);
   const isPack = tab === 'packs';
   const it = isPack ? null : p.items[tab];
   const on = isPack ? SLOTS.every((s) => eq[s] === p.id) : eq[tab] === p.id;
 
   $('#inv-detail').style.setProperty('--tier', TIER[p.id]);
   $('#inv-detail').classList.toggle('locked', locked);
-  $('#inv-d-tier').textContent = isPack ? `Pack · ${p.name}` : `${SLOT_NAMES[tab]} · ${p.name}`;
+  $('#inv-d-tier').innerHTML = `${escapeHtml(isPack ? `Pack · ${p.name}` : `${SLOT_NAMES[tab]} · ${p.name}`)} ${rarityTag(p)}`;
   $('#inv-d-name').textContent = isPack ? p.name : it.name;
   $('#inv-d-desc').textContent = isPack ? p.desc : it.desc;
 
   // Contenu du pack, ou encart « verrouillé »
   let extra = '';
-  if (locked) {
+  if (locked && p.box) {
+    const n = unlockedCount(p.id);
+    extra += `<div class="inv-lock">
+      <div class="inv-lock-head">🔒 ${isPack ? 'Ses éléments se trouvent' : 'Se trouve'} dans les <a href="box.html">box</a> : une box à chaque victoire en ligne</div>
+      ${isPack ? `<div class="inv-progress" role="progressbar" aria-valuemin="0" aria-valuemax="${SLOTS.length}" aria-valuenow="${n}"><i style="width:${(n / SLOTS.length) * 100}%"></i></div>
+      <div class="inv-lock-count">${n} / ${SLOTS.length} éléments trouvés</div>` : ''}
+    </div>`;
+  } else if (locked) {
     const pr = unlockProgress(p.id);
     extra += `<div class="inv-lock">
       <div class="inv-lock-head">🔒 Se débloque avec <b>${pr.need} victoires</b> en ligne contre tes amis</div>
@@ -159,7 +177,7 @@ function renderDetail(autoplay = false) {
     </div>`;
   }
   if (isPack) {
-    extra += `<ul class="inv-contents">${SLOTS.map((s) => `<li><span aria-hidden="true">${ICONS[s]}</span><small>${SLOT_NAMES[s]}</small> ${escapeHtml(p.items[s].name)}</li>`).join('')}</ul>`;
+    extra += `<ul class="inv-contents">${SLOTS.map((s) => `<li class="${isItemUnlocked(p.id, s) ? '' : 'off'}"><span aria-hidden="true">${isItemUnlocked(p.id, s) ? ICONS[s] : '🔒'}</span><small>${SLOT_NAMES[s]}</small> ${escapeHtml(p.items[s].name)}</li>`).join('')}</ul>`;
   }
   $('#inv-d-extra').innerHTML = extra;
 
@@ -169,7 +187,9 @@ function renderDetail(autoplay = false) {
       ? '<div class="inv-demo-row"><button type="button" class="btn btn-ghost" data-demo="win">▶ Quand tu gagnes</button><button type="button" class="btn btn-ghost" data-demo="loss">▶ Quand tu perds</button></div>'
       : `<button type="button" class="btn btn-ghost" data-demo="win">▶ Revoir ${DEMOS[tab].label}</button>`;
   const main = locked
-    ? '<button type="button" class="btn inv-equip-btn" disabled>🔒 Verrouillé</button>'
+    ? p.box
+      ? `<a class="btn inv-equip-btn" href="box.html">🎁 ${isPack ? 'Trouver ses éléments' : 'Le trouver'} dans les box</a>`
+      : '<button type="button" class="btn inv-equip-btn" disabled>🔒 Verrouillé</button>'
     : on
       ? `<button type="button" class="btn inv-equip-btn is-on" disabled>✓ ${isPack ? 'Pack équipé' : 'Équipé'}</button>`
       : `<button type="button" class="btn inv-equip-btn" data-equip>${isPack ? 'Équiper le pack' : 'Équiper'}</button>`;

@@ -1148,6 +1148,8 @@ export function warmAudio() {
   if (a) musicBus(a);
 }
 
+// Téléphones : musique plus légère à calculer (pas de réverbération, moins de voix), même règle que js/coffre3d.js
+const LOW_POWER = typeof matchMedia === 'function' && (matchMedia('(pointer: coarse)').matches || innerWidth < 760);
 const midi = (m) => 440 * Math.pow(2, (m - 69) / 12);
 const music = { bus: null, timer: 0, playing: false, next: 0, step: 0, level: 0, track: 'calm', bright: false, gains: {} };
 
@@ -1159,15 +1161,17 @@ function musicBus(a) {
   out.connect(master);
   const input = a.createGain();
   input.connect(out);
-  const conv = a.createConvolver();
-  const len = Math.floor(a.sampleRate * 1.4);
-  const ir = a.createBuffer(1, len, a.sampleRate);
-  const d = ir.getChannelData(0);
-  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
-  conv.buffer = ir;
-  const wet = a.createGain();
-  wet.gain.value = 0.35;
-  input.connect(conv).connect(wet).connect(out);
+  if (!LOW_POWER) {
+    const conv = a.createConvolver();
+    const len = Math.floor(a.sampleRate * 1.4);
+    const ir = a.createBuffer(1, len, a.sampleRate);
+    const d = ir.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+    conv.buffer = ir;
+    const wet = a.createGain();
+    wet.gain.value = 0.35;
+    input.connect(conv).connect(wet).connect(out);
+  }
   const delay = a.createDelay(1);
   delay.delayTime.value = 0.62;
   const fb = a.createGain();
@@ -1265,7 +1269,7 @@ function calmStep(a, t, s, dest) {
   const arp = bright && ch.arpB ? ch.arpB : ch.arp;
   if (s % 32 === 0) {
     const len = sd * 32 + 1;
-    for (const m of pad) mnote(a, dest, { freq: midi(m), type: 'sawtooth', t, dur: len, vol: 0.006, attack: 1.4, release: 1.2, filter: 750 + lvl * 300 });
+    for (const m of LOW_POWER ? pad.slice(0, 3) : pad) mnote(a, dest, { freq: midi(m), type: 'sawtooth', t, dur: len, vol: 0.006, attack: 1.4, release: 1.2, filter: 750 + lvl * 300 });
     mnote(a, dest, { freq: midi(ch.bass), t, dur: len, vol: 0.05, attack: 0.4, release: 1 });
     if (lvl >= 2 || Math.random() < 0.4) {
       const bf = midi(arp[3] + 12);
@@ -1305,7 +1309,7 @@ function battleStep(a, t, s, dest) {
   // Ostinato (toujours) ; doublé à l'octave à partir d'épique
   const accent = i % 4 === 0 ? 1.4 : 1;
   mnote(a, dest, { freq: midi(ch.root + OSTINATO[i]), type: 'sawtooth', t, dur: sd * 0.9, vol: 0.022 * accent, attack: 0.004, release: sd * 0.6, filter: 900 + lvl * 350 });
-  if (lvl >= 2) mnote(a, dest, { freq: midi(ch.root + 12 + OSTINATO[i]), type: 'sawtooth', t, dur: sd * 0.8, vol: 0.01 * accent, attack: 0.004, release: sd * 0.5, filter: 1600 });
+  if (lvl >= 2 && !LOW_POWER) mnote(a, dest, { freq: midi(ch.root + 12 + OSTINATO[i]), type: 'sawtooth', t, dur: sd * 0.8, vol: 0.01 * accent, attack: 0.004, release: sd * 0.5, filter: 1600 });
   // Taikos : la pulsation, de plus en plus chargée
   const taiko = lvl === 0 ? [0, 8] : lvl === 1 ? [0, 6, 8, 11] : [0, 3, 6, 8, 10, 11, 14];
   if (taiko.includes(i)) mtaiko(a, dest, t, (i === 0 ? 0.16 : 0.1) + lvl * 0.02, i % 8 === 0 ? 0.85 : 1.1);
@@ -1317,7 +1321,7 @@ function battleStep(a, t, s, dest) {
   if (lvl >= 2 && (i === 0 || i === 10)) {
     for (const m of ch.brass) mnote(a, dest, { freq: midi(m - 12), type: 'sawtooth', t, dur: i === 0 ? 0.55 : 0.3, vol: 0.016, attack: 0.02, release: 0.2, filter: 500, fenv: 2600 + lvl * 400 });
   }
-  if (lvl >= 2 && i === 0) {
+  if (lvl >= 2 && i === 0 && !LOW_POWER) {
     for (const m of ch.pad) {
       const f = a.createBiquadFilter();
       f.type = 'bandpass';
@@ -1329,7 +1333,7 @@ function battleStep(a, t, s, dest) {
   }
   // Jeu complet : charleston en doubles croches, cymbale qui monte, mélodie de cuivres
   if (lvl >= 3) {
-    mnoise(a, dest, t, { freq: 8000, dur: 0.04, vol: i % 2 ? 0.006 : 0.012 });
+    if (!LOW_POWER || i % 2 === 0) mnoise(a, dest, t, { freq: 8000, dur: 0.04, vol: i % 2 ? 0.006 : 0.012 });
     if (i === 0 && bar % 2 === 1) mnoise(a, dest, t, { freq: 5000, dur: sd * 16, vol: 0.05, swell: true });
     if (i % 4 === 0) {
       const n = MELODY[((bar % 2) * 4 + i / 4) % MELODY.length];

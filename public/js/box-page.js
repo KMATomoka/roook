@@ -16,7 +16,7 @@ import {
 } from './theme.js';
 import { RATES, DUST_PER_BOX, watchBoxes, openBox, grantTestBox } from './box.js';
 import { createFx } from './fx.js';
-import { boxMusic, isMusicOn, setMusicOn, isMuted, unlockAudio, warmAudio } from './sound.js';
+import { boxMusic, unlockAudio, warmAudio } from './sound.js';
 // Téléphones et petites tablettes : effets allégés (même règle que js/coffre3d.js)
 const LOW_POWER = matchMedia('(pointer: coarse)').matches || innerWidth < 760;
 // La 3D (Three.js, 700 Ko) se charge après la page, pour qu'elle s'affiche tout de suite
@@ -225,7 +225,10 @@ addEventListener('resize', sizeCanvas);
 /** Lance des particules depuis (x, y) en pixels d'écran. */
 function emit({ x, y, n = 20, speed = [3, 9], angle = [0, Math.PI * 2], color = '#fff', size = [1.5, 3.5], life = [40, 80], gravity = 0.12, kind = 'spark', drag = 0.97 }) {
   const cols = Array.isArray(color) ? color : [color];
-  if (LOW_POWER) n = Math.ceil(n * 0.45); // téléphone : moins de particules
+  if (LOW_POWER) n = Math.ceil(n * 0.35); // téléphone : moins de particules
+  // Plafond : jamais plus de N particules à l'écran (c'est ce qui fait ramer quand tout explose en même temps)
+  n = Math.min(n, (LOW_POWER ? 110 : 500) - parts.length);
+  if (n <= 0) return;
   for (let i = 0; i < n; i++) {
     const a = rnd(angle[0], angle[1]);
     const v = rnd(speed[0], speed[1]);
@@ -412,6 +415,7 @@ function flash(color = '#fff', peak = 0.8, ms = 500) {
   f.animate([{ opacity: peak }, { opacity: 0 }], { duration: ms, easing: 'ease-out' });
 }
 function ring(color, scale = 3) {
+  if (LOW_POWER && scene.querySelector('.bx-ring')) return;
   const r = document.createElement('i');
   r.className = 'bx-ring';
   r.style.borderColor = color;
@@ -458,7 +462,7 @@ function tierUp(id) {
   setTier(id);
   boxSfx.tierUp(id);
   stopHum();
-  stopHum = isMusicOn() ? () => {} : boxSfx.hum(ORDER.indexOf(id));
+  stopHum = () => {};
   flash(t.color, 0.55, 600);
   slam(id === 'jeu' ? 'Jeu complet ?!' : `${t.name} !`, t.color);
   ring(t.color, 4.5);
@@ -514,7 +518,6 @@ async function doOpen(key, fake = null) {
   // Son et musique lancés tout de suite, dans le geste du joueur (sinon les téléphones les bloquent)
   unlockAudio();
   boxMusic.start();
-  updateMusicBtn();
   // Le coffre de la page passe dans la scène (déjà prêt : pas de chargement au moment d'ouvrir)
   await ensureChest();
   chest.moveTo(stageHost, { idle: false, zoom: 1.08, sharp: true });
@@ -535,7 +538,7 @@ async function doOpen(key, fake = null) {
   const target = ORDER.indexOf(res.rarity);
   if (!reduce) {
     // Sans musique, la gemme scintille doucement en attendant
-    stopHum = isMusicOn() ? () => {} : boxSfx.hum(0);
+    stopHum = () => {}; // la musique remplace les scintillements
     const hint = $('#bx-hint');
     hint.hidden = false;
     buildCard(res); // la carte se prépare, invisible, pendant les coups
@@ -633,12 +636,12 @@ async function reveal(res) {
   if (!reduce) {
     // La carte sort de la box en tournant (dos de la carte, puis face)
     await result.querySelector('.bx-card3d').animate(
-      [
+      LOW_POWER ? [{ transform: 'translateY(40px) scale(.8)', opacity: 0 }, { transform: 'none', opacity: 1 }] : [
         { transform: 'translateY(90px) scale(.3) rotateY(540deg)', opacity: 0 },
         { transform: 'translateY(-10px) scale(1.06) rotateY(-12deg)', opacity: 1, offset: 0.7 },
         { transform: 'none', opacity: 1 },
       ],
-      { duration: 900, easing: 'cubic-bezier(.2,.8,.3,1)' },
+      { duration: LOW_POWER ? 450 : 900, easing: 'cubic-bezier(.2,.8,.3,1)' },
     ).finished;
     if (isNew) {
       result.querySelector('.bx-res-badge')?.animate([{ transform: 'scale(3) rotate(-20deg)', opacity: 0 }, { transform: 'scale(.9) rotate(4deg)', opacity: 1, offset: 0.6 }, { transform: 'rotate(4deg)' }], { duration: 420, easing: 'ease-out', fill: 'forwards' });
@@ -764,29 +767,6 @@ if (demoArg) {
   const [r, p, sl, n] = demoArg.split(',');
   setTimeout(() => window.bxDemo(r, p, sl, n !== 'old'), 300);
 }
-
-// Bouton 🎵 de la scène : couper ou remettre la musique (le choix est gardé)
-const musicBtn = $('#bx-music');
-function updateMusicBtn() {
-  const on = isMusicOn() && !isMuted();
-  musicBtn.setAttribute('aria-pressed', String(on));
-  musicBtn.title = on ? 'Couper la musique' : 'Mettre la musique';
-  musicBtn.classList.toggle('off', !on);
-}
-musicBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  unlockAudio();
-  setMusicOn(!isMusicOn());
-  if (isMusicOn() && !stage.hidden) {
-    boxMusic.start();
-    if (opening && stage.dataset.level !== '-1') {
-      boxMusic.battle();
-      boxMusic.setLevel(Math.max(0, Number(stage.dataset.level)));
-    }
-  }
-  updateMusicBtn();
-});
-musicBtn.addEventListener('pointerdown', (e) => e.stopPropagation()); // ce n'est pas un coup sur le coffre
 
 // Le son et la musique se préparent quand la page est calme (pas au moment d'ouvrir)
 addEventListener('load', () => (window.requestIdleCallback || setTimeout)(() => warmAudio(), { timeout: 3000 }));

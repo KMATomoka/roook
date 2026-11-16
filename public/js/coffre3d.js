@@ -598,25 +598,34 @@ export function createChest(host, { idle = true, tint = '#2fe38a', leak = 0, zoo
   function frame(now) {
     if (!st.alive) return;
     raf = requestAnimationFrame(frame);
-    const dt = Math.min(0.05, (now - last) / 1000);
-    last = now;
-    if (!st.visible || st.paused) return;
-    // Au repos : une image sur deux suffit (30 images par seconde), sur ordinateur comme sur téléphone
-    if (st.idle) {
+    if (!st.visible || st.paused) {
+      last = now;
+      return;
+    }
+    // Au repos (et toujours sur téléphone) : une image sur deux suffit, 30 images par seconde
+    if (st.idle || LOW_POWER) {
       st.skip = !st.skip;
       if (st.skip) return;
     }
-    st.t += dt;
+    // Temps écoulé depuis la dernière image dessinée (les images sautées comptent)
+    const full = Math.min(0.1, (now - last) / 1000);
+    last = now;
+    // Les ressorts sont calculés par petits pas (stables même à 30 images par seconde)
+    const steps = full > 0.034 ? 2 : 1;
+    const dt = full / steps;
+    st.t += full;
     // Ressort du couvercle
     const k = 120;
     const c = 14;
-    st.openV += (k * (st.openT - st.open) - c * st.openV) * dt;
-    st.open += st.openV * dt;
+    for (let n = 0; n < steps; n++) {
+      st.openV += (k * (st.openT - st.open) - c * st.openV) * dt;
+      st.open += st.openV * dt;
+      st.squashV += (-260 * st.squash - 11 * st.squashV) * dt;
+      st.squash += st.squashV * dt;
+    }
     parts.lidPivot.rotation.x = -THREE.MathUtils.degToRad(st.open);
     // Ressort de l'écrasement (coups)
-    st.squashV += (-260 * st.squash - 11 * st.squashV) * dt;
-    st.squash += st.squashV * dt;
-    st.jolt *= Math.pow(0.02, dt);
+    st.jolt *= Math.pow(0.02, full);
     root.scale.set(1 + st.squash * 0.6, 1 - st.squash, 1 + st.squash * 0.6);
     root.rotation.z = Math.sin(st.t * 40) * st.jolt * 0.06;
     root.position.x = Math.sin(st.t * 55) * st.jolt * 0.04;
@@ -625,7 +634,7 @@ export function createChest(host, { idle = true, tint = '#2fe38a', leak = 0, zoo
     parts.chest.rotation.y = -0.6 + sway + st.spin;
     parts.chest.position.y = st.idle ? Math.sin(st.t * 1.3) * 0.03 + 0.03 : 0;
     // Lumière dans le coffre et gemme qui respire
-    st.leak += (st.leakT - st.leak) * Math.min(1, dt * 6);
+    st.leak += (st.leakT - st.leak) * Math.min(1, full * 6);
     // Couvercle fermé, la lumière ne passe que par la fente ; ouvert, elle inonde
     inner.intensity = st.leak * (0.8 + 8 * Math.min(1, Math.max(0, st.open) / 60));
     parts.glowMat.opacity = Math.min(1, st.leak * 1.3);

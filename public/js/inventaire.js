@@ -13,7 +13,7 @@ import {
   unlockedCount, piecesCount, piecesPack, itemName, unlockProgress, loadPackFont,
 } from './theme.js';
 import { createFx } from './fx.js';
-import { playSound, isMuted } from './sound.js';
+import { playSound, isMuted, stopAllSounds } from './sound.js';
 
 // Les aperçus montrent les animations de tous les packs : on charge leurs polices une fois la page affichée
 addEventListener('load', () => PACKS.forEach((p) => loadPackFont(p.id)));
@@ -278,6 +278,7 @@ function renderDetail(autoplay = false) {
   // Grand aperçu : le pack entier, ou l'équipement actuel avec cet élément à la place
   clearTimeout(demoTimer);
   dFx.reset();
+  stopAllSounds(); // on change d'élément ou d'onglet : le son de l'aperçu d'avant s'arrête
   dress(dHost, overrideFor(p.id));
   const fen = isPack ? START : tab === 'board' ? MIDDLE : tab === 'pieces' ? START : DEMOS[tab].fen;
   // Pièce choisie : elle est mise en avant sur le grand aperçu
@@ -288,6 +289,7 @@ function renderDetail(autoplay = false) {
 
 /** Rejoue le coup de démonstration avec l'animation (et le son) de l'élément choisi. */
 function playDemo(delay = 300, outcome = 'win') {
+  stopAllSounds(); // l'animation d'avant se tait
   const demo = DEMOS[tab];
   if (!demo) return;
   const chess = new Chess(demo.fen);

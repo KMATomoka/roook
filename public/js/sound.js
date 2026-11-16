@@ -21,18 +21,41 @@ export function setMuted(v) {
   } catch {}
 }
 
+let comp = null;
+
+/**
+ * Coupe net tous les sons en cours ET ceux déjà programmés (une fin de partie, un accord, la musique…) :
+ * tout passe par « master », qu'on éteint en un éclair puis qu'on remplace par un neuf pour les sons suivants.
+ * Sert quand on ferme ou passe une animation, ou qu'on en lance une autre (inventaire, coffres).
+ */
+export function stopAllSounds() {
+  if (!ctx || !master) return;
+  const old = master;
+  const now = ctx.currentTime;
+  old.gain.cancelScheduledValues(now);
+  old.gain.setValueAtTime(old.gain.value, now);
+  old.gain.linearRampToValueAtTime(0, now + 0.04);
+  setTimeout(() => old.disconnect(), 80);
+  master = ctx.createGain();
+  master.gain.value = 0.9;
+  master.connect(comp);
+  // La musique était branchée sur l'ancien « master » : elle s'arrête et sera recréée au besoin
+  stopMusicNow();
+}
+
 function audio() {
   if (muted) return null;
   try {
     if (!ctx) {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
       // Un compresseur évite que les sons forts (mat) saturent
-      const comp = ctx.createDynamicsCompressor();
+      comp = ctx.createDynamicsCompressor();
       comp.threshold.value = -14;
       comp.ratio.value = 4;
+      comp.connect(ctx.destination);
       master = ctx.createGain();
       master.gain.value = 0.9;
-      master.connect(comp).connect(ctx.destination);
+      master.connect(comp);
       noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
       const d = noiseBuf.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -1362,6 +1385,13 @@ function switchTrack(name) {
     music.next = a.currentTime + 0.06;
   }
   fadeTrack(a, name, 1, 0.4);
+}
+function stopMusicNow() {
+  if (typeof music === 'undefined') return;
+  music.playing = false;
+  clearInterval(music.timer);
+  music.bus = null;
+  music.gains = {};
 }
 export const boxMusic = {
   /** Morceau « attente » (calme). À appeler dans le geste de l'utilisateur (le clic sur « Ouvrir »). */

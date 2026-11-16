@@ -16,7 +16,7 @@ import {
 } from './theme.js';
 import { RATES, DUST_PER_BOX, watchBoxes, openBox, grantTestBox } from './box.js';
 import { createFx } from './fx.js';
-import { boxMusic, unlockAudio, warmAudio } from './sound.js';
+import { boxMusic, unlockAudio, warmAudio, stopAllSounds } from './sound.js';
 // Téléphones et petites tablettes : effets allégés (même règle que js/coffre3d.js)
 const LOW_POWER = matchMedia('(pointer: coarse)').matches || innerWidth < 760;
 // La 3D (Three.js, 700 Ko) se charge après la page, pour qu'elle s'affiche tout de suite
@@ -510,6 +510,8 @@ async function burstOpen(id) {
 
 async function doOpen(key, fake = null) {
   if (opening) return;
+  // Coffre suivant (la scène est encore ouverte) : on coupe les sons de la carte d'avant (accord, aperçu…)
+  if (!stage.hidden) stopAllSounds();
   opening = true;
   sizeCanvas();
   demoCtl?.stop();
@@ -690,7 +692,8 @@ function closeStage() {
   parts = [];
   document.body.classList.remove('bx-opening');
   renderMain();
-  boxMusic.stop();
+  stopAllSounds(); // on ferme : plus aucun son (musique, accord, animation gagnée)
+  setTimeout(warmAudio, 400); // et on prépare déjà la musique du prochain coffre
   if (chest) {
     chest.moveTo(cardHost, { idle: true, zoom: 1.1 });
     chest.reset();
@@ -747,7 +750,10 @@ document.addEventListener('click', async (e) => {
   }
   if (e.target.closest('[data-close]')) return closeStage();
   const demo = e.target.closest('[data-demo]');
-  if (demo) return demoCtl?.play(demo.dataset.demo, 250);
+  if (demo) {
+    stopAllSounds(); // on relance l'aperçu : le son du précédent s'arrête
+    return demoCtl?.play(demo.dataset.demo, 250);
+  }
   if (e.target.closest('[data-again]')) {
     if (state.keys.length) return doOpen(state.keys[0]);
     if (state.dust >= DUST_PER_BOX) return doOpen(null);

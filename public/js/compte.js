@@ -984,6 +984,28 @@ function forgetGame() {
     localStorage.removeItem(LAST_GAME);
   } catch {}
 }
+// Revanches refusées (partie + manche) : une fois refusée, on n'en est plus jamais notifié, quel que soit l'onglet
+const DECLINED = 'roque:revanches-refusees';
+function declinedList() {
+  try {
+    const l = JSON.parse(localStorage.getItem(DECLINED) || '[]');
+    return Array.isArray(l) ? l : [];
+  } catch {
+    return [];
+  }
+}
+/** Retient qu'on a refusé la revanche de cette partie (à cette manche). */
+export function markRematchDeclined(gameId, round = 0) {
+  try {
+    const l = declinedList().filter((k) => k !== `${gameId}:${round}`);
+    l.push(`${gameId}:${round}`);
+    localStorage.setItem(DECLINED, JSON.stringify(l.slice(-30)));
+  } catch {}
+}
+/** A-t-on déjà refusé la revanche de cette partie (à cette manche) ? */
+export function isRematchDeclined(gameId, round = 0) {
+  return declinedList().includes(`${gameId}:${round}`);
+}
 function watchRematch() {
   let last = null;
   try {
@@ -1012,7 +1034,8 @@ function watchRematch() {
       forgetGame();
       return;
     }
-    const asks = g.status === 'over' && g.rematch?.[opp] && !g.rematch?.[me] && g.rematch?.no !== me;
+    const asks =
+      g.status === 'over' && g.rematch?.[opp] && !g.rematch?.[me] && g.rematch?.no !== me && !isRematchDeclined(last.id, g.round || 0);
     if (!asks) {
       t?.close();
       t = null;
@@ -1038,14 +1061,26 @@ function watchRematch() {
       { duration: 0, cls: 'invite' },
     );
     notifySound('rematch');
-    t.querySelector('[data-a="no"]').addEventListener('click', () => {
-      // Refuser : l'autre joueur est prévenu
+    const shown = t;
+    shown.querySelector('[data-a="no"]').addEventListener('click', () => {
+      // Refuser : retenu ici (plus aucune notification pour cette revanche) et l'autre joueur est prévenu.
+      // On arrête d'écouter AVANT d'écrire : l'écriture relance tout de suite l'écoute (qui fermait déjà l'invitation
+      // et faisait planter la suite, si bien que la partie n'était jamais oubliée).
+      markRematchDeclined(last.id, g.round || 0);
+      off();
+      forgetGame();
+      shown.close();
+      t = null;
       update(ref(db, `games/${last.id}/rematch`), { no: me }).catch(() => {});
+    });
+  });
+  // Refusée dans un autre onglet : on ferme l'invitation ici aussi
+  addEventListener('storage', (e) => {
+    if (e.key === DECLINED && t && shownFor !== null && isRematchDeclined(last.id, shownFor || 0)) {
       t.close();
       t = null;
       off();
-      forgetGame();
-    });
+    }
   });
   setTimeout(() => {
     off();

@@ -1,6 +1,7 @@
 // Page « Profil » : statistiques d'un joueur en ligne (victoires, défaites, taux, séries, couleurs, rival…),
 // ses dernières parties, et pour son propre profil : le choix public / privé.
 import { $, escapeHtml } from './common.js';
+import { ICONS } from './icons.js'; // icônes dessinées (à la place des emojis)
 import {
   session, toast, picHtml, loadProfile, setProfilePrivate, profileUrl, addFriend, acceptFriend, challenge, cadenceLabel, logout,
   setAvatar, removeAvatar, myEmail, changeEmail, setBio, BIO_MAX,
@@ -135,7 +136,7 @@ function render(p) {
   page.innerHTML = `
     <section class="card pf-hero">
       ${me
-        ? `<label class="pf-pic pf-pic-edit" title="Changer ma photo">${picHtml(p.username, p.avatar, 'profile-avatar', `<i class="presence ${presence}"></i>`)}<span class="profile-pic-edit" aria-hidden="true">📷</span><input type="file" id="pic-input" accept="image/*" hidden></label>`
+        ? `<label class="pf-pic pf-pic-edit" title="Changer ma photo">${picHtml(p.username, p.avatar, 'profile-avatar', `<i class="presence ${presence}"></i>`)}<span class="profile-pic-edit" aria-hidden="true">${ICONS.camera}</span><input type="file" id="pic-input" accept="image/*" hidden></label>`
         : `<div class="pf-pic">${picHtml(p.username, p.avatar, 'profile-avatar', `<i class="presence ${presence}"></i>`)}</div>`}
       <div class="pf-id">
         <h1>${escapeHtml(p.username)}
@@ -236,12 +237,12 @@ function badgeCard(p) {
 
 function actions(p) {
   if (p.relation === 'me') {
-    return `<a class="btn btn-ghost small" href="amis.html">👥 Mes amis</a>
-      <a class="btn btn-ghost small" href="inventaire.html">🎒 Inventaire</a>
-      <button class="btn btn-ghost small" data-act="photo">📷 Changer ma photo</button>
-      ${p.avatar ? '<button class="btn btn-ghost small" data-act="nophoto">Retirer la photo</button>' : ''}
-      ${p.admin ? '<a class="btn btn-ghost small" href="admin.html">🛡 Administration</a>' : ''}
-      <button class="btn btn-ghost small" data-act="logout">⎋ Se déconnecter</button>`;
+    return `<a class="btn btn-ghost small btn-ico" href="amis.html">${ICONS.friends}Mes amis</a>
+      <a class="btn btn-ghost small btn-ico" href="inventaire.html">${ICONS.bag}Inventaire</a>
+      <button class="btn btn-ghost small btn-ico" data-act="photo">${ICONS.camera}Changer ma photo</button>
+      ${p.avatar ? `<button class="btn btn-ghost small btn-ico" data-act="nophoto">${ICONS.noPhoto}Retirer la photo</button>` : ''}
+      ${p.admin ? `<a class="btn btn-ghost small btn-ico" href="admin.html">${ICONS.shield}Administration</a>` : ''}
+      <button class="btn btn-ghost small btn-ico" data-act="logout">${ICONS.logout}Se déconnecter</button>`;
   }
   if (p.relation === 'none') return '<button class="btn btn-primary" data-act="add">+ Ajouter en ami</button>';
   if (p.relation === 'sent') return '<span class="search-tag">Demande d’ami envoyée</span>';

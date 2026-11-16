@@ -9,7 +9,7 @@ import { isMuted, setMuted, lowTimeBeep, notifySound } from './sound.js';
 import { createFx } from './fx.js';
 import { attachArrows } from './arrows.js';
 import { scrollMoveIntoList, repetitions, rivalOf, faceUrl } from './common.js';
-import { session, avatarOf, profileUrl, badgeOf, badgeHtml, toast, rememberGame } from './compte.js';
+import { session, avatarOf, profileUrl, badgeOf, badgeHtml, toast, rememberGame, markRematchDeclined, isRematchDeclined } from './compte.js';
 import { gameSocket, AWAY_LIMIT } from './online.js';
 import { serverNow } from './fb.js';
 const account = await session;
@@ -750,6 +750,7 @@ function startOnline() {
   });
 
   let oppAskedRematch = false;
+  let lastRound = 0;
   let oppRefused = false;
   let drawAsked = false;
   let autoRematch = false;
@@ -792,6 +793,7 @@ function startOnline() {
     } else {
       render();
     }
+    lastRound = s.round || 0;
     if (s.status === 'over' && myColor) {
       const opp = myColor === 'w' ? 'b' : 'w';
       rememberGame(onlineId); // pour recevoir sa revanche même après avoir quitté cette page
@@ -806,7 +808,7 @@ function startOnline() {
         $('#end-rematch').disabled = true;
       }
       oppRefused = refused;
-      const asks = s.rematch[opp] && !s.rematch[myColor] && s.rematch.no !== myColor;
+      const asks = s.rematch[opp] && !s.rematch[myColor] && s.rematch.no !== myColor && !isRematchDeclined(onlineId, s.round || 0);
       if (asks && !oppAskedRematch) {
         // Elle vient d'arriver : son, encart, et l'écran de fin rouvert s'il était fermé
         notifySound('rematch');
@@ -866,6 +868,7 @@ function startOnline() {
   $('#draw-accept').addEventListener('click', () => socket.emit('offerDraw'));
   // Refuser la revanche proposée : l'autre reçoit un message
   $('#end-offer-no').addEventListener('click', () => {
+    markRematchDeclined(onlineId, lastRound);
     socket.emit('declineRematch');
     showRematchOffer(false);
     $('#end-rematch').textContent = 'Revanche';

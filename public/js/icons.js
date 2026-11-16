@@ -131,6 +131,28 @@ export const ICONS = {
     ${sparkle(53, 9, 4, '#c7f5e3')}`,
     'gear',
   ),
+  /** Appareil photo (changer ma photo). */
+  camera: svg(
+    `<path d="M22 16 L25 9 H39 L42 16" fill="#ffd36b"/>
+    <rect x="6" y="15" width="52" height="38" rx="7" fill="#a98bff"/>
+    <path d="M6.5 24 H18 M46 24 H57.5" stroke-width="3"/>
+    <rect x="11" y="18" width="7" height="4" rx="1.5" fill="#ff7aa8" stroke-width="2.4"/>
+    <circle cx="32" cy="34" r="13" fill="#ffd36b"/>
+    <circle cx="32" cy="34" r="7.5" fill="#d6ecff"/>
+    <path d="M28 31 Q29.5 28.5 32 28" stroke="#ffffff" stroke-width="2.6"/>
+    ${sparkle(52, 8, 4, '#c7f5e3')}`,
+    'camera',
+  ),
+  /** Cadre photo barré d'une gomme (retirer la photo). */
+  noPhoto: svg(
+    `<rect x="6" y="9" width="44" height="38" rx="5" fill="#f3eeff"/>
+    <path d="M10 43 L22 29 L30 37 L36 31 L46 43 Z" fill="#9ff0d0" stroke-width="3"/>
+    <circle cx="37" cy="20" r="4.5" fill="#ffd36b" stroke-width="3"/>
+    <path d="M36 50 L50 36 Q53 33 56 36 L59 39 Q62 42 59 45 L45 59 Z" fill="#ff7aa8"/>
+    <path d="M36 50 L45 59 L41 61 Q38 62 36 60 L34 58 Q32 56 33 53 Z" fill="#ffd8e6"/>
+    <path d="M42 44 L51 53" stroke-width="3"/>`,
+    'noPhoto',
+  ),
   /** Loupe dorée (rechercher un joueur). */
   search: svg(
     `<path d="M40 40 L55 55" stroke-width="10"/>

@@ -1,4 +1,5 @@
-// Génère le damier du pack « Bois » (public/img/damier-bois.svg) : érable clair et noyer foncé, avec le grain du bois.
+// Génère le damier en bois (public/img/damier-bois.svg) : frêne clair et acajou rouge-brun, grain fin et droit,
+// comme un vrai damier en marqueterie (toutes les cases ont le fil dans le même sens).
 // Une seule image pour tout le plateau (a8 clair en haut à gauche ; le damier est le même retourné, donc il va aussi
 // quand on joue les Noirs). Chaque case a son propre grain (décalage du bruit) et une teinte qui varie un peu,
 // comme des pièces de bois assemblées. Utilisation : node scripts/damier-bois.js
@@ -9,8 +10,8 @@ let seed = 11;
 const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
 const S = 100; // taille d'une case dans l'image
 
-const LIGHT = ['#e4c393', '#e8c899', '#dfbc8a', '#e6c596'];
-const DARK = ['#7a4a2b', '#734428', '#80502f', '#6d4024'];
+const LIGHT = ['#efdbb9', '#ead3ad', '#f2dfc0', '#e7cfa6'];
+const DARK = ['#a9502a', '#b25b31', '#9f4824', '#ab552d'];
 
 let squares = '';
 for (let r = 0; r < 8; r++) {
@@ -20,7 +21,7 @@ for (let r = 0; r < 8; r++) {
     // Le grain : un décalage différent par case, et des cases dont le fil va dans l'autre sens
     const dx = Math.floor(rand() * 600);
     const dy = Math.floor(rand() * 600);
-    const vertical = rand() < 0.5;
+    const vertical = true; // fil vertical partout, comme sur la photo
     // Le rectangle est décalé dans le motif (translate) puis remis sur sa case ; certaines cases tournent d'un quart
     const cx = f * S + S / 2;
     const cy = r * S + S / 2;
@@ -40,11 +41,11 @@ const grain = (id, rgb, alpha, freq, sd) => `<pattern id="${id}" patternUnits="u
 
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" preserveAspectRatio="none">
 <defs>
-${grain('gl', [0.45, 0.28, 0.12], [-2.2, 1.05], '0.003 0.16', 3)}
-${grain('gd', [0.14, 0.06, 0.02], [-2.0, 1.05], '0.003 0.15', 8)}
+${grain('gl', [0.62, 0.45, 0.28], [-2.4, 1.0], '0.003 0.22', 3)}
+${grain('gd', [0.34, 0.1, 0.03], [-2.1, 1.1], '0.003 0.2', 8)}
 </defs>
 ${squares}
-<g fill="none" stroke="#2a160a" stroke-opacity=".28" stroke-width="1.2">${Array.from({ length: 7 }, (_, i) => `<path d="M${(i + 1) * S} 0 V800 M0 ${(i + 1) * S} H800"/>`).join('')}</g>
+<g fill="none" stroke="#3a1a0a" stroke-opacity=".18" stroke-width="1">${Array.from({ length: 7 }, (_, i) => `<path d="M${(i + 1) * S} 0 V800 M0 ${(i + 1) * S} H800"/>`).join('')}</g>
 </svg>
 `;
 const out = path.join(__dirname, '..', 'public/img/damier-bois.svg');

@@ -556,17 +556,17 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   --coord-on-light-shadow: 0 1px 0 rgba(255, 250, 235, 0.6);
   --board-shadow: 0 0 0 2px #d8b04c, 0 0 0 5px #2a170b, 0 0 0 6px rgba(227, 196, 106, 0.55), 0 18px 45px rgba(0, 0, 0, 0.55), 0 0 50px rgba(216, 176, 76, 0.16);
 }
-/* Pack Bois : érable clair et noyer foncé, avec le grain du bois (scripts/damier-bois.js), cadre de bois sombre */
+/* Damier en bois : frêne clair et acajou, grain fin et droit (scripts/damier-bois.js), cadre de frêne clair */
 .board-bois {
-  --sq-light: #e4c393;
-  --sq-dark: #7a4a2b;
-  --sq-last: rgba(255, 214, 110, 0.42);
-  --sq-selected: rgba(255, 226, 140, 0.58);
-  --coord-on-dark: #f6e3c4;
-  --coord-on-dark-shadow: 0 1px 2px rgba(30, 14, 4, 0.7);
-  --coord-on-light: #5a3418;
-  --coord-on-light-shadow: 0 1px 0 rgba(255, 244, 222, 0.5);
-  --board-shadow: 0 0 0 4px #5a3418, 0 0 0 8px #2e180a, 0 0 0 9px rgba(228, 195, 147, 0.35), 0 18px 45px rgba(0, 0, 0, 0.55);
+  --sq-light: #ecd6b1;
+  --sq-dark: #a9502a;
+  --sq-last: rgba(255, 210, 90, 0.42);
+  --sq-selected: rgba(255, 222, 130, 0.58);
+  --coord-on-dark: #fbe9d2;
+  --coord-on-dark-shadow: 0 1px 2px rgba(60, 20, 4, 0.6);
+  --coord-on-light: #8a3e1c;
+  --coord-on-light-shadow: 0 1px 0 rgba(255, 248, 232, 0.6);
+  --board-shadow: 0 0 0 2px #c79a62, 0 0 0 9px #e6c99a, 0 0 0 10px #b98a52, 0 18px 45px rgba(0, 0, 0, 0.55);
   --board-img: url('../img/damier-bois.svg');
   --board-img-size: 100% 100%;
 }

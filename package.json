@@ -13,7 +13,8 @@
   "dependencies": {
     "@lichess-org/chessground": "^10.5.0",
     "chess.js": "^1.4.0",
-    "stockfish": "^19.0.1"
+    "stockfish": "^19.0.1",
+    "three": "^0.170.0"
   },
   "engines": {
     "node": ">=20"

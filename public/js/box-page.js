@@ -16,6 +16,7 @@ import {
 } from './theme.js';
 import { RATES, DUST_PER_BOX, watchBoxes, openBox, grantTestBox } from './box.js';
 import { createFx } from './fx.js';
+import { createChest } from './coffre3d.js';
 import { boxSfx } from './sound.js';
 
 const ICONS = { board: '▦', pieces: '♞', endAnim: '♚', capture: '✦', P: '♟', R: '♜', N: '♞', B: '♝', Q: '♛', K: '♚' };
@@ -55,6 +56,51 @@ const cubeHTML = (cls = '') => `<div class="cube chest ${cls}" aria-hidden="true
   </div>
 </div>`;
 
+/** Le coffre : en vraie 3D (WebGL, js/coffre3d.js) si possible, sinon la version CSS ci-dessus. */
+function makeChest(host, opts) {
+  const c3 = createChest(host, opts);
+  if (c3) return c3;
+  const cls = opts.idle ? 'idle' : 'stage-cube';
+  host.innerHTML = cubeHTML(cls);
+  const cube = () => host.querySelector('.cube');
+  const hinge = (deg) => `translateZ(calc(var(--s) * -0.45)) rotateX(${deg}deg) translateZ(calc(var(--s) * 0.45))`;
+  return {
+    setTint: (c) => cube().style.setProperty('--c', c),
+    setLeak: (v) => cube().style.setProperty('--leak', String(v)),
+    setOpen: (d) => cube().style.setProperty('--open', `${d}deg`),
+    setIdle() {},
+    hit() {
+      cube().animate([{ transform: 'none' }, { transform: 'translateY(10px) scale(1.14, .8)', offset: 0.14 }, { transform: `translateY(-22px) scale(.92, 1.12) rotate(${rnd(-7, 7)}deg)`, offset: 0.45 }, { transform: 'none' }], { duration: 560, easing: 'ease-out' });
+    },
+    open() {
+      cube().style.setProperty('--leak', '1');
+      cube().querySelector('.cb-lid').animate([{ transform: hinge(16) }, { transform: hinge(128), offset: 0.55 }, { transform: hinge(104), offset: 0.8 }, { transform: hinge(112) }], { duration: 800, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' });
+    },
+    reset() {
+      host.innerHTML = cubeHTML(cls);
+    },
+    dispose() {
+      host.innerHTML = '';
+    },
+  };
+}
+// Les deux coffres de la page (gardés d'un affichage à l'autre : on ne recrée pas un WebGL à chaque fois)
+const cardHost = document.createElement('div');
+cardHost.className = 'chest3d chest-card';
+let cardChest = null;
+const stageHost = document.createElement('div');
+stageHost.className = 'chest3d chest-stage';
+let stageChest = null;
+/** Pose le coffre de la page dans sa carte (il brille quand il y en a à ouvrir). */
+function placeCardChest(n) {
+  const art = $('#bx-card-art');
+  if (!art) return;
+  art.prepend(cardHost);
+  cardChest ||= makeChest(cardHost, { idle: true, tint: '#3cf2a3', zoom: 1.1 });
+  cardChest.setLeak(n ? 0.25 : 0);
+  cardChest.setOpen(0);
+}
+
 const { user, banned } = await session;
 const uid = user?.id || null;
 let state = { ready: false, keys: [], owned: {}, dust: 0 };
@@ -82,16 +128,17 @@ function renderRates() {
 function renderMain() {
   const main = $('#bx-main');
   if (!uid) {
-    main.innerHTML = `<div class="bx-card"><div class="bx-card-art">${cubeHTML('idle')}</div><div class="bx-card-body">
+    main.innerHTML = `<div class="bx-card"><div class="bx-card-art" id="bx-card-art"></div><div class="bx-card-body">
       <h2>Coffre commun</h2><p class="muted">Connecte-toi pour gagner des box : une à chaque victoire en ligne.</p>
       <a class="btn btn-primary" href="connexion.html?retour=box.html">Se connecter</a></div></div>`;
+    placeCardChest(0);
     return;
   }
   if (!state.ready) return;
   const n = state.keys.length;
   const dustOk = state.dust >= DUST_PER_BOX;
   main.innerHTML = `<div class="bx-card${n ? ' has' : ''}">
-      <div class="bx-card-art">${cubeHTML('idle')}${n ? `<span class="bx-count">×${n}</span>` : ''}</div>
+      <div class="bx-card-art" id="bx-card-art">${n ? `<span class="bx-count">×${n}</span>` : ''}</div>
       <div class="bx-card-body">
         <h2>Coffre commun</h2>
         <p class="muted">Un plateau, une pièce (pion, tour, cavalier, fou, dame ou roi), une fin de partie ou une prise et son. Et parfois, très rarement, un jeu de pièces complet.</p>
@@ -108,6 +155,7 @@ function renderMain() {
         ${staff ? '<p class="bx-staff"><button class="btn btn-ghost small" type="button" data-grant>🛠 +1 box de test</button> <span class="muted">(admins et fondateur)</span></p>' : ''}
       </div>
     </div>`;
+  placeCardChest(n);
 }
 
 // ---------------------------------------------------------------------------
@@ -324,7 +372,7 @@ stage.addEventListener('pointerdown', (e) => {
 
 const center = () => {
   const r = scene.getBoundingClientRect();
-  return { x: r.left + r.width / 2, y: r.top + r.height * 0.42 };
+  return { x: r.left + r.width / 2, y: r.top + r.height * 0.5 };
 };
 function shake(px, ms = 380) {
   if (reduce) return;
@@ -363,25 +411,16 @@ function slam(text, color) {
 const setTier = (id) => {
   stage.style.setProperty('--c', TIERS[id].color);
   stage.dataset.level = String(ORDER.indexOf(id));
+  stageChest?.setTint(TIERS[id].color);
 };
 
 /** Un coup sur la box : elle s'écrase, rebondit, le couvercle se soulève et la lumière fuit. */
 function hit(k, color) {
-  const cube = scene.querySelector('.cube');
   boxSfx.hit(k);
-  cube.style.setProperty('--open', `${5 + k * 4}deg`);
-  cube.style.setProperty('--leak', String(Math.min(1, 0.35 + k * 0.18)));
-  cube.animate(
-    [
-      { transform: 'none' },
-      { transform: `translateY(10px) scale(1.14, .8)`, offset: 0.14 },
-      { transform: `translateY(-22px) scale(.92, 1.12) rotate(${rnd(-7, 7)}deg)`, offset: 0.45 },
-      { transform: `translateY(4px) scale(1.04, .96)`, offset: 0.75 },
-      { transform: 'none' },
-    ],
-    { duration: 560, easing: 'ease-out' },
-  );
-  shake(5 + k * 3);
+  stageChest.setOpen(4 + k * 3);
+  stageChest.setLeak(Math.min(1, 0.3 + k * 0.18));
+  stageChest.hit(k);
+  shake(3 + k * 2);
   ring(color, 2.2 + k * 0.4);
   const c = center();
   emit({ x: c.x, y: c.y - 10, n: 14 + k * 8, speed: [3, 7 + k * 2], angle: [-Math.PI * 0.95, -Math.PI * 0.05], color: [color, '#fff'], size: [1.5, 3], life: [25, 50], gravity: 0.2 });
@@ -405,17 +444,10 @@ function tierUp(id) {
 async function burstOpen(id) {
   const t = TIERS[id];
   const lvl = ORDER.indexOf(id);
-  const cube = scene.querySelector('.cube');
   stopHum();
   boxSfx.open(id);
-  cube.classList.add('open');
-  cube.style.setProperty('--leak', '1');
   // Le couvercle bascule sur sa charnière (à l'arrière), rebondit un peu et reste ouvert
-  const hinge = (deg) => `translateZ(calc(var(--s) * -0.45)) rotateX(${deg}deg) translateZ(calc(var(--s) * 0.45))`;
-  cube.querySelector('.cb-lid').animate(
-    [{ transform: hinge(16) }, { transform: hinge(128), offset: 0.55 }, { transform: hinge(104), offset: 0.8 }, { transform: hinge(112) }],
-    { duration: 800, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' },
-  );
+  stageChest.open();
   $('#bx-beam').animate([{ transform: 'translateX(-50%) scaleY(0)', opacity: 0 }, { transform: 'translateX(-50%) scaleY(1)', opacity: 1, offset: 0.35 }, { transform: 'translateX(-50%) scaleY(1.08)', opacity: 0 }], { duration: 1700, delay: 150, easing: 'ease-out' });
   flash('#fff', 0.9, 700);
   shake(12 + lvl * 4, 500);
@@ -428,8 +460,8 @@ async function burstOpen(id) {
     // Pluie de confettis sur toute la largeur de l'écran
     for (let i = 0; i < 24; i++) emit({ x: rnd(0, innerWidth), y: rnd(-60, -10), n: 4 + lvl, speed: [0.5, 3], angle: [Math.PI * 0.3, Math.PI * 0.7], color: conf, kind: 'confetti', size: [3, 6], life: [160, 240], gravity: 0.06, drag: 0.99 });
   }
-  cube.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateY(60px) scale(.7)', opacity: 0 }], { duration: 650, delay: 700, easing: 'ease-in', fill: 'forwards' });
-  await wait(900);
+  stageHost.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateY(60px) scale(.8)', opacity: 0 }], { duration: 650, delay: 900, easing: 'ease-in', fill: 'forwards' });
+  await wait(1100);
 }
 
 async function doOpen(key, fake = null) {
@@ -441,12 +473,18 @@ async function doOpen(key, fake = null) {
   result.hidden = true;
   result.innerHTML = '';
   scene.hidden = false;
-  scene.innerHTML = `${cubeHTML('stage-cube')}<i class="bx-beam" id="bx-beam"></i>`;
+  scene.innerHTML = '<i class="bx-beam" id="bx-beam"></i>';
+  scene.prepend(stageHost);
+  stageHost.getAnimations().forEach((a) => a.cancel());
   $('#bx-hint').hidden = true;
   stage.style.setProperty('--c', '#2fe38a'); // le coffre éteint : la lueur verte de sa gemme
   stage.dataset.level = '-1';
   stage.hidden = false;
   document.body.classList.add('bx-opening');
+  // Le coffre de la scène : créé une fois (quand la scène est affichée, pour avoir sa taille), puis remis à zéro
+  stageChest ||= makeChest(stageHost, { idle: false, tint: '#2fe38a', zoom: 1.08 });
+  stageChest.reset();
+  stageChest.setTint('#2fe38a');
 
   let res;
   try {
@@ -492,8 +530,7 @@ async function doOpen(key, fake = null) {
 
 /** Le coffre apparaît doucement, sans choc ni son de coup (seul le joueur le frappe). */
 async function landing() {
-  const cube = scene.querySelector('.cube');
-  await cube.animate(
+  await stageHost.animate(
     [
       { transform: 'translateY(-40px) scale(.9)', opacity: 0, filter: 'blur(6px)' },
       { transform: 'none', opacity: 1, filter: 'blur(0)' },

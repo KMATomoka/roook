@@ -16,6 +16,9 @@ const copies = [
   [nm('@lichess-org/chessground/assets/chessground.base.css'), 'vendor/chessground-assets/chessground.base.css'],
   [nm('stockfish/bin/stockfish-19-lite-single.js'), 'vendor/stockfish/stockfish-19-lite-single.js'],
   [nm('stockfish/bin/stockfish-19-lite-single.wasm'), 'vendor/stockfish/stockfish-19-lite-single.wasm'],
+  // Three.js (MIT) : le coffre en 3D de la page Mes box (js/coffre3d.js)
+  [nm('three/build/three.module.min.js'), 'vendor/three/three.module.min.js'],
+  [nm('three/LICENSE'), 'vendor/three/LICENSE'],
 ];
 for (const [from, to] of copies) {
   const dest = path.join(dist, to);

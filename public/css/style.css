@@ -2387,6 +2387,12 @@ body { overflow-x: clip; position: relative; }
 @media (prefers-reduced-motion: reduce) { .cube-rot, .cube .gem-set { animation: none; } }
 
 
+/* Le coffre en vraie 3D (js/coffre3d.js, WebGL) : un canevas qui remplit son hôte */
+.chest3d { position: relative; }
+.chest3d-canvas { display: block; width: 100%; height: 100%; }
+.chest3d.chest-card { width: 100%; height: 210px; }
+.chest3d.chest-stage { width: min(600px, 96vw); height: min(480px, 62vh); }
+.chest3d .cube { position: absolute; left: 50%; top: 50%; translate: -50% -50%; }
 /* Coffre de la page : il flotte, et brille quand il y en a à ouvrir */
 .bx-card-art .cube { --s: 100px; }
 .bx-card.has .bx-card-art .cube { --leak: 0.35; --c: #3cf2a3; animation: bx-float 3.2s ease-in-out infinite; }

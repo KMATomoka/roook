@@ -1,5 +1,6 @@
 // Page « Apprendre » : leçons pas à pas pour les débutants (déplacement des pièces, règles spéciales,
-// échec et mat), puis exercices : « Mat à l'infini » (positions créées au hasard, mat en 1, 2 ou 3,
+// échec et mat), puis exercices : « Problèmes » (vrais problèmes classés, tirés de la base ouverte de lichess,
+// avec un classement du joueur), « Mat à l'infini » (positions créées au hasard, mat en 1, 2 ou 3,
 // vérifiées par Stockfish), gagner une pièce, défendre.
 // Le contenu est dans apprendre-data.js ; la progression est gardée dans le navigateur.
 import { Chessground } from '../vendor/chessground/chessground.min.js';
@@ -21,6 +22,31 @@ const GOAL_TEXT = {
 };
 const PIECE_HINT = { p: 'un de tes pions', n: 'un cavalier', b: 'un fou', r: 'une tour', q: 'ta dame', k: 'ton roi' };
 const INF_MODES = { hasard: 'Au hasard', 1: 'Mat en 1', 2: 'Mat en 2', 3: 'Mat en 3' };
+// Problèmes : thèmes proposés (clé dans l'adresse → nom, thèmes lichess acceptés)
+const PB_THEMES = {
+  tous: ['Tous', null],
+  mat1: ['Mat en 1', ['mateIn1']],
+  mat2: ['Mat en 2', ['mateIn2']],
+  mat3: ['Mat en 3 et +', ['mateIn3', 'mateIn4']],
+  fourchette: ['Fourchette', ['fork']],
+  clouage: ['Clouage', ['pin']],
+  enfilade: ['Enfilade', ['skewer']],
+  decouverte: ['Attaque à la découverte', ['discoveredAttack']],
+  sacrifice: ['Sacrifice', ['sacrifice']],
+  prise: ['Pièce en prise', ['hangingPiece', 'trappedPiece']],
+  finale: ['Finale', ['endgame']],
+};
+// Noms français des thèmes lichess, montrés une fois le problème fini
+const THEME_FR = {
+  mateIn1: 'mat en 1', mateIn2: 'mat en 2', mateIn3: 'mat en 3', mateIn4: 'mat en 4', mate: 'mat', fork: 'fourchette', pin: 'clouage',
+  skewer: 'enfilade', discoveredAttack: 'attaque à la découverte', doubleCheck: 'échec double', hangingPiece: 'pièce en prise',
+  trappedPiece: 'pièce piégée', sacrifice: 'sacrifice', deflection: 'déviation', attraction: 'attraction', clearance: 'dégagement',
+  interference: 'interception', xRayAttack: 'rayon X', backRankMate: 'mat du couloir', smotheredMate: 'mat étouffé',
+  promotion: 'promotion', advancedPawn: 'pion avancé', quietMove: 'coup tranquille', defensiveMove: 'coup de défense',
+  zugzwang: 'zugzwang', endgame: 'finale', middlegame: 'milieu de partie', opening: 'ouverture', rookEndgame: 'finale de tours',
+  pawnEndgame: 'finale de pions', queenEndgame: 'finale de dames', bishopEndgame: 'finale de fous', knightEndgame: 'finale de cavaliers',
+  kingsideAttack: 'attaque sur le roque', queensideAttack: 'attaque à l’aile dame', exposedKing: 'roi exposé',
+};
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const isOpening = (l) => l.chapter.startsWith('ouv-');
 const groupOf = (l) => (isOpening(l) ? 'ouvertures' : 'lecons');
@@ -41,6 +67,8 @@ const icon = (role, color = 'white') => `<span class="cg-wrap learn-ico" aria-hi
 
 // --- Progression (dans le navigateur) -------------------------------------------
 const progress = { lessons: {}, puzzles: {}, infinite: { solved: 0, streak: 0, best: 0 }, ...getPref('apprendre', {}) };
+// Problèmes : classement du joueur (800 au départ), réussis / joués, série, et les derniers vus (pour ne pas les revoir)
+progress.problems = { rating: 800, played: 0, solved: 0, streak: 0, best: 0, seen: [], ...(progress.problems || {}) };
 const save = () => setPref('apprendre', progress);
 
 // --- Échiquier ------------------------------------------------------------------
@@ -71,6 +99,7 @@ let made = 0; // « Mat à l'infini » : coups déjà joués par le joueur
 let mistake = false; // un coup raté dans cet exercice (la série sans faute s'arrête)
 let seq = 0; // ouvertures : prochain coup de la suite
 let gen = 0; // change à chaque nouvelle tâche (pour ignorer les minuteries d'avant)
+let usedHelp = false; // problèmes : indice ou solution utilisés
 
 const later = (ms, f) => {
   const g = gen;
@@ -250,6 +279,25 @@ function judge(m) {
     });
     return;
   }
+  if (g === 'problem') {
+    const last = lineIdx >= task.line.length - 1;
+    // Le coup attendu, ou n'importe quel mat au dernier coup (comme sur lichess)
+    if (uci(m) !== task.line[lineIdx] && !(last && chess.isCheckmate())) {
+      rateProblem(false);
+      return wrong('Ce n’est pas le bon coup. Cherche encore !', 1200);
+    }
+    if (last || chess.isCheckmate()) return success(chess.isCheckmate() ? 'Échec et mat !' : undefined);
+    busy = true;
+    feedback(pick(GOOD) + ' Continue…', 'good');
+    sync();
+    later(650, () => {
+      playOpp(task.line[lineIdx + 1]);
+      lineIdx += 2;
+      busy = false;
+      sync();
+    });
+    return;
+  }
   if (g === 'line') {
     const want = task.line[lineIdx].split('|');
     if (!want.includes(uci(m))) return wrong('Ce n’est pas le meilleur coup ici. Cherche encore !');
@@ -310,6 +358,27 @@ function success(text) {
     const next = same[same.indexOf(L) + 1];
     const after = isOpening(L) ? ['Toutes les ouvertures →', '#ouvertures'] : ['Passer aux entraînements →', '#exercices'];
     showNext(next ? `${isOpening(L) ? 'Ouverture' : 'Leçon'} suivante : ${next.title} →` : after[0], next ? `#lecon/${next.id}` : after[1]);
+  } else if (cur.kind === 'problem') {
+    const clean = !cur.failed && !mistake && !usedHelp;
+    rateProblem(clean);
+    const st = progress.problems;
+    if (clean) st.solved++;
+    st.streak = clean ? st.streak + 1 : 0;
+    st.best = Math.max(st.best, st.streak);
+    save();
+    renderSteps();
+    const d = cur.delta;
+    const themes = task.themes.split(' ').map((t) => THEME_FR[t]).filter(Boolean);
+    feedback(
+      `${clean ? text || pick(BRAVO) : 'Résolu, mais pas du premier coup.'} ${d >= 0 ? '+' : '−'}${Math.abs(d)} au classement.` +
+        (clean && st.streak > 1 ? ` 🔥 ${st.streak} d’affilée !` : ''),
+      clean ? 'good' : '',
+    );
+    if (themes.length) {
+      $('#p-hint').textContent = `Thèmes : ${themes.slice(0, 4).join(', ')}.`;
+      $('#p-hint').hidden = false;
+    }
+    showNext('Problème suivant →', `#problemes/${cur.theme}`);
   } else if (cur.kind === 'infinite') {
     const st = progress.infinite;
     if (!shownSolution) st.solved++;
@@ -344,6 +413,7 @@ function solutionMove() {
   const ms = chess.moves({ verbose: true });
   const g = task.goal;
   if (g === 'line') return ms.find((m) => task.line[lineIdx].split('|')[0] === uci(m));
+  if (g === 'problem') return ms.find((m) => uci(m) === task.line[lineIdx]);
   if (g === 'sequence') return ms.find((m) => noCheck(m.san) === noCheck(task.moves[seq][0].split('|')[0]));
   if (g === 'move') return ms.find((m) => task.moves.includes(uci(m)));
   if (g === 'castle') return ms.find((m) => m.flags.includes(task.side));
@@ -363,7 +433,7 @@ function startTask() {
   const fen = task.fen || START;
   const fenTurn = fen.split(' ')[1];
   chess = task.goal === 'sequence' ? new Chess(fen) : cur.kind === 'lesson' ? load(fen) : new Chess(fen);
-  player = task.side || (task.pre ? other(fenTurn) : fenTurn);
+  player = task.side || (task.pre || task.goal === 'problem' ? other(fenTurn) : fenTurn);
   seq = 0;
   orientation = player;
   visited = new Set();
@@ -379,7 +449,7 @@ function startTask() {
   $('#btn-next').hidden = true;
   const hasSolution = !['targets', 'capture', 'promote'].includes(task.goal);
   $('#btn-solution').hidden = !hasSolution;
-  $('#btn-hint').hidden = !task.hint && task.goal !== 'mateN';
+  $('#btn-hint').hidden = !task.hint && task.goal !== 'mateN' && task.goal !== 'problem';
   $('#p-turn').innerHTML = `<span class="learn-side ${colorName(player)}"></span> Tu joues les ${player === 'w' ? 'Blancs' : 'Noirs'}`;
   $('#p-text').innerHTML =
     task.text ||
@@ -388,7 +458,18 @@ function startTask() {
       : GOAL_TEXT[task.goal]);
   $('#p-line').hidden = task.goal !== 'sequence';
   if (task.goal === 'sequence') return seqNext();
-  if (task.pre) {
+  if (task.goal === 'problem') {
+    // Problème : l'adversaire joue le premier coup de la suite, puis c'est à toi
+    usedHelp = false;
+    lineIdx = 1;
+    busy = true;
+    sync();
+    later(700, () => {
+      playOpp(task.line[0]);
+      busy = false;
+      sync();
+    });
+  } else if (task.pre) {
     busy = true;
     sync();
     later(700, () => {
@@ -435,6 +516,11 @@ function seqNext() {
 
 function renderSteps(doneUpTo) {
   const ol = $('#p-steps');
+  if (cur.kind === 'problem') {
+    const st = progress.problems;
+    ol.innerHTML = `<li class="learn-stat">📈 Ton classement <b>${Math.round(st.rating)}</b></li><li class="learn-stat">🔥 Série <b>${st.streak}</b></li><li class="learn-stat">✓ Réussis <b>${st.solved}</b> / ${st.played}</li>`;
+    return;
+  }
   if (cur.kind === 'infinite') {
     const st = progress.infinite;
     ol.innerHTML = `<li class="learn-stat">🔥 Série sans faute <b>${st.streak}</b></li><li class="learn-stat">🏆 Record <b>${st.best}</b></li><li class="learn-stat">✓ Réussis <b>${st.solved}</b></li>`;
@@ -547,6 +633,83 @@ async function openInfinite(mode) {
   document.title = `Mat en ${r.n} — Entraînement — ROOOK`;
 }
 
+// --- Problèmes : vrais problèmes classés (base ouverte de lichess, CC0), autour du niveau du joueur ----------
+let bank = null; // [[id, fen, coups, classement, thèmes], …]
+const loadBank = () => (bank ||= fetch('data/problemes.json').then((r) => r.json()).then((d) => d.problemes));
+const themeLinks = (theme) =>
+  `<div class="learn-modes">${Object.entries(PB_THEMES)
+    .map(([k, [name]]) => `<a class="btn small ${k === theme ? 'btn-primary' : 'btn-ghost'}" href="#problemes/${k}">${name}</a>`)
+    .join('')}</div>`;
+
+/** Un problème proche du classement du joueur (pas vu récemment), dans le thème choisi. */
+function pickProblem(list, theme) {
+  const want = PB_THEMES[theme][1];
+  const pool = want ? list.filter((p) => want.some((t) => p[4].split(' ').includes(t))) : list;
+  const seen = new Set(progress.problems.seen);
+  const r = progress.problems.rating;
+  for (const width of [100, 200, 350, 600, 5000]) {
+    const near = pool.filter((p) => Math.abs(p[3] - r) <= width && !seen.has(p[0]));
+    if (near.length) return pick(near);
+  }
+  return pick(pool); // tout vu : on recommence
+}
+
+/** Classement du joueur : façon Elo, une seule fois par problème (au premier raté, ou à la réussite). */
+function rateProblem(won) {
+  if (cur.kind !== 'problem' || cur.rated) return;
+  cur.rated = true;
+  if (!won) cur.failed = true; // même après « Réessayer », ce problème reste raté
+  const st = progress.problems;
+  const expected = 1 / (1 + 10 ** ((task.rating - st.rating) / 400));
+  const k = st.played < 20 ? 40 : 20; // plus rapide au début, le temps de trouver ton niveau
+  const before = st.rating;
+  st.rating = Math.max(100, Math.round(st.rating + k * ((won ? 1 : 0) - expected)));
+  cur.delta = st.rating - before;
+  st.played++;
+  st.seen = [...st.seen, task.id].slice(-400);
+  if (!won) st.streak = 0;
+  save();
+  renderSteps();
+}
+
+async function openProblem(theme) {
+  if (!PB_THEMES[theme]) theme = 'tous';
+  gen++;
+  const g0 = gen;
+  cur = { kind: 'problem', theme, rated: false, delta: 0 };
+  task = null;
+  $('#back').textContent = '← Tous les entraînements';
+  $('#back').href = '#exercices';
+  $('#p-kicker').textContent = `Entraînement · Problèmes · ${PB_THEMES[theme][0]}`;
+  $('#p-title').textContent = 'Problème';
+  $('#p-intro').innerHTML = `<p>Des positions tirées de vraies parties. Ton adversaire vient de jouer : trouve la meilleure suite. Ton classement monte quand tu réussis du premier coup, et baisse sinon.</p>${themeLinks(theme)}`;
+  renderSteps();
+  showPlay(true);
+  ground.set({ movable: { color: undefined, dests: new Map() }, lastMove: undefined, check: false });
+  ground.setAutoShapes([]);
+  fx.reset();
+  for (const id of ['#btn-next', '#btn-hint', '#btn-solution', '#p-hint']) $(id).hidden = true;
+  $('#p-turn').textContent = '';
+  $('#p-text').textContent = 'Chargement du problème…';
+  feedback('');
+  let list;
+  try {
+    list = await loadBank();
+  } catch {
+    bank = null;
+    $('#p-text').textContent = 'Impossible de charger les problèmes. Vérifie ta connexion, puis réessaie.';
+    return;
+  }
+  if (g0 !== gen) return;
+  const [id, fen, moves, rating, themes] = pickProblem(list, theme);
+  task = { goal: 'problem', id, fen, line: moves.split(' '), rating, themes };
+  const mateIn = themes.match(/mateIn(\d)/)?.[1];
+  $('#p-title').textContent = `Problème · ${rating}`;
+  startTask();
+  $('#p-text').innerHTML = mateIn ? `Trouve le mat en ${mateIn}.` : 'Trouve le meilleur coup.';
+  document.title = `Problème ${rating} — Entraînement — ROOOK`;
+}
+
 // --- Sommaire --------------------------------------------------------------------
 function bar(n, total, label) {
   const pct = total ? Math.round((n / total) * 100) : 0;
@@ -559,7 +722,7 @@ function renderHome(tab) {
   const lessonsDone = basics.filter((l) => progress.lessons[l.id]).length;
   const openingsDone = openings.filter((l) => progress.lessons[l.id]).length;
   const puzzlesDone = PUZZLES.filter((p) => progress.puzzles[p.id]).length;
-  $('#progress').innerHTML = `<h2>Ta progression</h2>${bar(lessonsDone, basics.length, '📘 Leçons')}${bar(openingsDone, openings.length, '♞ Ouvertures')}${bar(puzzlesDone, PUZZLES.length, '🎯 Exercices')}<p class="learn-progress-inf">♾ Mats réussis : <b>${progress.infinite.solved}</b> · record <b>${progress.infinite.best}</b> d’affilée</p>`;
+  $('#progress').innerHTML = `<h2>Ta progression</h2>${bar(lessonsDone, basics.length, '📘 Leçons')}${bar(openingsDone, openings.length, '♞ Ouvertures')}${bar(puzzlesDone, PUZZLES.length, '🎯 Exercices')}<p class="learn-progress-inf">🧩 Problèmes : classement <b>${Math.round(progress.problems.rating)}</b> · <b>${progress.problems.solved}</b> réussis</p><p class="learn-progress-inf">♾ Mats réussis : <b>${progress.infinite.solved}</b> · record <b>${progress.infinite.best}</b> d’affilée</p>`;
 
   const chaptersHtml = (chapters, list) => {
   const nextLesson = list.find((l) => !progress.lessons[l.id]);
@@ -588,7 +751,18 @@ function renderHome(tab) {
     chaptersHtml(CHAPTERS.filter((c) => c.id.startsWith('ouv-')), openings);
 
   const inf = progress.infinite;
-  $('#pane-exercices').innerHTML = `<article class="card learn-infinite">
+  const pb = progress.problems;
+  $('#pane-exercices').innerHTML = `<article class="card learn-infinite learn-problems">
+      <div class="learn-infinite-text">
+        <h2>🧩 Problèmes</h2>
+        <p class="muted">Des milliers de vrais problèmes tirés de parties, choisis à ton niveau : fourchettes, clouages, mats en 2… Ton classement monte à chaque problème réussi du premier coup.</p>
+        <p class="learn-infinite-stats">📈 Classement <b>${Math.round(pb.rating)}</b> · ✓ Réussis <b>${pb.solved}</b> / ${pb.played} · 🏆 Record <b>${pb.best}</b> d’affilée</p>
+      </div>
+      <a class="btn btn-primary" href="#problemes/tous">Résoudre un problème →</a>
+      ${themeLinks('')}
+      <p class="muted learn-credit">Problèmes de la base ouverte de <a href="https://database.lichess.org/#puzzles" target="_blank" rel="noopener">lichess.org</a>.</p>
+    </article>
+    <article class="card learn-infinite">
       <div class="learn-infinite-text">
         <h2>♾ Mat à l’infini</h2>
         <p class="muted">Des positions de mat créées au hasard, sans fin : en 1, 2 ou 3 coups. Ton adversaire se défend toujours au mieux.</p>
@@ -632,6 +806,7 @@ function route() {
     if (L) return openLesson(L, Number(n) || 0);
   }
   if (kind === 'infini') return openInfinite(id || 'hasard');
+  if (kind === 'problemes') return openProblem(id || 'tous');
   if (kind === 'exo') {
     const P = PUZZLES.find((p) => p.id === id);
     if (P) return openPuzzle(P);
@@ -654,6 +829,13 @@ $('#btn-hint').addEventListener('click', async () => {
     const c = new Chess(fen);
     const m = c.move({ from: best.slice(0, 2), to: best.slice(2, 4), promotion: best[4] });
     $('#p-hint').textContent = `💡 Joue ${PIECE_HINT[m.piece]}${c.inCheck() ? ', en donnant échec' : ''}.`;
+  } else if (task.goal === 'problem') {
+    if (finished || busy) return;
+    const m = solutionMove();
+    if (!m) return;
+    usedHelp = true;
+    rateProblem(false);
+    $('#p-hint').textContent = `💡 Joue ${PIECE_HINT[m.piece]}. (Ce problème comptera comme raté.)`;
   } else $('#p-hint').textContent = '💡 ' + task.hint;
   $('#p-hint').hidden = false;
 });
@@ -668,6 +850,10 @@ $('#btn-solution').addEventListener('click', async () => {
   }
   if (!m) return;
   shownSolution = true;
+  if (task.goal === 'problem') {
+    usedHelp = true;
+    rateProblem(false);
+  }
   ground.setAutoShapes([{ orig: m.from, dest: m.to, brush: 'green' }]);
   feedback(cur.kind === 'lesson' ? 'Joue le coup indiqué par la flèche.' : 'Joue le coup de la flèche. (Cet exercice ne comptera pas comme réussi.)', '');
 });

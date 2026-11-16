@@ -2405,40 +2405,22 @@ body.bx-opening { overflow: hidden; }
 /* On tape sur le coffre : pas de surlignage bleu (sélection de texte, reflet du toucher, menu « copier ») */
 .bx-stage, .bx-stage *, .chest3d, .chest3d * { -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .bx-stage canvas, .chest3d canvas { touch-action: manipulation; outline: none; }
-/* Téléphones : on garde le spectacle mais sans les effets les plus lourds à dessiner (rayons qui tournent sur tout
-   l'écran, flou du rayon de lumière, reflets animés de la carte) */
-@media (pointer: coarse), (max-width: 760px) {
-  .bx-rays { animation: none; }
-  .bx-beam { filter: none; }
-  .bx-result.foil .bx-card3d::before { animation: none; }
-  .bx-card3d { transition: none; }
-  .bx-stage { transition: none; }
-  .bx-card3d { box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.4), 0 0 34px color-mix(in srgb, var(--c) 45%, transparent); }
-  .bx-tier { text-shadow: 0 0 12px var(--tc), 0 3px 0 color-mix(in srgb, var(--tc) 50%, #000); }
-  .bx-ped { animation: none; }
-  /* Rayons : plus petits et sans masque (une couche de 170vmax masquée pèse des dizaines de Mo sur un téléphone) */
-  .bx-rays { width: 115vmax; height: 115vmax; -webkit-mask: none; mask: none; background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--c) 22%, transparent) 0 5deg, transparent 5deg 15deg); }
-  /* Pas de modes de fusion (ils obligent à recomposer tout ce qui est dessous à chaque image) */
-  .bx-beam { mix-blend-mode: normal; opacity: 0; }
-  .bx-result.foil .bx-card3d::before { display: none; }
-  .bx-card3d::after { mix-blend-mode: normal; background: radial-gradient(circle at var(--mx) var(--my), rgba(255, 255, 255, 0.07), transparent 42%); }
-}
 .bx-stage {
   position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; overflow: hidden; --c: #8f6bff;
   background: radial-gradient(ellipse 70% 60% at 50% 52%, color-mix(in srgb, var(--c) 34%, #0a0716) 0%, #06040d 72%);
-  transition: --c 0.6s ease-out;
 }
 .bx-stage[hidden] { display: none; }
-.bx-rays {
-  position: absolute; left: 50%; top: 50%; width: 170vmax; height: 170vmax; translate: -50% -50%; pointer-events: none; opacity: 0; transition: opacity 0.7s;
-  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--c) 45%, transparent) 0 5deg, transparent 5deg 15deg);
-  -webkit-mask: radial-gradient(circle, #000 0, transparent 46%); mask: radial-gradient(circle, #000 0, transparent 46%);
-  animation: bx-spin 40s linear infinite;
+.bx-rays { /* rayons fixes (une grande couche qui tourne, masquée, coûtait trop cher à dessiner) */
+  position: absolute; left: 50%; top: 50%; width: 140vmax; height: 140vmax; translate: -50% -50%; pointer-events: none; opacity: 0; transition: opacity 0.5s;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--c) 30%, transparent) 0 5deg, transparent 5deg 15deg);
+}
+.bx-stage::after { /* voile sombre sur les bords : les rayons s'y fondent */
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 2;
+  background: radial-gradient(ellipse 60% 55% at 50% 50%, transparent 30%, #06040d 100%);
 }
 .bx-stage[data-level="1"] .bx-rays { opacity: 0.35; }
-.bx-stage[data-level="2"] .bx-rays { opacity: 0.6; animation-duration: 22s; }
-.bx-stage[data-level="3"] .bx-rays { opacity: 0.9; animation-duration: 12s; }
-@keyframes bx-spin { to { rotate: 360deg; } }
+.bx-stage[data-level="2"] .bx-rays { opacity: 0.6; }
+.bx-stage[data-level="3"] .bx-rays { opacity: 0.9; }
 .bx-fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
 .bx-flash { position: absolute; inset: 0; pointer-events: none; z-index: 6; opacity: 0; background: #fff; }
 /* Bouton 🎵 : couper ou remettre la musique de fond */
@@ -2462,12 +2444,11 @@ body.bx-opening { overflow: hidden; }
     radial-gradient(ellipse 22% 100% at 50% 100%, rgba(255, 255, 255, 0.95), transparent 70%),
     radial-gradient(ellipse 50% 100% at 50% 100%, color-mix(in srgb, var(--c) 85%, #fff) 0, color-mix(in srgb, var(--c) 45%, transparent) 40%, transparent 75%);
   -webkit-mask: linear-gradient(0deg, transparent 0, #000 6%, #000 45%, transparent 100%); mask: linear-gradient(0deg, transparent 0, #000 6%, #000 45%, transparent 100%);
-  filter: blur(6px); mix-blend-mode: screen;
 }
 .bx-tier {
   --tc: #fff; position: absolute; left: 0; right: 0; top: 7%; margin: 0; text-align: center; pointer-events: none; opacity: 0; z-index: 4;
   font: 900 clamp(2.1rem, 9vw, 3.6rem) / 1 var(--serif); letter-spacing: 0.06em; text-transform: uppercase; color: #fff;
-  text-shadow: 0 0 10px var(--tc), 0 0 30px var(--tc), 0 0 60px var(--tc), 0 4px 0 color-mix(in srgb, var(--tc) 50%, #000);
+  text-shadow: 0 0 12px var(--tc), 0 0 28px var(--tc), 0 4px 0 color-mix(in srgb, var(--tc) 50%, #000);
 }
 .bx-hint {
   position: absolute; left: 0; right: 0; bottom: 6%; margin: 0; text-align: center; pointer-events: none;
@@ -2493,11 +2474,11 @@ body.bx-opening { overflow: hidden; }
 }
 .bx-card3d > * { position: relative; z-index: 1; }
 .bx-card3d::after { /* reflet qui suit la souris */
-  content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; mix-blend-mode: screen;
-  background: radial-gradient(circle at var(--mx) var(--my), rgba(255, 255, 255, 0.16), transparent 42%);
+  content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: radial-gradient(circle at var(--mx) var(--my), rgba(255, 255, 255, 0.09), transparent 42%);
 }
 .bx-result.foil .bx-card3d::before { /* reflets d'arc-en-ciel (Épique, Jeu complet) */
-  content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; mix-blend-mode: color-dodge; opacity: 0.55;
+  content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0.35;
   background: linear-gradient(115deg, transparent 22%, rgba(255, 90, 200, 0.35) 34%, rgba(90, 200, 255, 0.35) 46%, rgba(120, 255, 170, 0.35) 58%, rgba(255, 220, 90, 0.3) 68%, transparent 80%) 0 0 / 300% 300%;
   animation: bx-foil 5s linear infinite;
 }
@@ -2600,3 +2581,13 @@ body.bx-opening { overflow: hidden; }
 #inv-detail-board[data-ptype="bishop"] cg-board piece.bishop,
 #inv-detail-board[data-ptype="queen"] cg-board piece.queen,
 #inv-detail-board[data-ptype="king"] cg-board piece.king { filter: drop-shadow(0 0 6px var(--tier)) drop-shadow(0 0 2px #fff); }
+
+/* Coffres sur téléphone : le spectacle, sans les effets les plus lourds à dessiner (en fin de fichier pour passer
+   devant les règles de base) */
+@media (pointer: coarse), (max-width: 760px) {
+  .bx-card3d { transition: none; box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.4), 0 0 34px color-mix(in srgb, var(--c) 45%, transparent); }
+  .bx-tier { text-shadow: 0 0 12px var(--tc), 0 3px 0 color-mix(in srgb, var(--tc) 50%, #000); }
+  .bx-ped { animation: none; }
+  .bx-rays { width: 115vmax; height: 115vmax; }
+  .bx-result.foil .bx-card3d::before { display: none; }
+}

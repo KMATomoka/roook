@@ -16,7 +16,7 @@ import {
 } from './theme.js';
 import { RATES, DUST_PER_BOX, watchBoxes, openBox, grantTestBox } from './box.js';
 import { createFx } from './fx.js';
-import { boxMusic, isMusicOn, setMusicOn, isMuted } from './sound.js';
+import { boxMusic, isMusicOn, setMusicOn, isMuted, unlockAudio, warmAudio } from './sound.js';
 // Téléphones et petites tablettes : effets allégés (même règle que js/coffre3d.js)
 const LOW_POWER = matchMedia('(pointer: coarse)').matches || innerWidth < 760;
 // La 3D (Three.js, 700 Ko) se charge après la page, pour qu'elle s'affiche tout de suite
@@ -217,7 +217,7 @@ let parts = [];
 let raf = 0;
 let dpr = 1;
 function sizeCanvas() {
-  dpr = LOW_POWER ? 1 : Math.min(2, devicePixelRatio || 1);
+  dpr = 1; // les particules n'ont pas besoin de plus : un canevas plein écran en haute densité coûte cher
   canvas.width = innerWidth * dpr;
   canvas.height = innerHeight * dpr;
 }
@@ -391,6 +391,7 @@ function waitTap() {
   });
 }
 stage.addEventListener('pointerdown', (e) => {
+  unlockAudio();
   if (tapResolve && !e.target.closest('button, a')) tapResolve();
 });
 
@@ -423,8 +424,8 @@ function slam(text, color) {
   t.style.setProperty('--tc', color);
   t.animate(
     [
-      { transform: 'scale(2.6)', opacity: 0, filter: 'blur(12px)' },
-      { transform: 'scale(.92)', opacity: 1, filter: 'blur(0)', offset: 0.3 },
+      { transform: 'scale(2.6)', opacity: 0 },
+      { transform: 'scale(.92)', opacity: 1, offset: 0.3 },
       { transform: 'scale(1)', opacity: 1, offset: 0.45 },
       { transform: 'scale(1.04)', opacity: 1, offset: 0.85 },
       { transform: 'scale(1.1)', opacity: 0 },
@@ -457,7 +458,7 @@ function tierUp(id) {
   setTier(id);
   boxSfx.tierUp(id);
   stopHum();
-  stopHum = boxSfx.hum(ORDER.indexOf(id));
+  stopHum = isMusicOn() ? () => {} : boxSfx.hum(ORDER.indexOf(id));
   flash(t.color, 0.55, 600);
   slam(id === 'jeu' ? 'Jeu complet ?!' : `${t.name} !`, t.color);
   ring(t.color, 4.5);
@@ -469,6 +470,7 @@ function tierUp(id) {
 async function burstOpen(id) {
   const t = TIERS[id];
   const lvl = ORDER.indexOf(id);
+  boxMusic.resolve(lvl); // retour au calme, en majeur pour un gros drop
   stopHum();
   boxSfx.open(id);
   // Le couvercle bascule sur sa charnière (à l'arrière), rebondit un peu et reste ouvert
@@ -509,15 +511,16 @@ async function doOpen(key, fake = null) {
   stage.dataset.level = '-1';
   stage.hidden = false;
   document.body.classList.add('bx-opening');
-  // Le coffre de la scène : créé une fois (quand la scène est affichée, pour avoir sa taille), puis remis à zéro
+  // Son et musique lancés tout de suite, dans le geste du joueur (sinon les téléphones les bloquent)
+  unlockAudio();
+  boxMusic.start();
+  updateMusicBtn();
   // Le coffre de la page passe dans la scène (déjà prêt : pas de chargement au moment d'ouvrir)
   await ensureChest();
   chest.moveTo(stageHost, { idle: false, zoom: 1.08, sharp: true });
   chest.reset();
   chest.setPaused(false);
   chest.setTint('#2fe38a');
-  boxMusic.start();
-  updateMusicBtn();
 
   let res;
   try {
@@ -531,7 +534,8 @@ async function doOpen(key, fake = null) {
   }
   const target = ORDER.indexOf(res.rarity);
   if (!reduce) {
-    stopHum = boxSfx.hum(0);
+    // Sans musique, la gemme scintille doucement en attendant
+    stopHum = isMusicOn() ? () => {} : boxSfx.hum(0);
     const hint = $('#bx-hint');
     hint.hidden = false;
     buildCard(res); // la carte se prépare, invisible, pendant les coups
@@ -542,6 +546,7 @@ async function doOpen(key, fake = null) {
       if (k === 0) {
         hint.textContent = 'Encore !';
         setTier('commun');
+        boxMusic.battle(); // premier coup : place à la musique épique
       }
       hit(k, TIERS[ORDER[Math.min(k, target)]].color);
       if (k === target + 1) break;
@@ -566,8 +571,8 @@ async function doOpen(key, fake = null) {
 async function landing() {
   await stageHost.animate(
     [
-      { transform: 'translateY(-40px) scale(.9)', opacity: 0, filter: 'blur(6px)' },
-      { transform: 'none', opacity: 1, filter: 'blur(0)' },
+      { transform: 'translateY(-40px) scale(.9)', opacity: 0 },
+      { transform: 'none', opacity: 1 },
     ],
     { duration: 700, easing: 'cubic-bezier(.2,.8,.3,1)' },
   ).finished;
@@ -770,11 +775,21 @@ function updateMusicBtn() {
 }
 musicBtn.addEventListener('click', (e) => {
   e.stopPropagation();
+  unlockAudio();
   setMusicOn(!isMusicOn());
-  if (isMusicOn() && !stage.hidden) boxMusic.start();
+  if (isMusicOn() && !stage.hidden) {
+    boxMusic.start();
+    if (opening && stage.dataset.level !== '-1') {
+      boxMusic.battle();
+      boxMusic.setLevel(Math.max(0, Number(stage.dataset.level)));
+    }
+  }
   updateMusicBtn();
 });
 musicBtn.addEventListener('pointerdown', (e) => e.stopPropagation()); // ce n'est pas un coup sur le coffre
+
+// Le son et la musique se préparent quand la page est calme (pas au moment d'ouvrir)
+addEventListener('load', () => (window.requestIdleCallback || setTimeout)(() => warmAudio(), { timeout: 3000 }));
 
 // ---------------------------------------------------------------------------
 renderRates();

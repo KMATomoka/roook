@@ -195,6 +195,7 @@ function buildChest() {
   const glow = new THREE.Mesh(new THREE.PlaneGeometry(W - 2 * T, D - 2 * T), glowMat);
   glow.rotation.x = -Math.PI / 2;
   glow.position.y = H - 0.18;
+  glow.userData.keep = true;
   body.add(glow);
 
   // --- Fer du corps : cornières aux 4 coins, bandes haute et basse, clous ---
@@ -414,7 +415,47 @@ function buildChest() {
   gemLight.position.z = 0.16;
   gemGroup.add(gemLight);
 
+  mergeByMaterial(body);
+  mergeByMaterial(lid);
   return { chest, lidPivot, glow, glowMat, gemMat, gemLight };
+}
+
+/**
+ * Fusionne les pièces d'un groupe qui partagent un matériau : une centaine de planches, clous et plaques deviennent
+ * une dizaine d'objets, donc une dizaine d'appels de dessin par image au lieu de plus de cent.
+ */
+function mergeByMaterial(group) {
+  const buckets = new Map();
+  for (const m of [...group.children]) {
+    if (!m.isMesh || m.userData.keep) continue;
+    m.updateMatrix();
+    const g = (m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone()).applyMatrix4(m.matrix);
+    for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
+    if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array((g.attributes.position.count) * 2), 2));
+    if (!buckets.has(m.material)) buckets.set(m.material, []);
+    buckets.get(m.material).push(g);
+    group.remove(m);
+  }
+  for (const [mat, list] of buckets) {
+    const merged = new THREE.BufferGeometry();
+    for (const name of ['position', 'normal', 'uv']) {
+      const size = list[0].attributes[name].itemSize;
+      const total = list.reduce((n, g) => n + g.attributes[name].array.length, 0);
+      const arr = new Float32Array(total);
+      let off = 0;
+      for (const g of list) {
+        arr.set(g.attributes[name].array, off);
+        off += g.attributes[name].array.length;
+      }
+      merged.setAttribute(name, new THREE.BufferAttribute(arr, size));
+    }
+    merged.computeBoundingSphere();
+    list.forEach((g) => g.dispose());
+    const mesh = new THREE.Mesh(merged, mat);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+  }
 }
 
 /** Un petit environnement pour les reflets du fer et de la gemme (une pièce sombre avec deux fenêtres de lumière). */
@@ -450,12 +491,12 @@ export function createChest(host, { idle = true, tint = '#2fe38a', leak = 0, zoo
     return null;
   }
   if (!renderer.getContext()) return null;
-  renderer.setPixelRatio(Math.min(LOW_POWER ? 1.3 : 1.5, devicePixelRatio || 1));
+  renderer.setPixelRatio(Math.min(LOW_POWER ? 1 : 1.25, devicePixelRatio || 1));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.3;
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = LOW_POWER ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+  renderer.shadowMap.enabled = !LOW_POWER; // téléphone : pas d'ombres calculées (la tache au sol suffit)
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   const canvas = renderer.domElement;
   canvas.className = 'chest3d-canvas';
   host.appendChild(canvas);
@@ -640,7 +681,7 @@ export function createChest(host, { idle = true, tint = '#2fe38a', leak = 0, zoo
       curZoom = z;
       st.idle = i;
       h.appendChild(canvas);
-      renderer.setPixelRatio(Math.min(LOW_POWER ? 1.3 : sharp ? 2 : 1.5, devicePixelRatio || 1));
+      renderer.setPixelRatio(Math.min(LOW_POWER ? 1.1 : sharp ? 1.5 : 1.25, devicePixelRatio || 1));
       ro.observe(h);
       io.observe(h);
       resize();

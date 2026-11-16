@@ -26,6 +26,7 @@ let fens = []; // positions : fens[0] = départ, fens[i] = après le coup i
 let evals = []; // évaluation (centipions, point de vue des Blancs) de chaque position
 let bests = []; // meilleur coup (uci) de chaque position
 let pvs = []; // meilleure suite de chaque position
+let seconds = []; // évaluation du 2e meilleur coup de chaque position (null si inconnue ou coup unique)
 let cur = 0;
 let orientation = 'w';
 let ground = null;
@@ -101,14 +102,16 @@ async function start(g) {
   }
   orientation = g.me || 'w';
 
-  if (g.analysis && g.analysis.depth === DEPTH && g.analysis.evals.length === fens.length) {
+  if (g.analysis && g.analysis.depth === DEPTH && g.analysis.evals.length === fens.length && Array.isArray(g.analysis.seconds)) {
     ({ evals, bests, pvs } = g.analysis);
+    seconds = g.analysis.seconds;
   } else {
     $('#progress').hidden = false;
     const engine = new Engine();
     evals = [];
     bests = [];
     pvs = [];
+    seconds = [];
     for (let i = 0; i < fens.length; i++) {
       $('#progress-text').textContent = i === 0 ? 'Position de départ' : `Coup ${Math.ceil(i / 2)} sur ${Math.ceil((fens.length - 1) / 2)}`;
       $('#progress-bar').style.width = `${Math.round((i / fens.length) * 100)}%`;
@@ -117,27 +120,80 @@ async function start(g) {
         evals.push(pos.turn() === 'w' ? -10000 : 10000);
         bests.push(null);
         pvs.push([]);
+        seconds.push(null);
         continue;
       }
       if (pos.isDraw() || pos.isStalemate()) {
         evals.push(0);
         bests.push(null);
         pvs.push([]);
+        seconds.push(null);
         continue;
       }
-      const res = await engine.analyse(fens[i], { depth: DEPTH });
+      // Deux lignes : le meilleur coup, et le 2e (pour savoir si le meilleur était le seul bon coup)
+      const res = await engine.analyse(fens[i], { depth: DEPTH, multipv: 2 });
       evals.push(toWhiteCp(res.lines[0], pos.turn()));
       bests.push(res.bestmove);
       pvs.push((res.lines[0]?.pv || []).slice(0, 6));
+      seconds.push(res.lines[1] ? toWhiteCp(res.lines[1], pos.turn()) : null);
     }
     engine.destroy();
     $('#progress-bar').style.width = '100%';
-    g.analysis = { depth: DEPTH, evals, bests, pvs };
+    g.analysis = { depth: DEPTH, evals, bests, pvs, seconds };
     saveGame(g);
     $('#progress').hidden = true;
   }
   classify();
   showReview();
+}
+
+const VAL = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+
+/** Le coup laisse-t-il en prise une pièce qui vaut plus que ce qu'il a pris ? (un sacrifice) */
+function isSacrifice(m, i) {
+  if (m.piece === 'k' || m.piece === 'p') return false;
+  const given = VAL[m.promotion || m.piece];
+  const taken = m.captured ? VAL[m.captured] : 0;
+  if (given - taken < 2) return false;
+  const after = new Chess(fens[i + 1]);
+  const takers = after.moves({ verbose: true }).filter((x) => x.to === m.to && x.captured);
+  if (!takers.length) return false;
+  const cheapest = Math.min(...takers.map((x) => VAL[x.piece] || 0));
+  return cheapest < given || !after.isAttacked(m.to, m.color);
+}
+
+/**
+ * Un coup « remarquable » peut-il l'être ? Hors ouverture, partie encore disputée (pas déjà perdue), coup qui tient,
+ * pas un mat en un, pas une reprise évidente, pas un coup forcé.
+ */
+function notable(m, i, before, after) {
+  if (i < 12) return false; // les 6 premiers coups de chaque camp : de l'ouverture
+  if (before < 12 || after < 45) return false;
+  if (m.san.includes('#')) return false;
+  const prev = plies[i - 1];
+  if (m.captured && prev && prev.captured && prev.to === m.to) return false; // reprise
+  return new Chess(fens[i]).moves().length >= 2;
+}
+/** De combien de points de chances de gain le 2e meilleur coup était-il moins bon ? (null si inconnu) */
+function gapToSecond(m, i) {
+  if (typeof seconds[i] !== 'number') return null;
+  const sign = m.color === 'w' ? 1 : -1;
+  return winPercent(sign * evals[i]) - winPercent(sign * seconds[i]);
+}
+/**
+ * Coup du moteur (ou aussi bon) : sa catégorie.
+ *  - ★ « Meilleur coup » (très rare, comme un coup brillant) : un sacrifice qui marche (même dans une partie déjà
+ *    gagnée), ou le seul bon coup (le 2e meilleur perdait au moins 20 points de chances de gain) ;
+ *  - ! « Excellent » (rare) : un coup qui comptait, le 2e meilleur perdait au moins 8 points ;
+ *  - ✓ « Bon coup » : le reste (le coup évident, celui de l'ouverture, celui d'une partie déjà gagnée…).
+ */
+function topMoveCat(m, i, before, after) {
+  if (!notable(m, i, before, after)) return 'good';
+  if (isSacrifice(m, i)) return 'best';
+  if (before > 88) return 'good'; // déjà gagné : trouver le bon coup n'a plus rien d'exceptionnel
+  const gap = gapToSecond(m, i);
+  if (gap === null) return 'good';
+  return gap >= 20 ? 'best' : gap >= 8 ? 'excellent' : 'good';
 }
 
 /** Note chaque coup selon la chance de gain perdue. */
@@ -150,8 +206,7 @@ function classify() {
     const loss = Math.max(0, before - after);
     const uci = m.from + m.to + (m.promotion || '');
     let cat;
-    if (uci === bests[i] || loss < 0.5) cat = uci === bests[i] ? 'best' : 'excellent';
-    else if (loss < 3) cat = 'excellent';
+    if (uci === bests[i] || loss < 0.5) cat = topMoveCat(m, i, before, after);
     else if (loss < 7) cat = 'good';
     else if (loss < 12) cat = 'inaccuracy';
     else if (loss < 22) cat = 'mistake';
@@ -367,7 +422,7 @@ function renderMoments() {
     .sort((a, b) => b.loss - a.loss)
     .slice(0, 4)
     .sort((a, b) => a.ply - b.ply);
-  const brilliant = focus.filter((m) => m.cat === 'best' && m.loss < 1 && evals[m.ply - 1] !== undefined).length;
+  const stars = focus.filter((m) => m.cat === 'best').length;
   $('#moments').innerHTML = key.length
     ? key
         .map((m) => {
@@ -376,7 +431,7 @@ function renderMoments() {
             <span><b>${moveLabel(m)}</b> — ${CATS[m.cat].label.toLowerCase()}${best ? `, mieux : ${frSan(best)}` : ''}</span></button></li>`;
         })
         .join('')
-    : `<li class="empty">Aucune erreur importante, et ${brilliant} coups parfaits. Propre !</li>`;
+    : `<li class="empty">Aucune erreur importante. Propre !${stars ? ` Et ${stars === 1 ? 'un meilleur coup ★' : `${stars} meilleurs coups ★`} !` : ''}</li>`;
   $('#moments').addEventListener('click', (e) => {
     const b = e.target.closest('[data-goto]');
     if (b) goTo(Number(b.dataset.goto));
@@ -389,7 +444,7 @@ function renderMoveList() {
     const cell = (j) => {
       const m = plies[j];
       if (!m) return '<span></span>';
-      const show = ['blunder', 'mistake', 'inaccuracy', 'best'].includes(m.cat);
+      const show = ['blunder', 'mistake', 'inaccuracy', 'best', 'excellent'].includes(m.cat);
       return `<button class="mv ${CATS[m.cat].cls}" data-ply="${j + 1}">${frSan(m.san)}${show ? `<i>${CATS[m.cat].sym}</i>` : ''}</button>`;
     };
     html += `<li><span class="num">${i / 2 + 1}.</span>${cell(i)}${cell(i + 1)}</li>`;

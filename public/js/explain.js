@@ -258,9 +258,12 @@ export function explainMove(o) {
       break;
     }
     case 'good': {
-      lines.push(ownTxt ? `Coup correct : il ${ownTxt}.` : 'Coup correct, la position reste équilibrée.');
-      if (best && bestTxt) lines.push(`${bestSan} était un peu plus fort, car il ${bestTxt}.`);
-      else if (best) lines.push(`${bestSan} était un peu plus précis.`);
+      // « Bon coup » : souvent le coup du moteur lui-même, mais évident (ouverture, reprise, partie déjà gagnée…)
+      const isTop = best && best.move.san === move.san;
+      if (isTop) lines.push(ownTxt ? `Bon coup : il ${ownTxt}.` : `Bon coup. ${calmReason(moverAfter)}`);
+      else lines.push(ownTxt ? `Coup correct : il ${ownTxt}.` : 'Coup correct, la position reste équilibrée.');
+      if (!isTop && best && bestTxt) lines.push(`${bestSan} était un peu plus fort, car il ${bestTxt}.`);
+      else if (!isTop && best) lines.push(`${bestSan} était un peu plus précis.`);
       break;
     }
     default: {

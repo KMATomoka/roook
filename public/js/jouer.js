@@ -1,6 +1,6 @@
 // Page « Jouer » : adversaire au hasard, contre un ami (comptes), contre l'ordinateur (Noa, Adriz ou Astrea), ou sur le même écran ; et les dernières parties.
 import { LEVELS } from './engine.js';
-import { $, $$, getPref, setPref, loadGames, gameRow, escapeHtml, RIVALS, rivalOf } from './common.js';
+import { $, $$, getPref, setPref, loadGames, gameRow, escapeHtml, RIVALS, rivalOf, faceUrl } from './common.js';
 import { session, challenge, watchFriends, picHtml, profileUrl, CADENCES } from './compte.js';
 import { findOpponent } from './matchmaking.js';
 
@@ -158,16 +158,16 @@ const LEVEL_FACE = ['golmon', 'rire', 'content', 'neutre', 'hmm', 'grimace', 'co
 let rival = rivalOf(getPref('adversaire', 'noa'));
 formIa.rival.value = rival.id;
 // On précharge les visages pour que le changement soit instantané
-for (const id of Object.keys(RIVALS)) LEVEL_FACE.forEach((f) => (new Image().src = `img/${id}/${f}.svg`));
+for (const id of Object.keys(RIVALS)) LEVEL_FACE.forEach((f) => (new Image().src = faceUrl(id, f)));
 let lastFace = null;
 const showLevel = () => {
   const L = LEVELS[lvl.value - 1];
-  const face = `${rival.id}/${LEVEL_FACE[lvl.value - 1]}`;
+  const face = faceUrl(rival.id, LEVEL_FACE[lvl.value - 1]);
   $('#rival-name').textContent = rival.name;
   $('#ia-go').textContent = `Affronter ${rival.name}`;
   if (face !== lastFace) {
     const img = $('#noa-level-face');
-    img.src = `img/${face}.svg`;
+    img.src = face;
     img.alt = `${rival.name}, niveau ${L.n}`;
     if (lastFace && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
       img.animate(
@@ -185,6 +185,7 @@ lvl.addEventListener('input', showLevel);
 for (const r of formIa.querySelectorAll('input[name=rival]')) {
   r.addEventListener('change', () => {
     rival = rivalOf(r.value);
+    setPref('adversaire', rival.id);
     showLevel();
   });
 }

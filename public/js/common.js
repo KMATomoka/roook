@@ -92,6 +92,10 @@ export const RIVALS = {
   astrea: { id: 'astrea', name: 'Astrea', desc: 'Le chat de l’espace', win: 'Miaou ! Trop facile 😼', draw: 'Mrrr… match nul ?', lose: 'Miaou… bien joué.' },
 };
 export const rivalOf = (id) => RIVALS[id] || RIVALS.noa;
+// Adresse d'un visage (img/<adversaire>/<humeur>.svg), avec la version du site : ces adresses sont construites
+// dans le code, le site ne peut pas y ajouter son empreinte, et le navigateur gardait d'anciens dessins en mémoire.
+const SITE_V = new URL(import.meta.url).search;
+export const faceUrl = (id, mood) => `img/${id}/${mood}.svg${SITE_V}`;
 
 export function getPref(k, def) {
   try {

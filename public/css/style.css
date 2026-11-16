@@ -478,6 +478,9 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 /* Bouton du son */
 .topbar-right { display: flex; align-items: center; gap: 14px; }
 .sound-toggle { width: 38px; height: 34px; font-size: 1rem; }
+/* Prémove : bouton allumé, et les cases du coup en attente */
+.premove-btn.on { border-color: #f5b83d; color: #ffd36b; background: rgba(245, 184, 61, 0.12); }
+cg-board square.premove-sq { background: rgba(245, 150, 40, 0.5); }
 
 /* --- Noa, le coach ---------------------------------------------------- */
 .noa-says { display: flex; gap: 10px; align-items: flex-start; margin-top: 4px; }

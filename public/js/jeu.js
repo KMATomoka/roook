@@ -9,7 +9,7 @@ import { isMuted, setMuted, lowTimeBeep } from './sound.js';
 import { createFx } from './fx.js';
 import { attachArrows } from './arrows.js';
 import { scrollMoveIntoList, repetitions, rivalOf, faceUrl } from './common.js';
-import { session, avatarOf, profileUrl, badgeOf, badgeHtml } from './compte.js';
+import { session, avatarOf, profileUrl, badgeOf, badgeHtml, toast } from './compte.js';
 import { gameSocket, AWAY_LIMIT } from './online.js';
 import { serverNow } from './fb.js';
 const account = await session;
@@ -90,6 +90,43 @@ function practiceColor() {
   if (mode === 'ami' && online.status !== 'playing') return null;
   return chess.turn() !== myColor ? myColor : null;
 }
+/**
+ * Prémove (jouer à l'avance) : pendant le tour adverse, une pièce lâchée revient à sa place, SAUF si on l'a voulu
+ * (bouton ⚡ Prémove activé, ou touche Ctrl / Cmd enfoncée en lâchant la pièce) : le coup est alors mis en attente, et joué dès que c'est
+ * notre tour s'il est encore possible. Une autre pièce lâchée sans le vouloir annule le prémove.
+ */
+let premove = null; // { from, to }
+let premoveOn = getPref('premove', '0') === '1';
+// Ctrl (Cmd sur Mac) : lu sur la souris elle-même au moment où on lâche (Maj est réservée aux flèches)
+let shiftDown = false;
+const readMods = (e) => (shiftDown = !!(e.ctrlKey || e.metaKey));
+for (const t of ['mousedown', 'mousemove', 'mouseup', 'pointerup']) addEventListener(t, readMods, true);
+addEventListener('keydown', (e) => (e.key === 'Control' || e.key === 'Meta') && (shiftDown = true));
+addEventListener('keyup', (e) => (e.key === 'Control' || e.key === 'Meta') && (shiftDown = false));
+addEventListener('blur', () => (shiftDown = false));
+/** Lâcher une pièce pendant le tour adverse : prémove ou retour à sa place. */
+function practiceDrop(from, to) {
+  premove = premoveOn || shiftDown ? { from, to } : null;
+  syncBoard();
+}
+/** C'est à moi : on joue le prémove s'il est encore possible. */
+function playPremove() {
+  const p = premove;
+  premove = null;
+  if (!p || movableColor() !== colorName(myColor)) return;
+  const to = castleDest(chess, p.from, p.to);
+  let move = null;
+  try {
+    move = chess.move({ from: p.from, to, promotion: isPromotion(chess, p.from, to) ? 'q' : undefined });
+  } catch {}
+  if (!move) {
+    toast('Prémove annulé : ce coup n’est plus possible.', { cls: 'info', duration: 2200 });
+    return syncBoard();
+  }
+  fx.move(move, chess, fxOpts());
+  if (mode === 'ami') socket.emit('move', { from: move.from, to: move.to, promotion: move.promotion });
+  afterMove();
+}
 /** Coups possibles de mes pièces si c'était à moi de jouer. */
 function practiceDests(c) {
   try {
@@ -116,7 +153,12 @@ function syncBoard() {
     lastMove: last ? [last.from, last.to] : undefined,
     check: c.inCheck() ? colorName(c.turn()) : false,
     movable: { color: mc || (pc ? colorName(pc) : undefined), dests: mc ? legalDests(c) : pc ? practiceDests(c) : new Map() },
+    // Le prémove en attente : ses deux cases surlignées
+    highlight: { lastMove: true, check: true, custom: premove && pc ? new Map([[premove.from, 'premove-sq'], [premove.to, 'premove-sq']]) : new Map() },
   });
+  // Mon tour arrive avec un prémove en attente : on le joue (juste après, pour finir l'affichage en cours)
+  if (premove && mc) setTimeout(playPremove, 60);
+  if (!mc && !pc) premove = null; // partie finie, ou on revoit un coup passé
   marks.update(c.fen());
   fx.setPaused(viewPly !== null);
 }
@@ -376,6 +418,10 @@ function awayInfo() {
 
 function renderActions() {
   const playing = !over;
+  const pm = $('#btn-premove');
+  pm.hidden = !playing || !myColor || (mode !== 'ami' && mode !== 'ia');
+  pm.setAttribute('aria-pressed', String(premoveOn));
+  pm.classList.toggle('on', premoveOn);
   $('#leave-note').hidden = !(mode === 'ami' && myColor && online.status === 'playing' && playing);
   $('#btn-draw').hidden = mode !== 'ami' || !playing || !myColor || online.status !== 'playing';
   $('#btn-resign').hidden = !playing || (mode === 'ami' && (!myColor || online.status !== 'playing'));
@@ -388,6 +434,13 @@ function renderActions() {
   }
 }
 
+$('#btn-premove').addEventListener('click', () => {
+  premoveOn = !premoveOn;
+  setPref('premove', premoveOn ? '1' : '0');
+  if (!premoveOn) premove = null;
+  toast(premoveOn ? '⚡ Prémove activé : la pièce lâchée pendant le tour adverse sera jouée dès que c’est ton tour.' : 'Prémove désactivé.', { cls: 'info', duration: 2600 });
+  render();
+});
 $('#btn-flip').addEventListener('click', () => {
   orientation = orientation === 'w' ? 'b' : 'w';
   render();
@@ -404,8 +457,8 @@ $('#btn-resign').addEventListener('click', () => {
 // Coup joué par l'utilisateur
 // ---------------------------------------------------------------------------
 async function onUserMove(from, to) {
-  // Ce n'était pas mon tour : la pièce revient à sa place, rien n'est joué
-  if (chess.turn() !== myColor && practiceColor()) return syncBoard();
+  // Ce n'était pas mon tour : la pièce revient à sa place, ou devient un prémove si on l'a voulu
+  if (chess.turn() !== myColor && practiceColor()) return practiceDrop(from, to);
   to = castleDest(chess, from, to); // roi posé sur sa tour = roque
   let promotion;
   if (isPromotion(chess, from, to)) {

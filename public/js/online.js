@@ -108,7 +108,8 @@ export function gameSocket(gameId, user) {
   function saveHistory(game) {
     if (!color || savedRound === game.round || game.result === '*') return;
     const { verbose } = rebuild(game);
-    if (!verbose.length) return;
+    // Sans aucun coup, une victoire ne compte pas (sinon on gagnerait des coffres sans jouer) ; une nulle, si
+    if (!verbose.length && game.result !== '1/2-1/2') return;
     savedRound = game.round;
     set(ref(db, `history/${user.id}/${gameId}-${game.round}`), {
       white: game.names.w,

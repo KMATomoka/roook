@@ -337,7 +337,7 @@ function buildPreview(art, res) {
   if (PIECE_TYPES.includes(slot)) {
     // Une pièce : en grand sur un socle lumineux, Blancs devant et Noirs derrière, qui tournent doucement
     art.className = `bx-res-art cg-wrap pieces-${pack}`;
-    art.innerHTML = `<div class="bx-show"><div class="bx-ped"></div><div class="bx-turn">${pieceEl(slot, 'black', 'bx-back')}${pieceEl(slot, 'white', 'bx-front')}</div><div class="bx-ref">${pieceEl(slot, 'white')}</div></div>`;
+    art.innerHTML = `<div class="bx-show"><div class="bx-ped"></div><div class="bx-turn">${pieceEl(slot, 'black', 'bx-back')}${pieceEl(slot, 'white', 'bx-mirror')}${pieceEl(slot, 'white', 'bx-front')}</div></div>`;
     return null;
   }
   const look = { ...eq, [slot]: pack };

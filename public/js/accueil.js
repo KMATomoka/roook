@@ -1,6 +1,12 @@
 // Page d'accueil : présentation, échiquier animé, accès aux autres pages
 import { Chessground } from '../vendor/chessground/chessground.min.js';
-import { $, Chess } from './common.js';
+import { $, Chess, getPref, rivalOf } from './common.js';
+
+// « Affronter … » : le dernier adversaire choisi sur la page Jouer (Noa, Adriz ou Astrea)
+{
+  const cta = $('#cta-ia');
+  if (cta) cta.textContent = `Affronter ${rivalOf(getPref('adversaire', 'noa')).name}`;
+}
 import './compte.js'; // compte, barre du haut, notifications
 
 // --- Échiquier animé : des parties célèbres, l'une après l'autre, dans un ordre au hasard -------------

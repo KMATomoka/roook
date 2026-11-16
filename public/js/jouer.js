@@ -164,6 +164,7 @@ const showLevel = () => {
   const L = LEVELS[lvl.value - 1];
   const face = `${rival.id}/${LEVEL_FACE[lvl.value - 1]}`;
   $('#rival-name').textContent = rival.name;
+  $('#ia-go').textContent = `Affronter ${rival.name}`;
   if (face !== lastFace) {
     const img = $('#noa-level-face');
     img.src = `img/${face}.svg`;

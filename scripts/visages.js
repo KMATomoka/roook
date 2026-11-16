@@ -206,9 +206,50 @@ const CAT_FX = {
   frime: sparkle(92, 20, 1.1) + sparkle(18, 32, 0.7, '#FFD84A'),
   content: sparkle(92, 22, 0.8),
 };
+// Corps de chat : petit corps rond en combinaison, pattes en moufles, queue tigrée qui s'enroule
+const SUIT = '#F4F1FF';
+const SUIT_SHADE = '#D6CDF3';
+const CAT_BODY = 'M 33 112 C 31 97 35 86 44 81 L 68 81 C 77 86 81 97 79 112 Z';
+const TAIL = 'M 77 104 C 92 106 101 96 98 85 C 96 78 99 72 104.5 72.5';
+/** Moufle de chat (avec les coussinets roses quand on voit le dessous de la patte). */
+const paw = (x, y, beans = false) =>
+  `<ellipse cx="${x}" cy="${y}" rx="5.4" ry="5.8" fill="${SUIT}" stroke="${INK}" stroke-width="2"/>`
+  + (beans ? `<g fill="${C.pink}"><ellipse cx="${x}" cy="${y + 1.4}" rx="2.2" ry="1.7"/><circle cx="${x - 2.4}" cy="${y - 2}" r="0.95"/><circle cx="${x}" cy="${y - 2.8}" r="0.95"/><circle cx="${x + 2.4}" cy="${y - 2}" r="0.95"/></g>`
+    : `<path d="M ${x - 4.4} ${y - 2.6} Q ${x} ${y - 4.4} ${x + 4.4} ${y - 2.6}" fill="none" stroke="#8F6BFF" stroke-width="1.6"/>`);
+/** Bras levé, de l'épaule (x1, y1) jusqu'à la patte (x2, y2). */
+const arm = (x1, y1, x2, y2) =>
+  `<path d="M ${x1} ${y1} Q ${(x1 + x2) / 2 + (x2 > 56 ? 4 : -4)} ${(y1 + y2) / 2 + 3} ${x2} ${y2}" fill="none" stroke="${INK}" stroke-width="9" stroke-linecap="round"/><path d="M ${x1} ${y1} Q ${(x1 + x2) / 2 + (x2 > 56 ? 4 : -4)} ${(y1 + y2) / 2 + 3} ${x2} ${y2}" fill="none" stroke="${SUIT}" stroke-width="5.8" stroke-linecap="round"/>`;
+const ARM_PATH = (x1, y1, x2, y2) => `M ${x1} ${y1} Q ${(x1 + x2) / 2 + (x2 > 56 ? 4 : -4)} ${(y1 + y2) / 2 + 3} ${x2} ${y2}`;
+// Pose des pattes selon l'humeur : [bras levés (épaule → patte)], [pattes posées], cœur tenu ?
+const POSES = {
+  neutre: { up: [], rest: [[38, 99], [74, 99]] },
+  content: { up: [[75, 88, 90, 73]], rest: [[38, 99]] }, // elle fait coucou
+  frime: { up: [[37, 88, 21, 73], [75, 88, 91, 73]], rest: [] }, // les deux pattes en l'air
+  surpris: { up: [[37, 88, 22, 74], [75, 88, 90, 74]], rest: [] },
+  rire: { up: [], rest: [[45, 97], [67, 97]] }, // se tient le ventre
+  hmm: { up: [], rest: [[38, 99], [74, 99]] },
+  grimace: { up: [], rest: [[44, 95], [68, 95]] },
+  colere: { up: [], rest: [[38, 97], [74, 97]] },
+  golmon: { up: [], rest: [[49.5, 95], [62.5, 95]], heart: true }, // tient un cœur
+};
+function catBody(mood) {
+  const pose = POSES[mood] || POSES.neutre;
+  const sticker = `<g fill="#fff" stroke="#fff" stroke-linejoin="round" stroke-linecap="round"><path d="${CAT_BODY}" stroke-width="10"/><path d="${TAIL}" fill="none" stroke-width="17"/>${pose.up.map(([a, b, c, d]) => `<path d="${ARM_PATH(a, b, c, d)}" fill="none" stroke-width="15"/><circle cx="${c}" cy="${d}" r="9"/>`).join('')}</g>`;
+  const tail = `<path d="${TAIL}" fill="none" stroke="${INK}" stroke-width="9.4" stroke-linecap="round"/><path d="${TAIL}" fill="none" stroke="${C.fur}" stroke-width="6.2" stroke-linecap="round"/><path d="${TAIL}" fill="none" stroke="${C.stripe}" stroke-width="6.2" stroke-dasharray="3 4.6" stroke-dashoffset="-6"/>`;
+  const body = `<path d="${CAT_BODY}" fill="${SUIT}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M 69 82 C 76 87 80 97 78.5 112 L 71 112 C 73.5 98 73 89 69 82 Z" fill="${SUIT_SHADE}"/>
+    <path d="M 33.6 101 Q 56 105.5 78.4 101" fill="none" stroke="#8F6BFF" stroke-width="3.2"/>
+    <rect x="47" y="86" width="18" height="9" rx="2.6" fill="#fff" stroke="${INK}" stroke-width="1.4"/>
+    <circle cx="51.6" cy="90.5" r="1.9" fill="#8F6BFF"/><circle cx="56.4" cy="90.5" r="1.9" fill="#3CF2A3"/><path d="M 59.6 89.3 H 62.4 M 59.6 91.7 H 62.4" stroke="${INK}" stroke-width="1.1" stroke-linecap="round"/>`;
+  const arms = pose.up.map(([a, b, c, d]) => arm(a, b, c, d) + paw(c, d, true)).join('');
+  const rest = pose.rest.map(([x, y]) => paw(x, y)).join('');
+  const held = pose.heart ? heart(56, 92.5, 5.4, '#FF4D7A') : '';
+  return { sticker, back: tail, front: body + rest + held + arms };
+}
 function astrea(mood) {
   const defs = noaDefs + `<linearGradient id="catFur" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${C.furTop}"/><stop offset="1" stop-color="${C.furBot}"/></linearGradient>`;
-  const body = `<g transform="translate(0 3)"><use href="#torsoBackA"></use><use href="#helmetBackA"></use><use href="#suitA"></use><use href="#noaHelmetA"></use><g transform="translate(13.61 -1.18) scale(0.757)"><g clip-path="url(#noaOpeningA)">${catHead(mood)}</g></g><use href="#noaRimA"></use><use href="#neckRingA"></use></g>${CAT_FX[mood] || ''}`;
+  const b = catBody(mood);
+  const body = `<g transform="translate(0 3)">${b.sticker}<use href="#helmetBackA"></use>${b.back}${b.front}<use href="#noaHelmetA"></use><g transform="translate(13.61 -1.18) scale(0.757)"><g clip-path="url(#noaOpeningA)">${catHead(mood)}</g></g><use href="#noaRimA"></use><use href="#neckRingA"></use></g>${CAT_FX[mood] || ''}`;
   return svgDoc(defs, body);
 }
 

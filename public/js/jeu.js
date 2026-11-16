@@ -5,11 +5,11 @@ import {
   $, $$, Chess, colorName, legalDests, castleDest, isPromotion, askPromotion, saveGame, getPref, setPref,
   resultText, localGameOver, formatClock, escapeHtml, material, frSan,
 } from './common.js';
-import { isMuted, setMuted, lowTimeBeep } from './sound.js';
+import { isMuted, setMuted, lowTimeBeep, notifySound } from './sound.js';
 import { createFx } from './fx.js';
 import { attachArrows } from './arrows.js';
 import { scrollMoveIntoList, repetitions, rivalOf, faceUrl } from './common.js';
-import { session, avatarOf, profileUrl, badgeOf, badgeHtml, toast } from './compte.js';
+import { session, avatarOf, profileUrl, badgeOf, badgeHtml, toast, rememberGame } from './compte.js';
 import { gameSocket, AWAY_LIMIT } from './online.js';
 import { serverNow } from './fb.js';
 const account = await session;
@@ -549,7 +549,19 @@ function finish(end) {
   $('#end-rematch').textContent = mode === 'ami' ? 'Revanche' : 'Rejouer';
   $('#end-rematch').hidden = mode === 'ami' && !myColor;
   $('#end-rematch').disabled = false;
+  showRematchOffer(false);
   setTimeout(() => !$('#end-dialog').open && $('#end-dialog').showModal(), end.reason === 'mat' ? 2700 : 600);
+}
+
+/** L'adversaire propose la revanche : un encart bien visible et un bouton « Accepter » mis en avant. */
+function showRematchOffer(on, name = '') {
+  const btn = $('#end-rematch');
+  $('#end-offer').hidden = !on;
+  if (on) $('#end-offer-text').textContent = `${name || 'Ton adversaire'} te propose une revanche !`;
+  btn.classList.toggle('btn-primary', on);
+  btn.classList.toggle('btn-ghost', !on);
+  btn.classList.toggle('rematch-offer', on);
+  if (on) btn.textContent = '✓ Accepter la revanche';
 }
 
 function storeGame() {
@@ -736,6 +748,8 @@ function startOnline() {
     render();
   });
 
+  let oppAskedRematch = false;
+  let autoRematch = false;
   socket.on('state', (s) => {
     const wasOver = online.status === 'over';
     const before = history().length;
@@ -777,9 +791,24 @@ function startOnline() {
     }
     if (s.status === 'over' && myColor) {
       const opp = myColor === 'w' ? 'b' : 'w';
-      const btn = $('#end-rematch');
-      if (s.rematch[opp] && !s.rematch[myColor]) btn.textContent = `Accepter la revanche`;
-    }
+      rememberGame(onlineId); // pour recevoir sa revanche même après avoir quitté cette page
+      const asks = s.rematch[opp] && !s.rematch[myColor];
+      if (asks && !oppAskedRematch) {
+        // Elle vient d'arriver : son, encart, et l'écran de fin rouvert s'il était fermé
+        notifySound('rematch');
+        showRematchOffer(true, names[opp]);
+        if (!$('#end-dialog').open) $('#end-dialog').showModal();
+      }
+      oppAskedRematch = asks;
+      // Arrivé depuis l'invitation « Accepter » : on accepte tout de suite
+      if (params.get('revanche') === '1' && !autoRematch) {
+        autoRematch = true;
+        window.history.replaceState(null, '', location.pathname + '?partie=' + encodeURIComponent(onlineId));
+        socket.emit('rematch');
+        $('#end-rematch').textContent = 'Revanche acceptée…';
+        $('#end-rematch').disabled = true;
+      }
+    } else oppAskedRematch = false;
   });
 
   socket.on('swap', () => {

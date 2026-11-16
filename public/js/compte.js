@@ -7,6 +7,7 @@ import { escapeHtml, getPref, setPref } from './common.js';
 import './theme.js'; // apparence choisie dans l'inventaire (plateau, pièces…)
 import { watchBoxes } from './box.js'; // box gagnées (compteur dans la barre du haut)
 import { ICONS } from './icons.js'; // icônes dessinées du menu (à la place des emojis)
+import { notifySound } from './sound.js'; // petit son des notifications (défi, demande d'ami, revanche)
 import {
   auth, db, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   sendPasswordResetEmail, verifyBeforeUpdateEmail, deleteUser,
@@ -309,6 +310,7 @@ onAuthStateChanged(auth, async (u) => {
     syncEmail(u);
     startPresence();
     listenInvitations();
+    watchRematch();
     listenFriendRequests();
     watchBan(u.uid);
   }
@@ -498,12 +500,7 @@ function renderAccount(user) {
         <span class="account-name">${escapeHtml(user.username)}</span>
         <span class="account-badge" hidden></span>
       </a>
-      ${SETTINGS_HTML}
-      <button class="icon-btn account-logout" title="Se déconnecter" aria-label="Se déconnecter">${ICONS.logout}</button>`;
-    el.querySelector('.account-logout').addEventListener('click', async () => {
-      await signOutClean();
-      location.href = './';
-    });
+      ${SETTINGS_HTML}`;
   }
   bar.appendChild(el);
   if (user) setupSearch(el.querySelector('.player-search'));
@@ -531,13 +528,8 @@ function renderAccount(user) {
         <a href="box.html"${location.pathname.endsWith('/box.html') ? ' aria-current="page"' : ''}><span class="nav-ico" aria-hidden="true">${ICONS.chestOpen}</span>Mes box<span class="nav-box-n"></span></a>
         <a href="profil.html"${location.pathname.endsWith('/profil.html') && !location.search ? ' aria-current="page"' : ''}><span class="nav-ico" aria-hidden="true">${ICONS.user}</span>Mon profil</a>
         ${isStaff ? `<a href="admin.html"${location.pathname.endsWith('/admin.html') ? ' aria-current="page"' : ''}><span class="nav-ico" aria-hidden="true">${ICONS.shield}</span>Administration</a>` : ''}
-        <button type="button" class="nav-logout"><span class="nav-ico" aria-hidden="true">${ICONS.logout}</span>Se déconnecter</button>
       </div>`,
     );
-    nav.querySelector('.nav-logout').addEventListener('click', async () => {
-      await signOutClean();
-      location.href = './';
-    });
   }
 }
 
@@ -975,12 +967,91 @@ function setBadge(n) {
   badge.textContent = n;
 }
 
+// ---------------------------------------------------------------------------
+// Revanche proposée après avoir quitté la partie : pendant 15 minutes après une partie en ligne, si l'adversaire
+// demande la revanche alors qu'on est ailleurs sur le site, on reçoit une invitation pour l'accepter.
+// ---------------------------------------------------------------------------
+const LAST_GAME = 'roque:derniere-partie';
+const REMATCH_WINDOW = 15 * 60 * 1000;
+/** Retient la dernière partie en ligne terminée (appelé par la page de partie). */
+export function rememberGame(gameId) {
+  try {
+    localStorage.setItem(LAST_GAME, JSON.stringify({ id: gameId, at: Date.now() }));
+  } catch {}
+}
+function forgetGame() {
+  try {
+    localStorage.removeItem(LAST_GAME);
+  } catch {}
+}
+function watchRematch() {
+  let last = null;
+  try {
+    last = JSON.parse(localStorage.getItem(LAST_GAME) || 'null');
+  } catch {}
+  if (!last?.id || Date.now() - last.at > REMATCH_WINDOW) return forgetGame();
+  // Sur la page de cette partie, c'est elle qui s'en occupe
+  if (new URLSearchParams(location.search).get('partie') === last.id) return;
+  const uid = currentUser.id;
+  let shownFor = null;
+  let t = null;
+  const off = onValue(ref(db, `games/${last.id}`), (s) => {
+    const g = s.val();
+    if (!g || Date.now() - last.at > REMATCH_WINDOW) {
+      off();
+      return;
+    }
+    const me = g.white === uid ? 'w' : g.black === uid ? 'b' : null;
+    if (!me) return off();
+    const opp = me === 'w' ? 'b' : 'w';
+    const asks = g.status === 'over' && g.rematch?.[opp] && !g.rematch?.[me];
+    if (!asks) {
+      t?.close();
+      t = null;
+      shownFor = null;
+      if (g.status === 'playing') {
+        off();
+        forgetGame();
+      }
+      return;
+    }
+    if (shownFor === g.round) return;
+    shownFor = g.round;
+    const name = g.names?.[opp] || 'Ton adversaire';
+    t = toast(
+      `<div class="toast-invite">
+        <div class="toast-title">⚔ ${escapeHtml(name)} te propose une revanche !</div>
+        <div class="toast-sub">Les couleurs sont inversées.</div>
+        <div class="toast-actions">
+          <a class="btn btn-primary small" href="jeu.html?partie=${encodeURIComponent(last.id)}&revanche=1">Accepter</a>
+          <button class="btn btn-ghost small" data-a="no">Refuser</button>
+        </div>
+      </div>`,
+      { duration: 0, cls: 'invite' },
+    );
+    notifySound('rematch');
+    t.querySelector('[data-a="no"]').addEventListener('click', () => {
+      t.close();
+      t = null;
+      off();
+      forgetGame();
+    });
+  });
+  setTimeout(() => {
+    off();
+    t?.close();
+  }, Math.max(0, REMATCH_WINDOW - (Date.now() - last.at)));
+}
+
 function listenFriendRequests() {
   const loadedAt = serverNow() - 5000;
   onValue(ref(db, `friendRequests/${currentUser.id}`), (s) => setBadge(Object.keys(s.val() || {}).length));
   onChildAdded(ref(db, `friendRequests/${currentUser.id}`), (s) => {
     const v = s.val();
-    if ((v.at || 0) > loadedAt) toast(`👋 <b>${escapeHtml(v.username)}</b> veut être ton ami. <a href="amis.html">Voir</a>`, { cls: 'info', duration: 8000 });
+    if ((v.at || 0) > loadedAt) {
+      toast(`👋 <b>${escapeHtml(v.username)}</b> veut être ton ami. <a href="amis.html">Voir</a>`, { cls: 'info', duration: 8000 });
+      notifySound('request');
+    }
   });
 }
 
@@ -1009,6 +1080,7 @@ function listenInvitations() {
       { duration: 0, cls: 'invite' },
     );
     inviteToasts.set(inv.id, t);
+    notifySound('invite');
     avatarOf(inv.from).then((url) => {
       const el = t.querySelector('.toast-pic');
       if (url && el) el.outerHTML = picHtml(inv.fromName, url, 'toast-pic');

@@ -1055,6 +1055,19 @@ export function playSound(move, outcome = 'neutral', style = null) {
   if (move.san.includes('+')) set.check();
 }
 
+/**
+ * Petit son de notification : défi reçu (« invite »), demande d'ami (« request »), revanche proposée (« rematch »).
+ * Deux ou trois notes claires, comme une clochette.
+ */
+export function notifySound(kind = 'invite') {
+  if (muted) return;
+  const notes = kind === 'rematch' ? [784, 988, 1319] : kind === 'request' ? [1047, 1319] : [880, 1175];
+  notes.forEach((f, i) => {
+    tone({ freq: f, type: 'triangle', at: i * 0.11, dur: 0.38, vol: 0.12, attack: 0.006 });
+    tone({ freq: f * 2, type: 'sine', at: i * 0.11, dur: 0.22, vol: 0.03, attack: 0.004 });
+  });
+}
+
 /** Petit bip quand il reste peu de temps. */
 export function lowTimeBeep() {
   tone({ freq: 1760, type: 'square', dur: 0.06, vol: 0.04 });

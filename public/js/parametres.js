@@ -3,7 +3,7 @@
 import { $, Chess, getPref, setPref } from './common.js';
 import './compte.js'; // barre du haut, menu
 import { isMuted, setMuted, isMusicOn, setMusicOn, getVolume, setVolume, playSound } from './sound.js';
-import { toast } from './compte.js';
+import { toast, session, logout } from './compte.js';
 
 const DEFAULTS = { coups: true, coords: true, premove: '0', effets: true };
 
@@ -26,6 +26,14 @@ const capture = () => new Chess('rnb1kbnr/pppp1ppp/8/4p3/4P2q/5N2/PPPP1PPP/RNBQK
 $('#set-sound').addEventListener('change', (e) => {
   setMuted(!e.target.checked);
   load();
+
+// Compte : se déconnecter (le bouton n'est plus dans la barre du haut)
+session.then(({ user }) => {
+  if (!user) return;
+  $('#set-account').hidden = false;
+  $('#set-username').textContent = user.username;
+  $('#set-logout').addEventListener('click', () => logout());
+});
   if (e.target.checked) playSound(capture(), 'neutral');
 });
 $('#set-volume').addEventListener('input', (e) => {

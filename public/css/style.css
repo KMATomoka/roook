@@ -2708,6 +2708,8 @@ html:has(body.bx-opening), body.bx-opening { overflow: hidden; overscroll-behavi
   animation: end-offer-in 0.4s ease-out;
 }
 @keyframes end-offer-in { from { transform: scale(0.9); opacity: 0; } }
+.end-offer { display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; }
+.end-note { margin: 4px auto 12px; color: var(--muted); font-weight: 600; }
 #end-rematch.rematch-offer { background: #3cf2a3; border-color: #3cf2a3; color: #06281a; box-shadow: 0 0 0 0 rgba(60, 242, 163, 0.6); animation: rematch-pulse 1.4s ease-in-out infinite; }
 @keyframes rematch-pulse { 50% { box-shadow: 0 0 0 8px rgba(60, 242, 163, 0); } }
 @media (prefers-reduced-motion: reduce) { #end-rematch.rematch-offer, .end-offer { animation: none; } }

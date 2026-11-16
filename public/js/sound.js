@@ -1061,7 +1061,7 @@ export function playSound(move, outcome = 'neutral', style = null) {
  */
 export function notifySound(kind = 'invite') {
   if (muted) return;
-  const notes = kind === 'rematch' ? [784, 988, 1319] : kind === 'request' ? [1047, 1319] : [880, 1175];
+  const notes = kind === 'rematch' ? [784, 988, 1319] : kind === 'request' ? [1047, 1319] : kind === 'draw' ? [988, 784] : kind === 'no' ? [659, 523] : [880, 1175];
   notes.forEach((f, i) => {
     tone({ freq: f, type: 'triangle', at: i * 0.11, dur: 0.38, vol: 0.12, attack: 0.006 });
     tone({ freq: f * 2, type: 'sine', at: i * 0.11, dur: 0.22, vol: 0.03, attack: 0.004 });

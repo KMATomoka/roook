@@ -1004,7 +1004,15 @@ function watchRematch() {
     const me = g.white === uid ? 'w' : g.black === uid ? 'b' : null;
     if (!me) return off();
     const opp = me === 'w' ? 'b' : 'w';
-    const asks = g.status === 'over' && g.rematch?.[opp] && !g.rematch?.[me];
+    // Ma revanche refusée pendant que j'étais ailleurs : on me prévient (une fois)
+    if (g.status === 'over' && g.rematch?.[me] && g.rematch?.no === opp) {
+      toast(`${escapeHtml(g.names?.[opp] || 'Ton adversaire')} a refusé la revanche.`, { cls: 'info', duration: 6000 });
+      notifySound('no');
+      off();
+      forgetGame();
+      return;
+    }
+    const asks = g.status === 'over' && g.rematch?.[opp] && !g.rematch?.[me] && g.rematch?.no !== me;
     if (!asks) {
       t?.close();
       t = null;
@@ -1031,6 +1039,8 @@ function watchRematch() {
     );
     notifySound('rematch');
     t.querySelector('[data-a="no"]').addEventListener('click', () => {
+      // Refuser : l'autre joueur est prévenu
+      update(ref(db, `games/${last.id}/rematch`), { no: me }).catch(() => {});
       t.close();
       t = null;
       off();

@@ -557,6 +557,7 @@ function finish(end) {
 function showRematchOffer(on, name = '') {
   const btn = $('#end-rematch');
   $('#end-offer').hidden = !on;
+  if (on) $('#end-note').hidden = true;
   if (on) $('#end-offer-text').textContent = `${name || 'Ton adversaire'} te propose une revanche !`;
   btn.classList.toggle('btn-primary', on);
   btn.classList.toggle('btn-ghost', !on);
@@ -749,6 +750,8 @@ function startOnline() {
   });
 
   let oppAskedRematch = false;
+  let oppRefused = false;
+  let drawAsked = false;
   let autoRematch = false;
   socket.on('state', (s) => {
     const wasOver = online.status === 'over';
@@ -792,7 +795,18 @@ function startOnline() {
     if (s.status === 'over' && myColor) {
       const opp = myColor === 'w' ? 'b' : 'w';
       rememberGame(onlineId); // pour recevoir sa revanche même après avoir quitté cette page
-      const asks = s.rematch[opp] && !s.rematch[myColor];
+      // L'autre a refusé ma revanche : on le dit, et le bouton se désactive
+      const refused = s.rematch.no === opp && s.rematch[myColor];
+      if (refused && !oppRefused) {
+        notifySound('no');
+        toast(`${escapeHtml(names[opp] || 'Ton adversaire')} a refusé la revanche.`, { cls: 'info', duration: 5000 });
+        $('#end-note').textContent = `${names[opp] || 'Ton adversaire'} a refusé la revanche.`;
+        $('#end-note').hidden = false;
+        $('#end-rematch').textContent = 'Revanche refusée';
+        $('#end-rematch').disabled = true;
+      }
+      oppRefused = refused;
+      const asks = s.rematch[opp] && !s.rematch[myColor] && s.rematch.no !== myColor;
       if (asks && !oppAskedRematch) {
         // Elle vient d'arriver : son, encart, et l'écran de fin rouvert s'il était fermé
         notifySound('rematch');
@@ -809,6 +823,10 @@ function startOnline() {
         $('#end-rematch').disabled = true;
       }
     } else oppAskedRematch = false;
+    // Nulle proposée par l'adversaire : un petit son (en plus du bandeau)
+    const drawNow = !!(s.status === 'playing' && myColor && s.drawOffer && s.drawOffer !== myColor);
+    if (drawNow && !drawAsked) notifySound('draw');
+    drawAsked = drawNow;
   });
 
   socket.on('swap', () => {
@@ -846,6 +864,15 @@ function startOnline() {
 
   $('#btn-draw').addEventListener('click', () => socket.emit('offerDraw'));
   $('#draw-accept').addEventListener('click', () => socket.emit('offerDraw'));
+  // Refuser la revanche proposée : l'autre reçoit un message
+  $('#end-offer-no').addEventListener('click', () => {
+    socket.emit('declineRematch');
+    showRematchOffer(false);
+    $('#end-rematch').textContent = 'Revanche';
+    $('#end-rematch').disabled = true;
+    $('#end-note').textContent = 'Tu as refusé la revanche.';
+    $('#end-note').hidden = false;
+  });
   $('#draw-decline').addEventListener('click', () => socket.emit('declineDraw'));
 
   $('#chat-form').addEventListener('submit', (e) => {

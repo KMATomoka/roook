@@ -301,6 +301,12 @@ export function gameSocket(gameId, user) {
       update(gRef, { drawOffer: null });
     },
 
+    /** Refuser la revanche : on le note dans la partie (rematch/no = ma couleur), l'autre est prévenu. */
+    declineRematch() {
+      if (!g || !color || g.status !== 'over') return;
+      update(ref(db, `games/${gameId}/rematch`), { no: color }).catch(() => {});
+    },
+
     async rematch() {
       if (!g || !color || g.status !== 'over') return;
       const res = await runTransaction(ref(db, `games/${gameId}/rematch`), (cur) => {

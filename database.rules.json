@@ -209,6 +209,38 @@
         }
       }
     },
+    "loot": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || (root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur'))",
+        "opened": {
+          "$box": {
+            ".write": "auth != null && auth.uid === $uid && (!root.child('bans/' + auth.uid).exists() || (root.child('bans/' + auth.uid).child('until').val() > 0 && root.child('bans/' + auth.uid).child('until').val() < now)) && !data.exists()",
+            ".validate": "newData.hasChildren(['at', 'item', 'rarity']) && newData.child('at').val() === now && newData.child('item').isString() && newData.child('item').val().length <= 40 && newData.child('rarity').val().matches(/^(commun|rare|epique|pack)$/) && ((root.child('history/' + $uid + '/' + $box).child('mode').val() === 'ami' && ((root.child('history/' + $uid + '/' + $box).child('me').val() === 'w' && root.child('history/' + $uid + '/' + $box).child('result').val() === '1-0') || (root.child('history/' + $uid + '/' + $box).child('me').val() === 'b' && root.child('history/' + $uid + '/' + $box).child('result').val() === '0-1'))) || root.child('lootGrants/' + $uid + '/' + $box).exists() || ($box.beginsWith('dust-') && root.child('loot/' + $uid + '/dust').val() >= 10))"
+          }
+        },
+        "owned": {
+          "$pack": {
+            "$slot": {
+              ".write": "auth != null && auth.uid === $uid && (!root.child('bans/' + auth.uid).exists() || (root.child('bans/' + auth.uid).child('until').val() > 0 && root.child('bans/' + auth.uid).child('until').val() < now))",
+              ".validate": "newData.val() === true && $pack.matches(/^(japon|western|ocean)$/) && $slot.matches(/^(board|pieces|endAnim|capture)$/)"
+            }
+          }
+        },
+        "dust": {
+          ".write": "auth != null && auth.uid === $uid && (!root.child('bans/' + auth.uid).exists() || (root.child('bans/' + auth.uid).child('until').val() > 0 && root.child('bans/' + auth.uid).child('until').val() < now))",
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= (data.exists() ? data.val() : 0) + 20"
+        }
+      }
+    },
+    "lootGrants": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || (root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur'))",
+        "$g": {
+          ".write": "auth != null && (root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur') && !data.exists()",
+          ".validate": "newData.val() === true"
+        }
+      }
+    },
     "history": {
       ".read": "auth != null && (root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur')",
       "$uid": {

@@ -309,6 +309,41 @@ const rules = {
         },
       },
     },
+    // Box : une par victoire en ligne (une partie de l'historique gagnée), ou offerte par un admin (box de test).
+    // Chaque box ne s'ouvre qu'une fois (on n'efface ni ne réécrit une box ouverte). Ce qu'elle donne est tiré au
+    // sort dans le navigateur (les règles ne savent pas tirer au hasard) ; elles bornent ce qu'on peut écrire.
+    loot: {
+      $uid: {
+        '.read': `${ME} && (${OWNER('$uid')} || ${ADMIN})`,
+        opened: {
+          $box: {
+            '.write': `${ME} && ${OWNER('$uid')} && ${OK} && !data.exists()`,
+            '.validate': `newData.hasChildren(['at', 'item', 'rarity']) && newData.child('at').val() === now && newData.child('item').isString() && newData.child('item').val().length <= 40 && newData.child('rarity').val().matches(/^(commun|rare|epique|pack)$/) && (${WIN('$box')} || root.child('lootGrants/' + $uid + '/' + $box).exists() || ($box.beginsWith('dust-') && root.child('loot/' + $uid + '/dust').val() >= 10))`,
+          },
+        },
+        // Éléments trouvés : seulement ceux des packs qu'on trouve dans les box
+        owned: {
+          $pack: {
+            $slot: {
+              '.write': `${ME} && ${OWNER('$uid')} && ${OK}`,
+              '.validate': "newData.val() === true && $pack.matches(/^(japon|western|ocean)$/) && $slot.matches(/^(board|pieces|endAnim|capture)$/)",
+            },
+          },
+        },
+        // Poussière d'étoile (les doublons) : jamais négative, au plus +20 d'un coup (le gain d'une box)
+        dust: {
+          '.write': `${ME} && ${OWNER('$uid')} && ${OK}`,
+          '.validate': 'newData.isNumber() && newData.val() >= 0 && newData.val() <= (data.exists() ? data.val() : 0) + 20',
+        },
+      },
+    },
+    // Box de test offertes par un admin ou le fondateur
+    lootGrants: {
+      $uid: {
+        '.read': `${ME} && (${OWNER('$uid')} || ${ADMIN})`,
+        $g: { '.write': `${ME} && ${ADMIN} && !data.exists()`, '.validate': 'newData.val() === true' },
+      },
+    },
     history: {
       '.read': `${ME} && ${ADMIN}`,
       $uid: {

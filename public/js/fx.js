@@ -1226,7 +1226,15 @@ export function createFx(frame, getOrientation) {
       const banner = el(over, 'fx-mate-banner western ' + outcome, { fontSize: `${Math.max(24, W * 0.085)}px` },
         `<div class="sign">${lose ? '<i class="hole"></i>' : '<div class="star">★</div>'}<div class="t">Échec et mat</div><div class="s">${sub}</div></div>`);
       const sign = banner.firstElementChild;
-      const end = lose ? 7 : 0;
+      // La pancarte est accrochée en haut du damier : deux clous, deux cordes jusqu'à elle
+      const { oy } = boardBox();
+      const fr = frame.getBoundingClientRect();
+      const sr = sign.getBoundingClientRect();
+      const rope = Math.max(10, sr.top - (fr.top + oy) - 4);
+      sign.style.setProperty('--rope', `${rope}px`);
+      sign.insertAdjacentHTML('afterbegin', '<i class="rope l"></i><i class="rope r"></i>');
+      const nails = [0.16, 0.84].map((p) => el(banner, 'wnail', { left: `${sr.left - fr.left + p * sr.width}px`, top: `${oy + 4}px` }));
+      const end = 0;
       sign.animate(
         calm
           ? [{ opacity: 0 }, { opacity: 1, transform: `rotate(${end}deg)` }]
@@ -1240,6 +1248,31 @@ export function createFx(frame, getOrientation) {
             ],
         { duration: calm ? 300 : 1500, easing: 'ease-out', fill: 'both' },
       );
+      // Défaite : la corde de droite se décroche du clou, la pancarte pend de travers et la corde tombe
+      if (lose) {
+        setTimeout(() => {
+          if (gen !== generation) return;
+          const A = 38;
+          // La pancarte bascule autour de son coin gauche (là où tient la corde de gauche, qui reste tendue)
+          sign.style.transformOrigin = '16% 0';
+          if (!calm) dust(nails[1].offsetLeft, nails[1].offsetTop, s, { count: 4, spread: 0.6, rise: 0.4 });
+          const swing = (k) => (calm ? [{ transform: 'none' }, { transform: `rotate(${k * A}deg)` }] : [{ transform: 'none' }, { transform: `rotate(${k * (A + 10)}deg)`, offset: 0.35 }, { transform: `rotate(${k * (A - 6)}deg)`, offset: 0.58 }, { transform: `rotate(${k * (A + 3)}deg)`, offset: 0.78 }, { transform: `rotate(${k * A}deg)` }]);
+          const opts = { duration: calm ? 200 : 1400, easing: 'cubic-bezier(.35,0,.4,1)', fill: 'forwards' };
+          sign.animate(swing(1), opts);
+          // La corde de gauche tourne à l'envers : elle reste droite, du clou à la pancarte
+          sign.querySelector('.rope.l').animate(swing(-1), opts);
+          // La corde de droite, décrochée, pend sous le coin de la pancarte (plus courte : elle s'est enroulée)
+          const r = sign.querySelector('.rope.r');
+          r.style.height = `min(var(--rope), 2.4em)`;
+          r.style.top = `calc(-1 * min(var(--rope), 2.4em))`;
+          r.animate(
+            calm
+              ? [{ transform: 'none' }, { transform: `rotate(${180 - A}deg)` }]
+              : [{ transform: 'none' }, { transform: `rotate(${120 - A}deg)`, offset: 0.3 }, { transform: `rotate(${200 - A}deg)`, offset: 0.55 }, { transform: `rotate(${168 - A}deg)`, offset: 0.75 }, { transform: `rotate(${185 - A}deg)`, offset: 0.9 }, { transform: `rotate(${180 - A}deg)` }],
+            { duration: calm ? 200 : 1700, easing: 'ease-out', fill: 'forwards' },
+          );
+        }, calm ? 400 : 2100);
+      }
       setTimeout(() => {
         if (gen !== generation) return;
         once(banner, [{ opacity: 1 }, { opacity: 0 }], { duration: 900, fill: 'forwards' });
@@ -1271,7 +1304,7 @@ export function createFx(frame, getOrientation) {
   const FISH = (col) => `<svg viewBox="0 0 30 14"><path d="M2 7 C7 1 17 1 23 7 C17 13 7 13 2 7Z M22 7 L29 2 L27.5 7 L29 12Z" fill="${col}"/><circle cx="7" cy="6" r="1.1" fill="#04192c"/></svg>`;
   const EYE = `<svg viewBox="0 0 120 60" style="overflow:visible"><defs><radialGradient id="fx-iris" cx=".5" cy=".5" r=".55"><stop offset="0" stop-color="#fff4a8"/><stop offset=".5" stop-color="#ffaa2a"/><stop offset="1" stop-color="#8f2a0c"/></radialGradient></defs><path d="M4 30 Q60 -6 116 30 Q60 66 4 30Z" fill="url(#fx-iris)" stroke="#2b0716" stroke-width="3"/><path d="M30 22 Q60 30 90 22 M28 38 Q60 31 92 38" fill="none" stroke="#7a2510" stroke-width="1.2" opacity=".6"/><ellipse class="pupil" cx="60" cy="30" rx="5" ry="21" fill="#0c0206"/><ellipse cx="51" cy="21" rx="5" ry="2.6" fill="#fff" opacity=".7"/><path d="M0 30 Q60 -12 120 30" fill="none" stroke="#3a0f2a" stroke-width="6" stroke-linecap="round"/></svg>`;
   // Tentacule : pointe enroulée vers la droite (flip = vers la gauche)
-  const TENTACLE = (flip) => `<svg viewBox="0 0 40 120" preserveAspectRatio="none" style="transform:scaleX(${flip ? -1 : 1})"><defs><linearGradient id="fx-tg" x1="0" x2="1"><stop offset="0" stop-color="#2a0b2c"/><stop offset=".5" stop-color="#5c1a4f"/><stop offset="1" stop-color="#1f0820"/></linearGradient></defs><path d="M9 122 C5 92 23 74 16.5 50 C10.5 30 18 11 30 6.5 C36.5 4.5 38.5 11 33.5 13 C25.5 17 21 31 27 48 C35 72 24 94 26.5 122Z" fill="url(#fx-tg)" stroke="#0d0310" stroke-width="1.6"/><g fill="#c86fa8" stroke="#3a0d38" stroke-width=".8"><circle cx="30.5" cy="17" r="1.2"/><circle cx="26.5" cy="26" r="1.5"/><circle cx="25.5" cy="36" r="1.8"/><circle cx="27.5" cy="47" r="2"/><circle cx="30" cy="59" r="2.2"/><circle cx="30.5" cy="72" r="2.3"/><circle cx="28.5" cy="85" r="2.4"/><circle cx="27" cy="99" r="2.5"/><circle cx="26.8" cy="112" r="2.6"/></g></svg>`;
+  const TENTACLE = (flip) => `<svg viewBox="0 0 40 120" preserveAspectRatio="none" style="transform:scaleX(${flip ? -1 : 1})"><defs><linearGradient id="fx-tg" x1="0" x2="1"><stop offset="0" stop-color="#5a1a52"/><stop offset=".45" stop-color="#b8428e"/><stop offset=".7" stop-color="#8a2a6c"/><stop offset="1" stop-color="#3e0f3a"/></linearGradient></defs><path d="M9 122 C5 92 23 74 16.5 50 C10.5 30 18 11 30 6.5 C36.5 4.5 38.5 11 33.5 13 C25.5 17 21 31 27 48 C35 72 24 94 26.5 122Z" fill="url(#fx-tg)" stroke="#ff9fd6" stroke-opacity=".55" stroke-width="1.4"/><g fill="#ffc2e6" stroke="#5a1450" stroke-width=".8"><circle cx="30.5" cy="17" r="1.2"/><circle cx="26.5" cy="26" r="1.5"/><circle cx="25.5" cy="36" r="1.8"/><circle cx="27.5" cy="47" r="2"/><circle cx="30" cy="59" r="2.2"/><circle cx="30.5" cy="72" r="2.3"/><circle cx="28.5" cy="85" r="2.4"/><circle cx="27" cy="99" r="2.5"/><circle cx="26.8" cy="112" r="2.6"/></g></svg>`;
 
   /** Le carré de l'échiquier réel dans le cadre : { ox, oy, W }. */
   function boardBox() {
@@ -1408,15 +1441,20 @@ export function createFx(frame, getOrientation) {
       // La baleine passe au loin
       const wh = el(clip, 'fx-ocean-whale', { left: `${-W * 0.75}px`, top: `${W * 0.08}px`, width: `${W * 0.7}px`, height: `${W * 0.315}px`, opacity: '.5', filter: 'blur(1px)' }, WHALE);
       once(wh, [{ transform: 'translate(0,0) rotate(2deg)' }, { transform: `translate(${W * 0.9}px, ${-W * 0.03}px) rotate(-2deg)`, offset: 0.5 }, { transform: `translate(${W * 1.85}px, ${W * 0.01}px) rotate(2deg)` }], { duration: 7000, easing: 'linear' });
-      // Le roi vaincu s'enfonce lentement dans sa case, dans ses bulles
+      // Le roi vaincu vacille, tombe sur le côté (lentement, comme dans l'eau), puis coule en s'éteignant
+      const side = kx > W / 2 ? -1 : 1; // il tombe vers le centre du plateau
+      king.style.transformOrigin = '50% 88%';
       king.animate(
         [
-          { transform: 'none', clipPath: 'inset(-30% -30% 0 -30%)', filter: 'none' },
-          { transform: 'translateY(-6%) rotate(-8deg)', clipPath: 'inset(-30% -30% 0 -30%)', filter: 'none', offset: 0.12 },
-          { transform: 'translateY(30%) rotate(18deg)', clipPath: 'inset(-30% -30% 30% -30%)', filter: 'brightness(.7) saturate(.7)', offset: 0.6 },
-          { transform: 'translateY(55%) rotate(24deg)', clipPath: 'inset(-30% -30% 55% -30%)', filter: 'brightness(.55) saturate(.6)' },
+          { transform: 'none', filter: 'none', opacity: 1 },
+          { transform: `rotate(${-6 * side}deg)`, offset: 0.1 },
+          { transform: `rotate(${10 * side}deg)`, offset: 0.2 },
+          { transform: `rotate(${88 * side}deg) translateX(${-6 * side}%)`, filter: 'brightness(.85)', offset: 0.45 },
+          { transform: `rotate(${82 * side}deg) translateX(${-6 * side}%)`, offset: 0.52 },
+          { transform: `rotate(${86 * side}deg) translateX(${-6 * side}%)`, filter: 'brightness(.75) saturate(.75)', opacity: 1, offset: 0.6 },
+          { transform: `rotate(${92 * side}deg) translate(${-6 * side}%, 30%)`, filter: 'brightness(.45) saturate(.5) blur(1px)', opacity: 0.25 },
         ],
-        { duration: 3200, delay: 300, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'forwards' },
+        { duration: 3600, delay: 300, easing: 'cubic-bezier(.45,0,.55,1)', fill: 'forwards' },
       );
       for (let k = 0; k < 5; k++) later(() => seaBubbles(clip, kx, ky + s * 0.2, s, 4, { spread: 0.3, rise: 1.4 }), 400 + k * 450);
       // Ton roi (ou celui du vainqueur) brille comme une perle
@@ -1473,9 +1511,12 @@ export function createFx(frame, getOrientation) {
       eye.querySelector('.pupil').animate([{ transform: 'translateX(0)' }, { transform: 'translateX(0)', offset: 0.7 }, { transform: `translate(${(look * 30).toFixed(1)}px, ${ky > eyeY ? 5 : -5}px)` }], { duration: 3600, delay: 500, fill: 'forwards' });
       // Les tentacules sortent de la case et entraînent ton roi
       const T = 1900;
-      for (const [off, h, flip, i] of [[-0.62, 1.5, false, 0], [-0.2, 1.25, false, 1], [0.2, 1.35, true, 2], [0.62, 1.6, true, 3]]) {
-        const box = el(clip, 'fx-ocean-tentacle-box', { left: `${kx - s}px`, top: `${ky + s / 2 - s * 1.7}px`, width: `${s * 2}px`, height: `${s * 1.7}px`, overflow: 'hidden', zIndex: 8 });
-        const t = el(box, 'fx-ocean-tentacle', { left: `${s + off * s - s * 0.27}px`, bottom: '0', width: `${s * 0.55}px`, height: `${h * s}px`, transformOrigin: '50% 100%' }, TENTACLE(flip));
+      // La boîte des tentacules (leur « sol ») est sous le roi ; au bord du haut, elle descend pour rester visible
+      const TH = 1.3; // hauteur des tentacules, en cases
+      const boxTop = Math.max(0, ky + s / 2 - s * TH);
+      for (const [off, h, flip, i] of [[-0.55, 1.15, false, 0], [-0.18, 1.0, false, 1], [0.18, 1.08, true, 2], [0.55, 1.22, true, 3]]) {
+        const box = el(clip, 'fx-ocean-tentacle-box', { left: `${kx - s}px`, top: `${boxTop}px`, width: `${s * 2}px`, height: `${s * TH}px`, overflow: 'hidden', zIndex: 8 });
+        const t = el(box, 'fx-ocean-tentacle', { left: `${s + off * s - s * 0.24}px`, bottom: '0', width: `${s * 0.48}px`, height: `${h * s}px`, transformOrigin: '50% 100%' }, TENTACLE(flip));
         t.animate(
           [
             { transform: 'translateY(100%) rotate(0deg)' },

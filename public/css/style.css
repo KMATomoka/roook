@@ -1785,16 +1785,23 @@ a.person-link:hover { color: var(--accent-soft); }
 }
 .fx-mate-banner.western .sign {
   position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.12em;
-  padding: 0.4em 0.95em 0.45em; border-radius: 0.08em; transform-origin: 50% -0.9em;
+  padding: 0.4em 0.95em 0.45em; border-radius: 0.08em; transform-origin: 50% calc(-1 * var(--rope, 0.9em));
   background: linear-gradient(180deg, #d88a5c, #9c4424 55%, #6e2c15);
   border: 0.06em solid #2e1208;
   box-shadow: inset 0 0 0 0.045em rgba(120, 220, 205, 0.6), inset 0 -0.3em 0.5em rgba(40, 18, 4, 0.35), 0 0.3em 0.7em rgba(0, 0, 0, 0.6);
 }
-.fx-mate-banner.western .sign::before, .fx-mate-banner.western .sign::after {
-  content: ''; position: absolute; top: -0.9em; width: 0.06em; height: 0.9em; background: linear-gradient(#e2c38c, #a07a42);
+/* Cordes : du haut de la pancarte jusqu'aux clous plantés en haut du damier (--rope : leur longueur) */
+.fx-mate-banner.western .rope {
+  position: absolute; top: calc(-1 * var(--rope, 0.9em)); width: 0.07em; height: var(--rope, 0.9em); margin-left: -0.035em;
+  transform-origin: 50% 100%; border-radius: 0.04em;
+  background: repeating-linear-gradient(170deg, #e8cb93 0 0.08em, #b8904f 0.08em 0.16em); box-shadow: 0 0 0 0.012em rgba(46, 18, 8, 0.6);
 }
-.fx-mate-banner.western .sign::before { left: 16%; }
-.fx-mate-banner.western .sign::after { right: 16%; }
+.fx-mate-banner.western .rope.l { left: 16%; }
+.fx-mate-banner.western .rope.r { left: 84%; }
+.fx-mate-banner.western .wnail {
+  position: absolute; width: 0.16em; height: 0.16em; margin: -0.08em 0 0 -0.08em; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #e9e3d6, #8a8378 45%, #3a342c 80%); box-shadow: 0 0.03em 0.05em rgba(0, 0, 0, 0.6);
+}
 .fx-mate-banner.western .star { font-size: 0.62em; line-height: 1; color: #7fe3d4; text-shadow: 0 0 10px rgba(90, 220, 200, 0.8), 0 2px 0 #1d5a52; }
 .fx-mate-banner.western .t {
   font: 400 0.6em/1.05 'Rye', serif; text-transform: none; letter-spacing: 0.02em;
@@ -1816,6 +1823,9 @@ a.person-link:hover { color: var(--accent-soft); }
    ========================================================================== */
 .fx-whirl { position: absolute; z-index: 1; will-change: transform, opacity; }
 .fx-whirl svg, .fx-ocean-fin svg, .fx-ocean-whale svg, .fx-ocean-fish svg, .fx-ocean-eye svg, .fx-ocean-tentacle svg { display: block; width: 100%; height: 100%; }
+/* Tentacules : une lueur pour qu'elles se détachent dans le noir des abysses */
+.fx-ocean-tentacle-box { position: absolute; }
+.fx-ocean-tentacle { position: absolute; filter: drop-shadow(0 0 4px rgba(255, 110, 200, 0.55)); }
 .fx-bubble {
   position: absolute; z-index: 4; border-radius: 50%; will-change: transform, opacity;
   border: 1.5px solid rgba(235, 255, 255, 0.9);

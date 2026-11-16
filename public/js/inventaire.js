@@ -13,6 +13,7 @@ import {
   unlockedCount, piecesCount, piecesPack, itemName, unlockProgress, loadPackFont,
 } from './theme.js';
 import { createFx } from './fx.js';
+import { playSound, isMuted } from './sound.js';
 
 // Les aperçus montrent les animations de tous les packs : on charge leurs polices une fois la page affichée
 addEventListener('load', () => PACKS.forEach((p) => loadPackFont(p.id)));
@@ -341,6 +342,7 @@ $('main').addEventListener('click', async (e) => {
       } else {
         await setEquip({ [tab]: selected });
         toast(`${escapeHtml(SLOT_NAMES[tab])} : <b>${escapeHtml(packById(selected).items[tab].name)}</b> équipé.`, { cls: 'info', duration: 2500 });
+        if (tab === 'capture') playSound(new Chess(DEMOS.capture.fen).move(DEMOS.capture.san), 'neutral');
       }
     } catch (ex) {
       toast(escapeHtml(ex.message || 'Impossible d’enregistrer pour l’instant.'), { cls: 'error' });
@@ -358,6 +360,7 @@ function refresh() {
 renderTabs();
 onEquipChange(refresh);
 refresh();
+$('#inv-muted').hidden = !isMuted();
 
 ready.then(({ signedIn }) => {
   refresh(); // les victoires (packs à débloquer) sont maintenant connues

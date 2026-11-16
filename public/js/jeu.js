@@ -5,6 +5,7 @@ import {
   $, $$, Chess, colorName, legalDests, castleDest, isPromotion, askPromotion, saveGame, getPref, setPref,
   resultText, localGameOver, formatClock, escapeHtml, material, frSan,
 } from './common.js';
+import { isMuted, setMuted, lowTimeBeep } from './sound.js';
 import { createFx } from './fx.js';
 import { attachArrows } from './arrows.js';
 import { scrollMoveIntoList, repetitions, rivalOf, faceUrl } from './common.js';
@@ -48,6 +49,17 @@ const fx = createFx($('.board-frame'), () => orientation);
 // Effets visuels seulement si on regarde la position actuelle
 const fxOpts = () => ({ visual: viewPly === null, me: mode === 'local' ? null : myColor });
 
+// Bouton pour couper / remettre le son
+const soundBtn = $('#sound-toggle');
+const showSound = () => {
+  soundBtn.textContent = isMuted() ? '🔇' : '🔊';
+  soundBtn.title = isMuted() ? 'Remettre le son' : 'Couper le son';
+};
+soundBtn.addEventListener('click', () => {
+  setMuted(!isMuted());
+  showSound();
+});
+showSound();
 
 function history() {
   return chess.history({ verbose: true });
@@ -220,6 +232,14 @@ setInterval(() => {
     aiThinking = false;
     $('#thinking').hidden = true;
     finish(timeoutEnd(loser));
+  }
+  const mine = mode === 'local' ? chess.turn() : myColor;
+  if (mine && !over && clocks.running && chess.turn() === mine) {
+    const left = liveClock(mine);
+    if (left < 10000 && !lowWarned[mine]) {
+      lowWarned[mine] = true;
+      lowTimeBeep();
+    }
   }
   // On ne touche à la page que si l'affichage change (sinon le navigateur recalcule la mise en page 10 fois par seconde)
   for (const el of $$('[data-clock]')) {

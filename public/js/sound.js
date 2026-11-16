@@ -8,13 +8,18 @@ import { getEquip } from './theme.js';
 let ctx = null;
 let master = null;
 let noiseBuf = null;
-// Le son n'existe plus que sur la page des box (coffres, musique, aperçus des animations gagnées) :
-// partout ailleurs le site est silencieux. Plus de bouton pour le couper, donc plus d'état « muet ».
-const muted = false;
-const boxPage = () => typeof document !== 'undefined' && !!document.body?.classList.contains('page-box');
+let muted = false;
+try {
+  muted = localStorage.getItem('roque:son') === 'off';
+} catch {}
 
 export const isMuted = () => muted;
-export function setMuted() {}
+export function setMuted(v) {
+  muted = !!v;
+  try {
+    localStorage.setItem('roque:son', muted ? 'off' : 'on');
+  } catch {}
+}
 
 function audio() {
   if (muted) return null;
@@ -953,7 +958,7 @@ const MATES = { astrea: spaceMate, classic: classicMate, royal: royalMate, japon
  * style : { capture, endAnim } pour forcer un jeu de sons (aperçus de l'inventaire) ; sinon l'équipement du joueur.
  */
 export function playSound(move, outcome = 'neutral', style = null) {
-  if (!move || muted || !boxPage()) return; // sons de partie : seulement dans les aperçus de la page des box
+  if (!move || muted) return;
   const eq = { ...getEquip(), ...(style || {}) };
   const set = SETS[eq.capture] || space;
   if (move.san.includes('#')) {
@@ -970,7 +975,9 @@ export function playSound(move, outcome = 'neutral', style = null) {
 }
 
 /** Petit bip quand il reste peu de temps. */
-export function lowTimeBeep() {}
+export function lowTimeBeep() {
+  tone({ freq: 1760, type: 'square', dur: 0.06, vol: 0.04 });
+}
 
 // --- Coffre (page « Mes box ») : arrivée, coups de suspense, ouverture, révélation ---------
 // Un coffre de bois cerclé de fer : sons de bois sourds, ferrures qui tintent, grincement des charnières.

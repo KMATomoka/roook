@@ -2,7 +2,7 @@
 // (bannir / débannir, retirer une photo, réinitialiser un mot de passe, nommer ou retirer un admin).
 // Les vraies protections sont dans les règles de la base : seul un admin peut lire ces données et agir.
 import { $, escapeHtml } from './common.js';
-import { session, toast, picHtml, isBanActive, banEndText, profileUrl, roleBadge, isOnline } from './compte.js';
+import { session, toast, picHtml, isBanActive, banEndText, profileUrl, roleBadge, isOnline, isPlaying } from './compte.js';
 import { db, ref, get, set, remove, onValue, serverTimestamp, serverNow, sendPasswordResetEmail, auth } from './fb.js';
 
 const { user, banned } = await session;
@@ -87,7 +87,7 @@ function members() {
         createdAt: u.createdAt || 0,
         email: data.private[id]?.email || null,
         online: isOnline(st),
-        playing: !!st.playing,
+        playing: isPlaying(st),
         lastSeen: isOnline(st) ? serverNow() : st.lastSeen || 0,
         role: data.roles[id] === 'fondateur' || data.roles[id] === 'admin' ? data.roles[id] : 'member',
         admin: data.roles[id] === 'admin' || data.roles[id] === 'fondateur',

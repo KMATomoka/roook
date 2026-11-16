@@ -570,7 +570,7 @@ export async function searchPlayers(text) {
       ]);
       if (!name) return null; // compte supprimé
       const relation = isFriend ? 'friend' : sent.child(id).exists() ? 'sent' : received.child(id).exists() ? 'received' : 'none';
-      return { id, username: name, avatar, relation, online: isOnline(st), playing: !!st?.playing };
+      return { id, username: name, avatar, relation, online: isOnline(st), playing: isPlaying(st) };
     }),
   );
   return players.filter(Boolean);
@@ -765,6 +765,11 @@ const PRESENCE_TTL = 10 * 60 * 1000;
 const PRESENCE_BEAT = 4 * 60 * 1000;
 /** Un joueur est-il en ligne, d'après son nœud status/{uid} ? */
 export const isOnline = (st) => Object.values(st?.connections || {}).some((v) => typeof v === 'number' && serverNow() - v < PRESENCE_TTL);
+/**
+ * Un joueur est-il en partie ? Seulement si une entrée « playing » récente existe (elle est datée et rafraîchie
+ * pendant la partie). Avant, une entrée restée en place le montrait « en partie » pour toujours.
+ */
+export const isPlaying = (st) => isOnline(st) && Object.values(st?.playing || {}).some((v) => v && typeof v === 'object' && typeof v.at === 'number' && serverNow() - v.at < PRESENCE_TTL);
 let presenceRef = null;
 
 function startPresence() {
@@ -784,12 +789,17 @@ function startPresence() {
         if (k !== me.key && (typeof v !== 'number' || serverNow() - v > PRESENCE_TTL)) dead[k] = null;
       }
       if (Object.keys(dead).length) await update(conns, dead);
+      // Et les « en partie » restés d'une ancienne page (sauf celui de la partie ouverte ici)
+      const stale = {};
+      for (const k of Object.keys((await get(ref(db, `status/${uid}/playing`))).val() || {})) if (k !== playingRef?.key) stale[k] = null;
+      if (Object.keys(stale).length) await update(ref(db, `status/${uid}/playing`), stale);
     } catch {
       // hors ligne ou compte suspendu : rien à faire
     }
   });
   setInterval(() => {
     if (presenceRef && currentUser) set(presenceRef, serverTimestamp()).catch(() => {});
+    if (playingRef && currentUser) set(playingRef, { g: playingGame, at: serverTimestamp() }).catch(() => {});
   }, PRESENCE_BEAT);
 }
 
@@ -811,13 +821,28 @@ async function signOutClean() {
   await signOut(auth).catch(() => {});
 }
 
-/** Indique aux amis qu'on est en partie (jusqu'à la fermeture de la page). */
+/** Indique aux amis qu'on est en partie : jusqu'à la fin de la partie ou la fermeture de la page. */
+let playingRef = null;
+let playingGame = null;
 export function markPlaying(gameId) {
   if (!currentUser) return () => {};
-  const r = push(ref(db, `status/${currentUser.id}/playing`));
-  onDisconnect(r).remove();
-  set(r, gameId);
-  return () => remove(r);
+  if (playingRef && playingGame === gameId) return unmarkPlaying; // déjà marqué (appelé à chaque coup)
+  if (!playingRef) {
+    playingRef = push(ref(db, `status/${currentUser.id}/playing`));
+    onDisconnect(playingRef).remove();
+  }
+  playingGame = gameId;
+  set(playingRef, { g: gameId, at: serverTimestamp() }).catch(() => {});
+  return unmarkPlaying;
+}
+/** La partie est finie : on n'est plus « en partie ». */
+export function unmarkPlaying() {
+  if (!playingRef) return;
+  const r = playingRef;
+  playingRef = null;
+  playingGame = null;
+  onDisconnect(r).cancel().catch(() => {});
+  remove(r).catch(() => {});
 }
 
 // ---------------------------------------------------------------------------
@@ -852,7 +877,7 @@ export function watchFriends(cb) {
             if (!fr) return;
             fr.status = st;
             fr.online = isOnline(st);
-            fr.playing = !!st.playing;
+            fr.playing = isPlaying(st);
             emit();
           }),
           onValue(ref(db, `avatars/${fid}`), (s) => {
@@ -999,7 +1024,81 @@ function listenInvitations() {
   });
   // Invitation annulée par l'autre joueur (ou expirée)
   onChildRemoved(ref(db, `invites/${uid}`), (snap) => closeInvite(snap.key));
+  listenReplies();
 }
+
+/**
+ * Réponses à mes défis, sur toutes les pages : si l'ami accepte pendant que je suis ailleurs sur le site, ou si
+ * mon téléphone était en veille, je rejoins quand même la partie. Une acceptation récente encore en attente
+ * (site fermé puis rouvert) propose de rejoindre la partie tant qu'elle se joue.
+ */
+const REPLY_FRESH = 15 * 60 * 1000;
+function listenReplies() {
+  const uid = currentUser.id;
+  onChildAdded(ref(db, `inviteReplies/${uid}`), async (snap) => {
+    const r = snap.val() || {};
+    const done = () => remove(snap.ref).catch(() => {});
+    window.dispatchEvent(new CustomEvent('roque:invite-reply', { detail: { id: snap.key, ...r } }));
+    if (r.status !== 'accepted' || !r.gameId) {
+      if (r.status === 'declined' && sentInvites.has(snap.key)) toast(`${escapeHtml(r.by || 'Ton ami')} a refusé ta partie.`, { cls: 'info' });
+      return done();
+    }
+    if (typeof r.at === 'number' && serverNow() - r.at > REPLY_FRESH) return done();
+    // Déjà sur la page de cette partie : rien à faire
+    if (new URLSearchParams(location.search).get('partie') === r.gameId) return done();
+    const g = (await get(ref(db, `games/${r.gameId}/status`)).catch(() => null))?.val();
+    if (g !== 'playing') return done();
+    done();
+    if (sentInvites.has(snap.key)) {
+      // Je viens d'envoyer ce défi : on y va tout de suite
+      location.href = 'jeu.html?partie=' + r.gameId;
+      return;
+    }
+    // Défi envoyé depuis une autre page ou avant de fermer le site : on propose d'y aller
+    const t = toast(
+      `<div class="toast-invite">
+        <div class="toast-title">${escapeHtml(r.by || 'Ton ami')} a accepté ton défi !</div>
+        <div class="toast-sub">La partie t’attend.</div>
+        <div class="toast-actions"><a class="btn btn-primary small" href="jeu.html?partie=${encodeURIComponent(r.gameId)}">Rejoindre la partie</a></div>
+      </div>`,
+      { duration: 0, cls: 'invite' },
+    );
+    t.querySelector('a')?.addEventListener('click', () => t.close());
+  });
+}
+/**
+ * Défis envoyés pendant cette visite (gardés d'une page à l'autre) : quand l'un est accepté, on rejoint la partie
+ * directement, même si on a changé de page entre-temps.
+ */
+const SENT_KEY = 'roque:defis';
+const sentInvites = {
+  all() {
+    try {
+      const o = JSON.parse(sessionStorage.getItem(SENT_KEY) || '{}');
+      const now = Date.now();
+      for (const k of Object.keys(o)) if (now - o[k] > 5 * 60 * 1000) delete o[k];
+      return o;
+    } catch {
+      return {};
+    }
+  },
+  save(o) {
+    try {
+      sessionStorage.setItem(SENT_KEY, JSON.stringify(o));
+    } catch {}
+  },
+  has(id) {
+    return id in this.all();
+  },
+  add(id) {
+    this.save({ ...this.all(), [id]: Date.now() });
+  },
+  delete(id) {
+    const o = this.all();
+    delete o[id];
+    this.save(o);
+  },
+};
 
 function closeInvite(id) {
   const t = inviteToasts.get(id);
@@ -1094,7 +1193,7 @@ async function sendInvite(friend, color, time) {
   const me = currentUser;
   const st = (await get(ref(db, `status/${friend.id}`))).val() || {};
   if (!isOnline(st)) throw new Error(`${friend.username} n’est pas connecté.`);
-  if (st.playing) throw new Error(`${friend.username} est déjà en partie.`);
+  if (isPlaying(st)) throw new Error(`${friend.username} est déjà en partie.`);
   const invRef = push(ref(db, `invites/${friend.id}`));
   const expires = serverNow() + 60000;
   await set(invRef, { from: me.id, fromName: me.username, toName: friend.username, color, base: time.base, inc: time.inc, expires, at: serverTimestamp() });
@@ -1108,31 +1207,39 @@ async function sendInvite(friend, color, time) {
     </div>`,
     { duration: 0, cls: 'invite' },
   );
-  const replyRef = ref(db, `inviteReplies/${me.id}/${invRef.key}`);
+  sentInvites.add(invRef.key);
   let done = false;
   const finish = () => {
     done = true;
     clearTimeout(timer);
-    off();
+    removeEventListener('roque:invite-reply', onReply);
     t.close();
-    remove(replyRef).catch(() => {});
   };
-  const off = onValue(replyRef, (s) => {
-    const r = s.val();
-    if (!r || done) return;
-    finish();
-    if (r.status === 'accepted') location.href = 'jeu.html?partie=' + r.gameId;
-    else toast(`${escapeHtml(friend.username)} a refusé ta partie.`, { cls: 'info' });
-  });
-  const timer = setTimeout(() => {
+  // La réponse arrive par listenReplies (qui fait rejoindre la partie) : ici on ferme seulement l'attente
+  const onReply = (e) => {
+    if (e.detail.id === invRef.key && !done) finish();
+  };
+  addEventListener('roque:invite-reply', onReply);
+  // Fin du délai : un téléphone en veille peut « réveiller » ce minuteur avant d'avoir reçu la réponse. On regarde
+  // donc d'abord si l'invitation existe encore : si l'ami l'a déjà acceptée, elle a disparu et la réponse arrive.
+  const timer = setTimeout(async () => {
     if (done) return;
+    const still = await get(invRef).then((s) => s.exists()).catch(() => true);
+    if (done) return;
+    if (!still) {
+      // Acceptée (ou refusée) : la réponse est en route, listenReplies s'en occupe
+      t.querySelector('.toast-sub').textContent = 'Réponse reçue, un instant…';
+      setTimeout(() => !done && finish(), 8000);
+      return;
+    }
     finish();
     remove(invRef).catch(() => {});
     toast(`${escapeHtml(friend.username)} n’a pas répondu à temps.`, { cls: 'info' });
-  }, 60000);
+  }, 61000);
   t.querySelector('[data-a="cancel"]').addEventListener('click', () => {
     if (done) return;
     finish();
+    sentInvites.delete(invRef.key);
     remove(invRef).catch(() => {});
   });
 }
@@ -1200,7 +1307,7 @@ export async function loadProfile(uid) {
     hasRoyalProof: !!user.royalProof,
     avatar,
     online: isOnline(status),
-    playing: !!status?.playing,
+    playing: isPlaying(status),
     lastSeen: status?.lastSeen || 0,
     role: role === 'fondateur' || role === 'admin' ? role : 'member',
     admin: role === 'admin' || role === 'fondateur',

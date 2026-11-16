@@ -12,7 +12,7 @@ import { firebaseConfig } from './firebase-config.js';
 /** Délai avant qu'un joueur parti (page fermée sans prévenir) perde la partie. */
 export const AWAY_LIMIT = 60000;
 import { Chess, localGameOver } from './common.js';
-import { markPlaying } from './compte.js';
+import { markPlaying, unmarkPlaying } from './compte.js';
 
 const other = (c) => (c === 'w' ? 'b' : 'w');
 
@@ -237,6 +237,9 @@ export function gameSocket(gameId, user) {
         }
         round = game.round;
         g = game;
+        // « En partie » pour les amis : seulement tant que la partie se joue (revanche comprise)
+        if (color && game.status === 'playing') markPlaying(gameId);
+        else if (game.status === 'over') unmarkPlaying();
         if (game.status === 'over') saveHistory(game);
         else checkBoardEnd(game);
         fire('state', publicState(game));

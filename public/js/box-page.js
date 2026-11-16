@@ -16,7 +16,7 @@ import {
 } from './theme.js';
 import { RATES, DUST_PER_BOX, watchBoxes, openBox, grantTestBox } from './box.js';
 import { createFx } from './fx.js';
-import { createChest } from './coffre3d.js';
+import { createChest, LOW_POWER } from './coffre3d.js';
 import { boxSfx } from './sound.js';
 
 const ICONS = { board: '▦', pieces: '♞', endAnim: '♚', capture: '✦', P: '♟', R: '♜', N: '♞', B: '♝', Q: '♛', K: '♚' };
@@ -69,6 +69,7 @@ function makeChest(host, opts) {
     setLeak: (v) => cube().style.setProperty('--leak', String(v)),
     setOpen: (d) => cube().style.setProperty('--open', `${d}deg`),
     setIdle() {},
+    setPaused() {},
     hit() {
       cube().animate([{ transform: 'none' }, { transform: 'translateY(10px) scale(1.14, .8)', offset: 0.14 }, { transform: `translateY(-22px) scale(.92, 1.12) rotate(${rnd(-7, 7)}deg)`, offset: 0.45 }, { transform: 'none' }], { duration: 560, easing: 'ease-out' });
     },
@@ -195,7 +196,7 @@ let parts = [];
 let raf = 0;
 let dpr = 1;
 function sizeCanvas() {
-  dpr = Math.min(2, devicePixelRatio || 1);
+  dpr = LOW_POWER ? 1 : Math.min(2, devicePixelRatio || 1);
   canvas.width = innerWidth * dpr;
   canvas.height = innerHeight * dpr;
 }
@@ -203,6 +204,7 @@ addEventListener('resize', sizeCanvas);
 /** Lance des particules depuis (x, y) en pixels d'écran. */
 function emit({ x, y, n = 20, speed = [3, 9], angle = [0, Math.PI * 2], color = '#fff', size = [1.5, 3.5], life = [40, 80], gravity = 0.12, kind = 'spark', drag = 0.97 }) {
   const cols = Array.isArray(color) ? color : [color];
+  if (LOW_POWER) n = Math.ceil(n * 0.45); // téléphone : moins de particules
   for (let i = 0; i < n; i++) {
     const a = rnd(angle[0], angle[1]);
     const v = rnd(speed[0], speed[1]);
@@ -213,7 +215,8 @@ function emit({ x, y, n = 20, speed = [3, 9], angle = [0, Math.PI * 2], color = 
 function tick() {
   g2.setTransform(dpr, 0, 0, dpr, 0, 0);
   g2.clearRect(0, 0, innerWidth, innerHeight);
-  g2.globalCompositeOperation = 'lighter';
+  // Téléphone : simple superposition (le mode « lighter » coûte cher sur un grand canevas)
+  g2.globalCompositeOperation = LOW_POWER ? 'source-over' : 'lighter';
   parts = parts.filter((p) => p.age < p.life);
   for (const p of parts) {
     p.age++;
@@ -256,7 +259,7 @@ function tick() {
       g2.scale(1, Math.cos(p.age * 0.25));
       g2.fillRect(-p.s, -p.s * 0.5, p.s * 2, p.s);
       g2.restore();
-      g2.globalCompositeOperation = 'lighter';
+      g2.globalCompositeOperation = LOW_POWER ? 'source-over' : 'lighter';
     }
   }
   g2.globalAlpha = 1;
@@ -460,7 +463,8 @@ async function burstOpen(id) {
     // Pluie de confettis sur toute la largeur de l'écran
     for (let i = 0; i < 24; i++) emit({ x: rnd(0, innerWidth), y: rnd(-60, -10), n: 4 + lvl, speed: [0.5, 3], angle: [Math.PI * 0.3, Math.PI * 0.7], color: conf, kind: 'confetti', size: [3, 6], life: [160, 240], gravity: 0.06, drag: 0.99 });
   }
-  stageHost.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateY(60px) scale(.8)', opacity: 0 }], { duration: 650, delay: 900, easing: 'ease-in', fill: 'forwards' });
+  stageHost.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateY(60px) scale(.8)', opacity: 0 }], { duration: 650, delay: 900, easing: 'ease-in', fill: 'forwards' })
+    .finished.then(() => stageChest.setPaused(true), () => {}); // parti : plus de rendu 3D pendant la carte
   await wait(1100);
 }
 
@@ -472,6 +476,8 @@ async function doOpen(key, fake = null) {
   demoCtl = null;
   result.hidden = true;
   result.innerHTML = '';
+  result.dataset.ready = '';
+  result.classList.remove('preparing');
   scene.hidden = false;
   scene.innerHTML = '<i class="bx-beam" id="bx-beam"></i>';
   scene.prepend(stageHost);
@@ -483,7 +489,10 @@ async function doOpen(key, fake = null) {
   document.body.classList.add('bx-opening');
   // Le coffre de la scène : créé une fois (quand la scène est affichée, pour avoir sa taille), puis remis à zéro
   stageChest ||= makeChest(stageHost, { idle: false, tint: '#2fe38a', zoom: 1.08 });
+  stageChest.setIdle(false);
   stageChest.reset();
+  stageChest.setPaused(false);
+  cardChest?.setPaused(true); // le coffre de la page est caché sous la scène : on ne le dessine plus
   stageChest.setTint('#2fe38a');
 
   let res;
@@ -501,6 +510,7 @@ async function doOpen(key, fake = null) {
     stopHum = boxSfx.hum(0);
     const hint = $('#bx-hint');
     hint.hidden = false;
+    buildCard(res); // la carte se prépare, invisible, pendant les coups
     // Coups : le 1er allume la box ; chaque coup suivant peut monter d'un cran ; le dernier l'ouvre
     for (let k = 0; k <= target + 1; k++) {
       await waitTap();
@@ -539,8 +549,11 @@ async function landing() {
   ).finished;
 }
 
-/** La carte de l'objet gagné. */
-async function reveal(res) {
+/**
+ * Prépare la carte de l'objet gagné, invisible : ses images (pièces, plateau) se décodent pendant que le joueur
+ * frappe le coffre, au lieu de figer l'écran au moment où elle apparaît.
+ */
+function buildCard(res) {
   const p = packById(res.pack);
   const t = TIERS[res.rarity];
   const isJeu = res.rarity === 'jeu';
@@ -574,7 +587,19 @@ async function reveal(res) {
   result.dataset.pack = res.pack;
   result.dataset.slot = slot;
   demoCtl = buildPreview(result.querySelector('.bx-res-art'), res);
+  result.dataset.ready = '1';
+  // Presque transparente (pas « cachée ») : le navigateur la dessine déjà, l'apparition sera fluide
+  result.classList.add('preparing');
   result.hidden = false;
+}
+
+/** La carte de l'objet gagné. */
+async function reveal(res) {
+  if (result.dataset.ready !== '1') buildCard(res);
+  result.dataset.ready = '';
+  const t = TIERS[res.rarity];
+  const isNew = res.fresh.length > 0;
+  result.classList.remove('preparing');
   boxSfx.reveal(res.rarity, isNew);
   if (!reduce) {
     // La carte sort de la box en tournant (dos de la carte, puis face)
@@ -621,6 +646,8 @@ function closeStage() {
   parts = [];
   document.body.classList.remove('bx-opening');
   renderMain();
+  stageChest?.setPaused(true);
+  cardChest?.setPaused(false);
 }
 
 // Carte holographique : elle penche vers la souris et un reflet la suit
@@ -703,6 +730,16 @@ if (demoArg) {
   const [r, p, sl, n] = demoArg.split(',');
   setTimeout(() => window.bxDemo(r, p, sl, n !== 'old'), 300);
 }
+
+// Le coffre de la scène est préparé en avance, quand la page est calme : sinon sa création (WebGL, shaders)
+// figerait l'écran au moment d'ouvrir, surtout sur téléphone
+function prepareStageChest() {
+  if (stageChest || opening) return;
+  scene.prepend(stageHost);
+  stageChest = makeChest(stageHost, { idle: false, tint: '#2fe38a', zoom: 1.08 });
+  stageChest.setPaused(true);
+}
+addEventListener('load', () => (window.requestIdleCallback || setTimeout)(prepareStageChest, { timeout: 2500 }));
 
 // ---------------------------------------------------------------------------
 renderRates();

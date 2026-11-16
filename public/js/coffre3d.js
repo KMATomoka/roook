@@ -438,20 +438,23 @@ function envMap(renderer) {
 // ---------------------------------------------------------------------------
 // Le coffre dans une page
 // ---------------------------------------------------------------------------
+// Téléphones et petites tablettes : rendu allégé (moins de pixels, ombres plus simples, pas d'anticrénelage)
+export const LOW_POWER = matchMedia('(pointer: coarse)').matches || innerWidth < 760;
+
 export function createChest(host, { idle = true, tint = '#2fe38a', leak = 0, zoom = 1 } = {}) {
   let renderer;
   try {
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer = new THREE.WebGLRenderer({ antialias: !LOW_POWER, alpha: true, powerPreference: LOW_POWER ? 'low-power' : 'high-performance' });
   } catch {
     return null;
   }
   if (!renderer.getContext()) return null;
-  renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+  renderer.setPixelRatio(Math.min(LOW_POWER ? 1.3 : 2, devicePixelRatio || 1));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.3;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = LOW_POWER ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
   const canvas = renderer.domElement;
   canvas.className = 'chest3d-canvas';
   host.appendChild(canvas);
@@ -472,7 +475,7 @@ export function createChest(host, { idle = true, tint = '#2fe38a', leak = 0, zoo
   const key = new THREE.DirectionalLight('#ffe0bd', 2.6);
   key.position.set(-2.2, 4, 3.2);
   key.castShadow = true;
-  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.mapSize.set(LOW_POWER ? 512 : 1024, LOW_POWER ? 512 : 1024);
   key.shadow.camera.left = -1.6;
   key.shadow.camera.right = 1.6;
   key.shadow.camera.top = 1.6;
@@ -519,7 +522,7 @@ export function createChest(host, { idle = true, tint = '#2fe38a', leak = 0, zoo
     open: 0, openT: 0, openV: 0, // angle du couvercle (degrés), cible, vitesse (ressort)
     squash: 0, squashV: 0, jolt: 0,
     spin: 0, t: 0, idle,
-    alive: true, visible: true,
+    alive: true, visible: true, paused: false, skip: false,
   };
   const applyTint = () => {
     rim.color.copy(st.tint);
@@ -544,6 +547,8 @@ export function createChest(host, { idle = true, tint = '#2fe38a', leak = 0, zoo
   });
   io.observe(host);
 
+  // Prépare les shaders tout de suite (sinon le premier affichage fige un instant)
+  renderer.compile(scene, camera);
   let last = performance.now();
   let raf = 0;
   function frame(now) {
@@ -551,7 +556,12 @@ export function createChest(host, { idle = true, tint = '#2fe38a', leak = 0, zoo
     raf = requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
-    if (!st.visible) return;
+    if (!st.visible || st.paused) return;
+    // Au repos sur téléphone : une image sur deux suffit (30 images par seconde)
+    if (LOW_POWER && st.idle) {
+      st.skip = !st.skip;
+      if (st.skip) return;
+    }
     st.t += dt;
     // Ressort du couvercle
     const k = 120;
@@ -615,6 +625,11 @@ export function createChest(host, { idle = true, tint = '#2fe38a', leak = 0, zoo
     },
     setIdle(v) {
       st.idle = v;
+    },
+    /** Met le rendu en pause (coffre caché sous la scène, ou parti) : plus aucun calcul. */
+    setPaused(v) {
+      st.paused = v;
+      last = performance.now();
     },
     dispose() {
       st.alive = false;

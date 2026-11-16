@@ -29,7 +29,7 @@
     <div class="page-head">
       <p class="eyebrow">Jouer</p>
       <h1>Comment veux-tu jouer ?</h1>
-      <p class="lead">Affronte un joueur au hasard, défie un ami en ligne, entraîne-toi contre Noa, ou joue à deux sur le même écran.</p>
+      <p class="lead">Affronte un joueur au hasard, défie un ami en ligne, entraîne-toi contre Noa, Adriz ou Astrea, ou joue à deux sur le même écran.</p>
     </div>
 
   <section class="modes" id="jouer">
@@ -51,11 +51,18 @@
         <div class="noa-card-head">
           <img class="mode-noa" id="noa-level-face" src="img/noa/neutre.svg" alt="Noa" width="76" height="76">
           <div>
-            <h3>Contre Noa</h3>
-            <p>Noa s’adapte à ton niveau : du débutant qui rigole au grand maître qui ne pardonne rien.</p>
+            <h3>Contre <span id="rival-name">Noa</span></h3>
+            <p>Choisis ton adversaire : il s’adapte à ton niveau, du débutant qui rigole au grand maître qui ne pardonne rien.</p>
           </div>
         </div>
         <form id="form-ia" class="mode-form">
+          <fieldset><legend>Ton adversaire</legend>
+            <div class="rival-pick">
+              <label><input type="radio" name="rival" value="noa" checked><span><img src="img/noa/content.svg" alt="" width="44" height="44">Noa</span></label>
+              <label><input type="radio" name="rival" value="adriz"><span><img src="img/adriz/content.svg" alt="" width="44" height="44">Adriz</span></label>
+              <label><input type="radio" name="rival" value="astrea"><span><img src="img/astrea/content.svg" alt="" width="44" height="44">Astrea</span></label>
+            </div>
+          </fieldset>
           <label><span>Niveau : <b id="lvl-name"></b> <span class="muted" id="lvl-elo"></span></span>
             <input type="range" name="niveau" min="1" max="8" value="3" id="lvl">
           </label>

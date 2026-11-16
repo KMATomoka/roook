@@ -8,7 +8,7 @@ import {
 import { isMuted, setMuted, lowTimeBeep } from './sound.js';
 import { createFx } from './fx.js';
 import { attachArrows } from './arrows.js';
-import { scrollMoveIntoList, repetitions } from './common.js';
+import { scrollMoveIntoList, repetitions, rivalOf } from './common.js';
 import { session, avatarOf, profileUrl, badgeOf, badgeHtml } from './compte.js';
 import { gameSocket, AWAY_LIMIT } from './online.js';
 import { serverNow } from './fb.js';
@@ -17,6 +17,8 @@ const account = await session;
 const params = new URLSearchParams(location.search);
 const onlineId = params.get('partie');
 const mode = onlineId ? 'ami' : params.has('ia') ? 'ia' : 'local';
+// Contre l'ordinateur : Noa, Adriz ou Astrea (même moteur, chacun sa tête et ses répliques)
+const rival = rivalOf(params.get('adv'));
 
 // ---------------------------------------------------------------------------
 // État commun
@@ -187,7 +189,7 @@ function playerName(c) {
 
 /** Visage du joueur : Noa, la photo de profil, l'initiale du pseudo, ou un simple carré de couleur. */
 function playerFace(c) {
-  if (mode === 'ia' && c !== myColor) return `<img class="avatar noa" data-noa src="img/noa/${noaMood}.svg" alt="Noa" width="44" height="44">`;
+  if (mode === 'ia' && c !== myColor) return `<img class="avatar noa" data-noa src="img/${rival.id}/${noaMood}.svg" alt="${rival.name}" width="44" height="44">`;
   const known = mode === 'ami' || (mode === 'ia' && account.user);
   if (!known) return `<div class="avatar ${colorName(c)}"></div>`;
   const colorTag = `<i class="avatar-color ${colorName(c)}" title="${c === 'w' ? 'Blancs' : 'Noirs'}"></i>`;
@@ -425,17 +427,17 @@ function finish(end) {
   }
   $('#end-icon').textContent = icon;
   if (mode === 'ia') {
-    // Noa réagit au résultat
+    // L'adversaire réagit au résultat
     const noaWon = end.result !== '1/2-1/2' && (end.result === '1-0' ? 'w' : 'b') !== myColor;
     const face = end.result === '1/2-1/2' ? 'hmm' : noaWon ? 'frime' : 'content';
     setNoaMood(face, 0);
-    $('#end-icon').innerHTML = `<img class="end-noa" src="img/noa/${face}.svg" alt="Noa" width="96" height="96">`;
+    $('#end-icon').innerHTML = `<img class="end-noa" src="img/${rival.id}/${face}.svg" alt="${rival.name}" width="96" height="96">`;
   }
   $('#end-title').textContent = r.title;
   $('#end-sub').textContent = r.sub ? r.sub.charAt(0).toUpperCase() + r.sub.slice(1) + '.' : '';
   if (mode === 'ia') {
     const noaWon = end.result !== '1/2-1/2' && (end.result === '1-0' ? 'w' : 'b') !== myColor;
-    $('#end-sub').textContent += noaWon ? ' Noa : « Trop facile. Tu prends ta revanche ? »' : end.result === '1/2-1/2' ? ' Noa : « Hmm… on remet ça ? »' : ' Noa : « GG, bien joué ! »';
+    $('#end-sub').textContent += ` ${rival.name} : « ${noaWon ? rival.win : end.result === '1/2-1/2' ? rival.draw : rival.lose} »`;
   }
   $('#end-review').href = `bilan.html?partie=${encodeURIComponent(gameId)}`;
   $('#end-rematch').textContent = mode === 'ami' ? 'Revanche' : 'Rejouer';
@@ -448,7 +450,7 @@ function storeGame() {
   if (savedThisGame || history().length === 0) return;
   savedThisGame = true;
   const pgnChess = new Chess();
-  pgnChess.setHeader('Event', mode === 'ia' ? `Contre Noa (niveau ${level.n} · ${level.name})` : mode === 'ami' ? 'Partie entre amis' : 'Partie sur le même écran');
+  pgnChess.setHeader('Event', mode === 'ia' ? `Contre ${rival.name} (niveau ${level.n} · ${level.name})` : mode === 'ami' ? 'Partie entre amis' : 'Partie sur le même écran');
   pgnChess.setHeader('Date', new Date().toISOString().slice(0, 10).replace(/-/g, '.'));
   pgnChess.setHeader('White', names.w);
   pgnChess.setHeader('Black', names.b);
@@ -529,7 +531,7 @@ function setNoaMood(mood, revertAfter = 2400) {
   noaMood = mood;
   const img = document.querySelector('[data-noa]');
   if (img && changed) {
-    img.src = `img/noa/${mood}.svg`;
+    img.src = `img/${rival.id}/${mood}.svg`;
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
       img.animate([{ transform: 'scale(.6) rotate(-12deg)' }, { transform: 'scale(1.18) rotate(4deg)' }, { transform: 'none' }], { duration: 380, easing: 'ease-out' });
     }
@@ -557,7 +559,7 @@ function setupAiColor(c) {
   myColor = c;
   orientation = c;
   const me = account.user?.username || 'Toi';
-  const ai = 'Noa';
+  const ai = rival.name;
   names = c === 'w' ? { w: me, b: ai } : { w: ai, b: me };
   pics = c === 'w' ? { w: account.user?.avatar || null, b: null } : { w: null, b: account.user?.avatar || null };
   badges = { w: null, b: null };
@@ -739,9 +741,9 @@ if (mode === 'ami') {
   level = LEVELS[n - 1];
   let c = params.get('couleur');
   if (c !== 'w' && c !== 'b') c = Math.random() < 0.5 ? 'w' : 'b';
-  $('#mode-label').textContent = `Contre Noa · niveau ${level.n} · ${cadence.label}`;
+  $('#mode-label').textContent = `Contre ${rival.name} · niveau ${level.n} · ${cadence.label}`;
   resetLocalClock();
-  document.title = `Contre Noa — ROOOK`;
+  document.title = `Contre ${rival.name} — ROOOK`;
   engine = new Engine();
   setupAiColor(c);
   render();

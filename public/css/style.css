@@ -498,6 +498,19 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 
 /* --- Noa, l'adversaire --------------------------------------------------- */
 .noa-card-head { display: flex; gap: 16px; align-items: center; }
+/* Choix de l'adversaire de l'ordinateur (Noa, Adriz, Astrea) : trois visages à cliquer */
+.rival-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.rival-pick label { position: relative; cursor: pointer; }
+.rival-pick input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+.rival-pick span {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px 7px; border-radius: 12px;
+  background: var(--bg-2); border: 1px solid var(--line); font: 700 0.86rem var(--font); color: var(--muted);
+  transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.15s;
+}
+.rival-pick img { width: 44px; height: 44px; object-fit: contain; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4)); }
+.rival-pick label:hover span { transform: translateY(-1px); border-color: var(--line-strong); }
+.rival-pick input:checked + span { color: var(--text); border-color: var(--accent); background: rgba(143, 107, 255, 0.14); box-shadow: 0 0 0 1px var(--accent); }
+.rival-pick input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 .noa-card-head h3 { margin-bottom: 4px; }
 .mode-noa { flex: none; width: 76px; height: 76px; object-fit: contain; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.45)); }
 .avatar.noa { width: 44px; height: 44px; object-fit: contain; border: 0; background: none; border-radius: 0; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45)); }

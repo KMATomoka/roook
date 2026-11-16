@@ -85,6 +85,14 @@ export function getGame(id) {
   return loadGames().find((g) => g.id === id) || null;
 }
 
+// Adversaires de l'ordinateur : même moteur et mêmes niveaux, chacun avec sa tête (img/<id>/<humeur>.svg) et ses répliques
+export const RIVALS = {
+  noa: { id: 'noa', name: 'Noa', desc: 'L’astronaute de ROOOK', win: 'Trop facile. Tu prends ta revanche ?', draw: 'Hmm… on remet ça ?', lose: 'GG, bien joué !' },
+  adriz: { id: 'adriz', name: 'Adriz', desc: 'Le pote qui ne lâche rien', win: 'EZ. Allez, une revanche ?', draw: 'Pas mal… on en refait une ?', lose: 'Bien joué, j’avoue !' },
+  astrea: { id: 'astrea', name: 'Astrea', desc: 'Le chat de l’espace', win: 'Miaou ! Trop facile 😼', draw: 'Mrrr… match nul ?', lose: 'Miaou… bien joué.' },
+};
+export const rivalOf = (id) => RIVALS[id] || RIVALS.noa;
+
 export function getPref(k, def) {
   try {
     const v = localStorage.getItem('roque:' + k);

@@ -1,6 +1,6 @@
-// Page « Jouer » : adversaire au hasard, contre un ami (comptes), contre Noa, ou sur le même écran ; et les dernières parties.
+// Page « Jouer » : adversaire au hasard, contre un ami (comptes), contre l'ordinateur (Noa, Adriz ou Astrea), ou sur le même écran ; et les dernières parties.
 import { LEVELS } from './engine.js';
-import { $, $$, getPref, setPref, loadGames, gameRow, escapeHtml } from './common.js';
+import { $, $$, getPref, setPref, loadGames, gameRow, escapeHtml, RIVALS, rivalOf } from './common.js';
 import { session, challenge, watchFriends, picHtml, profileUrl, CADENCES } from './compte.js';
 import { findOpponent } from './matchmaking.js';
 
@@ -152,18 +152,22 @@ renderMatchForm();
 const formIa = $('#form-ia');
 const lvl = $('#lvl');
 lvl.value = getPref('niveau', 3);
-// La tête de Noa change avec le niveau : golmon au niveau 1, lunettes de soleil au niveau 8
+// La tête de l'adversaire change avec le niveau : golmon au niveau 1, frime au niveau 8
 const LEVEL_FACE = ['golmon', 'rire', 'content', 'neutre', 'hmm', 'grimace', 'colere', 'frime'];
+// Adversaire choisi (Noa, Adriz ou Astrea) : gardé pour la prochaine fois
+let rival = rivalOf(getPref('adversaire', 'noa'));
+formIa.rival.value = rival.id;
 // On précharge les visages pour que le changement soit instantané
-LEVEL_FACE.forEach((f) => (new Image().src = `img/noa/${f}.svg`));
+for (const id of Object.keys(RIVALS)) LEVEL_FACE.forEach((f) => (new Image().src = `img/${id}/${f}.svg`));
 let lastFace = null;
 const showLevel = () => {
   const L = LEVELS[lvl.value - 1];
-  const face = LEVEL_FACE[lvl.value - 1];
+  const face = `${rival.id}/${LEVEL_FACE[lvl.value - 1]}`;
+  $('#rival-name').textContent = rival.name;
   if (face !== lastFace) {
     const img = $('#noa-level-face');
-    img.src = `img/noa/${face}.svg`;
-    img.alt = `Noa, niveau ${L.n}`;
+    img.src = `img/${face}.svg`;
+    img.alt = `${rival.name}, niveau ${L.n}`;
     if (lastFace && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
       img.animate(
         [{ transform: 'scale(.75) rotate(-10deg)' }, { transform: 'scale(1.1) rotate(4deg)' }, { transform: 'none' }],
@@ -177,12 +181,19 @@ const showLevel = () => {
   lvl.style.setProperty('--p', ((lvl.value - 1) / 7) * 100 + '%');
 };
 lvl.addEventListener('input', showLevel);
+for (const r of formIa.querySelectorAll('input[name=rival]')) {
+  r.addEventListener('change', () => {
+    rival = rivalOf(r.value);
+    showLevel();
+  });
+}
 showLevel();
 formIa.addEventListener('submit', (e) => {
   e.preventDefault();
   setPref('niveau', Number(lvl.value));
+  setPref('adversaire', rival.id);
   setPref('cadence', formIa.cadence.value);
-  location.href = `jeu.html?ia=${lvl.value}&couleur=${formIa.couleur.value}&cadence=${encodeURIComponent(formIa.cadence.value)}`;
+  location.href = `jeu.html?ia=${lvl.value}&adv=${rival.id}&couleur=${formIa.couleur.value}&cadence=${encodeURIComponent(formIa.cadence.value)}`;
 });
 
 // --- Sur le même écran ------------------------------------------------------------

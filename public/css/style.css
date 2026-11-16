@@ -2249,75 +2249,118 @@ body { overflow-x: clip; position: relative; }
 .bx-pack li > span:first-child { width: 1.3em; text-align: center; color: var(--c); }
 .bx-pack li small { display: block; color: var(--muted); font-size: 0.72rem; font-weight: 600; }
 
-/* --- La box en 3D (CSS) : corps à 5 faces, couvercle à 6 faces, ruban vert, lumière à l'intérieur ------------
-   --s : taille ; --lift : couvercle soulevé ; --leak : lumière qui fuit par les fentes (0 à 1) ; --c : sa couleur */
-@property --c { syntax: '<color>'; inherits: true; initial-value: #8f6bff; }
+/* --- Le coffre commun en 3D (CSS) : planches de bois sombre cerclées de fer, couvercle bombé sur charnière,
+   gemme verte (la couleur du coffre commun). --s : taille ; --open : couvercle entrouvert (angle) ;
+   --leak : lumière qui fuit (0 à 1) ; --c : sa couleur.
+   Corps : largeur 1,3 --s, profondeur 0,84 --s, hauteur 0,56 --s (la fente est à y = 0).
+   Couvercle : lèvre de 0,1 --s, deux pans inclinés, dessus plat à 0,32 --s, deux joues taillées en biseau. */
+@property --c { syntax: '<color>'; inherits: true; initial-value: #2fe38a; }
 @property --leak { syntax: '<number>'; inherits: true; initial-value: 0; }
-@property --lift { syntax: '<length>'; inherits: true; initial-value: 0px; }
+@property --open { syntax: '<angle>'; inherits: true; initial-value: 0deg; }
 .cube {
-  --s: 150px; --lift: 0px; --leak: 0; --rib: #3cf2a3; --edge: #1a1430;
-  position: relative; width: calc(var(--s) * 1.75); height: calc(var(--s) * 1.6); margin: 0 auto; perspective: 900px; perspective-origin: 50% 20%;
-  transition: --leak 0.35s ease-out, --lift 0.3s cubic-bezier(0.3, 1.8, 0.5, 1);
+  --s: 150px; --open: 0deg; --leak: 0; --edge: #0d0704;
+  --pl: calc(var(--s) * 0.112); /* largeur d'une planche */
+  position: relative; width: calc(var(--s) * 2.1); height: calc(var(--s) * 1.5); margin: 0 auto; perspective: 1000px; perspective-origin: 50% 15%;
+  transition: --leak 0.35s ease-out, --open 0.32s cubic-bezier(0.3, 1.9, 0.5, 1);
 }
-.cube::before { /* halo derrière la box, de plus en plus fort quand la lumière fuit */
+.cube::before { /* halo derrière le coffre, de plus en plus fort quand la lumière fuit */
   content: ''; position: absolute; inset: -25%; pointer-events: none; border-radius: 50%;
-  background: radial-gradient(circle at 50% 46%, color-mix(in srgb, var(--c) calc(var(--leak) * 75%), transparent), transparent 58%);
+  background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--c) calc(var(--leak) * 70%), transparent), transparent 56%);
 }
-.cube-shadow { position: absolute; left: 50%; bottom: 3%; width: 78%; height: 16%; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, rgba(0, 0, 0, 0.6), transparent); }
-.cube-rot { position: absolute; left: 50%; top: 40%; width: 0; height: 0; transform-style: preserve-3d; transform: rotateX(-24deg) rotateY(-32deg); animation: cube-idle 7s ease-in-out infinite; }
-@keyframes cube-idle { 0%, 100% { transform: rotateX(-24deg) rotateY(-36deg); } 50% { transform: rotateX(-18deg) rotateY(36deg); } }
-.cube.idle .cube-rot { animation-duration: 9s; }
+.cube-shadow { position: absolute; left: 50%; bottom: 6%; width: 86%; height: 16%; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, rgba(0, 0, 0, 0.7), transparent); }
+.cube-rot { position: absolute; left: 50%; top: 47%; width: 0; height: 0; transform-style: preserve-3d; transform: rotateX(-22deg) rotateY(-28deg); animation: cube-idle 8s ease-in-out infinite; }
+@keyframes cube-idle { 0%, 100% { transform: rotateX(-22deg) rotateY(-30deg); } 50% { transform: rotateX(-17deg) rotateY(30deg); } }
+.cube.idle .cube-rot { animation-duration: 10s; }
 .cb-body, .cb-lid { position: absolute; left: 0; top: 0; transform-style: preserve-3d; }
-.cb-lid { transform: translate3d(0, calc(var(--lift) * -1), 0); }
-.cube .f { position: absolute; left: 0; top: 0; display: block; box-sizing: border-box; border: 2px solid var(--edge); overflow: hidden; }
-/* Lumière qui fuit : dégradé de la couleur de --c depuis la fente */
+/* Charnière à l'arrière du couvercle */
+.cb-lid { transform: translateZ(calc(var(--s) * -0.42)) rotateX(var(--open)) translateZ(calc(var(--s) * 0.42)); }
+.cube .f { position: absolute; left: 0; top: 0; display: block; box-sizing: border-box; border: 2px solid var(--edge); overflow: hidden; --sh: 0; --strap: transparent; }
 .cube .f::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: var(--leak); mix-blend-mode: screen; }
-/* Corps : largeur --s, hauteur 0,62 --s, profondeur --s ; le haut du corps (la fente) est à y = 0 */
-.cube .front, .cube .back, .cube .left, .cube .right { width: var(--s); height: calc(var(--s) * 0.62); }
-.cube .front, .cube .back, .cube .left, .cube .right, .cube .lf, .cube .lb, .cube .ll, .cube .lr {
-  background:
-    linear-gradient(90deg, transparent 41%, var(--edge) 41% 42.5%, var(--rib) 42.5% 57.5%, var(--edge) 57.5% 59%, transparent 59%),
-    linear-gradient(180deg, var(--g1), var(--g2));
-}
-.cube .front, .cube .back, .cube .left, .cube .right { box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.18); }
-.cube .front::after, .cube .back::after, .cube .left::after, .cube .right::after { background: linear-gradient(180deg, var(--c), transparent 55%); }
-.cube .front { --g1: #9479ff; --g2: #4b31b9; transform: translate(-50%, -50%) translate3d(0, calc(var(--s) * 0.31), calc(var(--s) * 0.5)); }
-.cube .back { --g1: #6f55e2; --g2: #33228a; transform: translate(-50%, -50%) translate3d(0, calc(var(--s) * 0.31), calc(var(--s) * -0.5)) rotateY(180deg); }
-.cube .right { --g1: #7a5ff0; --g2: #3a2797; transform: translate(-50%, -50%) translate3d(calc(var(--s) * 0.5), calc(var(--s) * 0.31), 0) rotateY(90deg); }
-.cube .left { --g1: #6a51dc; --g2: #2f1f80; transform: translate(-50%, -50%) translate3d(calc(var(--s) * -0.5), calc(var(--s) * 0.31), 0) rotateY(-90deg); }
-.cube .bottom { width: var(--s); height: var(--s); background: #241a5a; transform: translate(-50%, -50%) translate3d(0, calc(var(--s) * 0.62), 0) rotateX(90deg); }
-.cube .inner { /* le fond lumineux, juste sous la fente : on le voit quand le couvercle part */
-  width: calc(var(--s) - 4px); height: calc(var(--s) - 4px); border: 0;
-  background: radial-gradient(circle, #fff 0, color-mix(in srgb, var(--c) 70%, #fff) 30%, var(--c) 60%, color-mix(in srgb, var(--c) 45%, #000));
-  transform: translate(-50%, -50%) translate3d(0, calc(var(--s) * 0.08), 0) rotateX(90deg);
-}
-/* Couvercle : un peu plus large (1,08 --s), haut de 0,22 --s */
-.cube .top, .cube .lbot { width: calc(var(--s) * 1.08); height: calc(var(--s) * 1.08); }
-.cube .top {
-  transform: translate(-50%, -50%) translate3d(0, calc(var(--s) * -0.22), 0) rotateX(90deg);
-  background:
-    radial-gradient(circle at 50% 50%, #fff 0 9%, var(--edge) 9% 10.5%, transparent 10.5%),
-    linear-gradient(90deg, transparent 42%, var(--edge) 42% 43.5%, var(--rib) 43.5% 56.5%, var(--edge) 56.5% 58%, transparent 58%),
-    linear-gradient(0deg, transparent 42%, var(--edge) 42% 43.5%, var(--rib) 43.5% 56.5%, var(--edge) 56.5% 58%, transparent 58%),
-    linear-gradient(135deg, #c3b0ff, #7556ea 55%, #5638c8);
-  box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.12);
-}
-.cube .top::before { /* l'étoile du couvercle */
-  content: '★'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -52%); font-size: calc(var(--s) * 0.13); line-height: 1; color: #8f6bff;
-}
-.cube .lbot { background: #2a1d6a; transform: translate(-50%, -50%) rotateX(90deg); }
-.cube .lf, .cube .lb { width: calc(var(--s) * 1.08); height: calc(var(--s) * 0.22); }
-.cube .ll, .cube .lr { width: calc(var(--s) * 1.08); height: calc(var(--s) * 0.22); }
-.cube .lf, .cube .lb, .cube .ll, .cube .lr { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.3); }
-.cube .lf::after, .cube .lb::after, .cube .ll::after, .cube .lr::after { background: linear-gradient(0deg, var(--c), transparent 80%); }
-.cube .lf { --g1: #b29bff; --g2: #6248d6; transform: translate(-50%, -50%) translate3d(0, calc(var(--s) * -0.11), calc(var(--s) * 0.54)); }
-.cube .lb { --g1: #9a82f2; --g2: #4e36b8; transform: translate(-50%, -50%) translate3d(0, calc(var(--s) * -0.11), calc(var(--s) * -0.54)) rotateY(180deg); }
-.cube .lr { --g1: #a28af8; --g2: #553cc4; transform: translate(-50%, -50%) translate3d(calc(var(--s) * 0.54), calc(var(--s) * -0.11), 0) rotateY(90deg); }
-.cube .ll { --g1: #9179ee; --g2: #4a33b2; transform: translate(-50%, -50%) translate3d(calc(var(--s) * -0.54), calc(var(--s) * -0.11), 0) rotateY(-90deg); }
-@media (prefers-reduced-motion: reduce) { .cube-rot { animation: none; } }
 
-/* Box de la page : elle flotte, et brille quand il y en a à ouvrir */
-.bx-card-art .cube { --s: 112px; }
+/* Bois : planches horizontales, veinures, ombre de la face ; cerclages de fer et rivets par-dessus */
+.cube .front, .cube .back, .cube .left, .cube .right, .cube .lf, .cube .lb, .cube .lfb, .cube .lbb, .cube .top, .cube .ll, .cube .lr {
+  background:
+    linear-gradient(rgba(0, 0, 0, var(--sh)), rgba(0, 0, 0, var(--sh))),
+    var(--iron, linear-gradient(transparent, transparent)),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0 2px, transparent 2px 9px, rgba(255, 210, 160, 0.05) 9px 11px, transparent 11px 19px),
+    repeating-linear-gradient(180deg, #45291a 0, #33200f calc(var(--pl) - 3px), #0b0603 calc(var(--pl) - 3px), #0b0603 var(--pl));
+}
+/* Deux cerclages verticaux et des coins de fer sur les grandes faces (corps et couvercle) */
+.cube .front, .cube .back, .cube .lf, .cube .lb, .cube .lfb, .cube .lbb, .cube .top {
+  --iron:
+    radial-gradient(circle at 12.5% 22%, #9a9aa6 0 1.5px, #0b0b0e 1.5px 2.6px, transparent 2.6px),
+    radial-gradient(circle at 12.5% 78%, #9a9aa6 0 1.5px, #0b0b0e 1.5px 2.6px, transparent 2.6px),
+    radial-gradient(circle at 87.5% 22%, #9a9aa6 0 1.5px, #0b0b0e 1.5px 2.6px, transparent 2.6px),
+    radial-gradient(circle at 87.5% 78%, #9a9aa6 0 1.5px, #0b0b0e 1.5px 2.6px, transparent 2.6px),
+    linear-gradient(90deg, #26262e 0 3.5%, #0b0b0e 3.5% 4.2%, transparent 4.2% 9%, #0b0b0e 9% 9.6%, #4b4b57 9.6% 10.6%, #2c2c35 10.6% 14.4%, #17171c 14.4% 15.4%, #0b0b0e 15.4% 16%, transparent 16% 84%, #0b0b0e 84% 84.6%, #4b4b57 84.6% 85.6%, #2c2c35 85.6% 89.4%, #17171c 89.4% 90.4%, #0b0b0e 90.4% 91%, transparent 91% 95.8%, #0b0b0e 95.8% 96.5%, #26262e 96.5%);
+}
+/* Joues et côtés : un cerclage au milieu et des coins */
+.cube .left, .cube .right, .cube .ll, .cube .lr {
+  --iron:
+    radial-gradient(circle at 50% 30%, #9a9aa6 0 1.5px, #0b0b0e 1.5px 2.6px, transparent 2.6px),
+    radial-gradient(circle at 50% 75%, #9a9aa6 0 1.5px, #0b0b0e 1.5px 2.6px, transparent 2.6px),
+    linear-gradient(90deg, #26262e 0 5%, #0b0b0e 5% 6%, transparent 6% 42%, #0b0b0e 42% 43%, #4b4b57 43% 44.5%, #2c2c35 44.5% 56%, #0b0b0e 56% 57%, transparent 57% 94%, #0b0b0e 94% 95%, #26262e 95%);
+}
+.cube .front, .cube .back, .cube .left, .cube .right { box-shadow: inset 0 3px 0 rgba(255, 220, 170, 0.08), inset 0 -6px 10px rgba(0, 0, 0, 0.45); }
+.cube .front::after, .cube .back::after, .cube .left::after, .cube .right::after { background: linear-gradient(180deg, var(--c), transparent 50%); }
+
+/* Corps */
+.cube .front, .cube .back { width: calc(var(--s) * 1.3); height: calc(var(--s) * 0.56); }
+.cube .left, .cube .right { width: calc(var(--s) * 0.84); height: calc(var(--s) * 0.56); }
+.cube .front { transform: translate(-50%, -50%) translate3d(0, calc(var(--s) * 0.28), calc(var(--s) * 0.42)); }
+.cube .back { --sh: 0.35; transform: translate(-50%, -50%) translate3d(0, calc(var(--s) * 0.28), calc(var(--s) * -0.42)) rotateY(180deg); }
+.cube .right { --sh: 0.28; transform: translate(-50%, -50%) translate3d(calc(var(--s) * 0.65), calc(var(--s) * 0.28), 0) rotateY(90deg); }
+.cube .left { --sh: 0.38; transform: translate(-50%, -50%) translate3d(calc(var(--s) * -0.65), calc(var(--s) * 0.28), 0) rotateY(-90deg); }
+.cube .bottom { width: calc(var(--s) * 1.3); height: calc(var(--s) * 0.84); background: #120a05; transform: translate(-50%, -50%) translate3d(0, calc(var(--s) * 0.56), 0) rotateX(90deg); }
+.cube .inner { /* le fond lumineux, juste sous la fente : on le voit quand le couvercle s'ouvre */
+  width: calc(var(--s) * 1.3 - 6px); height: calc(var(--s) * 0.84 - 6px); border: 0;
+  background: radial-gradient(ellipse, #fff 0, color-mix(in srgb, var(--c) 70%, #fff) 28%, var(--c) 58%, color-mix(in srgb, var(--c) 40%, #000));
+  transform: translate(-50%, -50%) translate3d(0, calc(var(--s) * 0.06), 0) rotateX(90deg);
+}
+/* Serrure de fer sur la face avant */
+.cube .lock {
+  position: absolute; left: 50%; top: -2px; width: calc(var(--s) * 0.2); height: calc(var(--s) * 0.24); transform: translateX(-50%);
+  background: linear-gradient(180deg, #55555f, #2a2a32 60%, #1a1a20); border: 2px solid var(--edge); border-radius: 0 0 45% 45% / 0 0 32% 32%;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.15);
+}
+.cube .keyhole { position: absolute; left: 50%; top: 42%; width: 22%; height: 34%; transform: translateX(-50%); background: radial-gradient(circle at 50% 28%, #050304 0 32%, transparent 33%), linear-gradient(90deg, transparent 38%, #050304 38% 62%, transparent 62%) 0 60% / 100% 60% no-repeat; }
+
+/* Couvercle */
+.cube .lbot { width: calc(var(--s) * 1.3); height: calc(var(--s) * 0.84); background: #1b1008; transform: translate(-50%, -50%) rotateX(90deg); }
+.cube .lf, .cube .lb { width: calc(var(--s) * 1.3); height: calc(var(--s) * 0.1); }
+.cube .lf { transform: translate(-50%, -50%) translate3d(0, calc(var(--s) * -0.05), calc(var(--s) * 0.42)); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.5); }
+.cube .lb { --sh: 0.35; transform: translate(-50%, -50%) translate3d(0, calc(var(--s) * -0.05), calc(var(--s) * -0.42)) rotateY(180deg); }
+.cube .lf::after, .cube .lb::after { background: linear-gradient(0deg, var(--c), transparent 90%); }
+/* Pans inclinés : 0,2973 --s de long, à 42,3° de la verticale */
+.cube .lfb, .cube .lbb { width: calc(var(--s) * 1.3); height: calc(var(--s) * 0.2973); }
+.cube .lfb { --sh: -0.05; transform: translate(-50%, -50%) translate3d(0, calc(var(--s) * -0.21), calc(var(--s) * 0.32)) rotateX(42.3deg); }
+.cube .lbb { --sh: 0.3; transform: translate(-50%, -50%) translate3d(0, calc(var(--s) * -0.21), calc(var(--s) * -0.32)) rotateY(180deg) rotateX(42.3deg); }
+.cube .top { width: calc(var(--s) * 1.3); height: calc(var(--s) * 0.44); --sh: -0.08; transform: translate(-50%, -50%) translate3d(0, calc(var(--s) * -0.32), 0) rotateX(90deg); }
+.cube .lfb, .cube .top { background-blend-mode: normal; filter: brightness(1.12); }
+/* Joues : la coupe du couvercle bombé */
+.cube .ll, .cube .lr { width: calc(var(--s) * 0.84); height: calc(var(--s) * 0.32); clip-path: polygon(0 100%, 0 68.75%, 23.8% 0, 76.2% 0, 100% 68.75%, 100% 100%); border: 0; }
+.cube .lr { --sh: 0.25; transform: translate(-50%, -50%) translate3d(calc(var(--s) * 0.65), calc(var(--s) * -0.16), 0) rotateY(90deg); }
+.cube .ll { --sh: 0.38; transform: translate(-50%, -50%) translate3d(calc(var(--s) * -0.65), calc(var(--s) * -0.16), 0) rotateY(-90deg); }
+
+/* La gemme verte, sertie de fer au milieu du pan avant : elle respire doucement */
+.cube .gem-set {
+  position: absolute; left: 50%; top: 50%; width: calc(var(--s) * 0.24); height: calc(var(--s) * 0.24); transform: translate(-50%, -50%);
+  border-radius: 50%; background: radial-gradient(circle, #1b1b22 0 58%, #5a5a66 58% 64%, #23232b 64% 80%, #0b0b0e 80%);
+  box-shadow: 0 0 calc(var(--s) * 0.1) rgba(47, 227, 138, 0.55);
+  animation: gem-glow 2.6s ease-in-out infinite;
+}
+.cube .gem {
+  position: absolute; inset: 17%; clip-path: polygon(50% 0, 100% 38%, 80% 100%, 20% 100%, 0 38%);
+  background:
+    linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.75) 34%, transparent 42%),
+    conic-gradient(from 200deg at 50% 45%, #0b7a48, #3cf2a3, #b8ffde, #2fe38a, #08603a, #1fbf74, #0b7a48);
+  filter: brightness(calc(1 + var(--leak) * 0.6));
+}
+@keyframes gem-glow { 50% { box-shadow: 0 0 calc(var(--s) * 0.2) rgba(60, 242, 163, 0.85); } }
+@media (prefers-reduced-motion: reduce) { .cube-rot, .cube .gem-set { animation: none; } }
+
+/* Coffre de la page : il flotte, et brille quand il y en a à ouvrir */
+.bx-card-art .cube { --s: 100px; }
 .bx-card.has .bx-card-art .cube { --leak: 0.35; --c: #3cf2a3; animation: bx-float 3.2s ease-in-out infinite; }
 @keyframes bx-float { 50% { translate: 0 -8px; } }
 @media (prefers-reduced-motion: reduce) { .bx-card.has .bx-card-art .cube { animation: none; } }
@@ -2346,7 +2389,7 @@ body.bx-opening { overflow: hidden; }
 .bx-inner { position: relative; z-index: 3; width: min(440px, 94vw); min-height: min(560px, 92vh); display: grid; place-items: center; }
 .bx-scene { grid-area: 1 / 1; position: relative; cursor: pointer; touch-action: manipulation; }
 .bx-scene[hidden] { display: none; }
-.bx-scene .cube { --s: min(170px, 38vw); }
+.bx-scene .cube { --s: min(185px, 40vw); }
 .bx-ring { position: absolute; left: 50%; top: 42%; width: 120px; height: 120px; border: 3px solid; border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%); box-shadow: 0 0 16px currentColor; }
 .bx-beam {
   position: absolute; left: 50%; bottom: 52%; width: min(260px, 60vw); height: 120vh; opacity: 0; pointer-events: none; transform-origin: 50% 100%; transform: translateX(-50%) scaleY(0);

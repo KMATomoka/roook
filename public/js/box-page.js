@@ -1,8 +1,9 @@
 // Page « Mes box » : box disponibles, ouverture en 3D, aperçu de ce qu'on gagne, taux de drop et collection.
 // Tirage et enregistrement : js/box.js. Sons : boxSfx (js/sound.js).
 //
-// L'ouverture, comme un jeu vidéo : la box tombe sur la scène, on la frappe (ou elle se frappe toute seule).
-// Chaque coup la fait trembler et laisse fuir de la lumière ; tant qu'elle ne s'ouvre pas, la rareté peut monter
+// L'ouverture, comme un jeu vidéo : le coffre (bois sombre cerclé de fer, gemme verte du coffre commun) tombe sur
+// la scène, et c'est le joueur qui le frappe (rien ne se fait tout seul). Chaque coup le fait trembler, le couvercle
+// se soulève et laisse fuir de la lumière ; tant qu'il ne s'ouvre pas, la rareté peut monter
 // (Commun → Rare → Épique → Jeu complet). Plus le drop est gros, plus il faut de coups : c'est le suspense.
 // Puis le couvercle saute, un rayon de lumière sort, et la carte de l'objet apparaît avec un vrai aperçu
 // (plateau en 3D, pièce sur son socle, fin de partie ou prise jouée sur un petit échiquier).
@@ -13,7 +14,7 @@ import {
   PACKS, SLOT_NAMES, RARITY, PIECE_TYPES, PIECE_NAMES, PIECE_ROLE, PACK_ITEMS,
   themeClasses, setEquip, equipOwnedPieces, getEquip, itemName, loadPackFont,
 } from './theme.js';
-import { RATES, DUST_PER_BOX, BOX_TYPES, watchBoxes, openBox, grantTestBox } from './box.js';
+import { RATES, DUST_PER_BOX, watchBoxes, openBox, grantTestBox } from './box.js';
 import { createFx } from './fx.js';
 import { boxSfx } from './sound.js';
 
@@ -39,12 +40,15 @@ const DEMOS = {
 };
 const MIDDLE = 'r1bq1rk1/pp2bppp/2n1pn2/3p4/2PP4/2N1PN2/PP3PPP/R2QKB1R w KQ - 0 8';
 
-/** La box en 3D (CSS) : un corps à 5 faces, un couvercle à 6 faces, un ruban, de la lumière à l'intérieur. */
-const cubeHTML = (cls = '') => `<div class="cube ${cls}" aria-hidden="true">
+/**
+ * Le coffre en 3D (CSS) : un corps de planches cerclé de fer (5 faces) et un couvercle bombé (lèvre, deux pans,
+ * dessus, deux joues) monté sur charnière, avec la gemme verte du coffre commun ; de la lumière à l'intérieur.
+ */
+const cubeHTML = (cls = '') => `<div class="cube chest ${cls}" aria-hidden="true">
   <div class="cube-shadow"></div>
   <div class="cube-rot">
-    <div class="cb-body"><i class="f inner"></i><i class="f bottom"></i><i class="f back"></i><i class="f left"></i><i class="f right"></i><i class="f front"></i></div>
-    <div class="cb-lid"><i class="f lbot"></i><i class="f lb"></i><i class="f ll"></i><i class="f lr"></i><i class="f lf"></i><i class="f top"></i></div>
+    <div class="cb-body"><i class="f inner"></i><i class="f bottom"></i><i class="f back"></i><i class="f left"></i><i class="f right"></i><i class="f front"><b class="lock"><b class="keyhole"></b></b></i></div>
+    <div class="cb-lid"><i class="f lbot"></i><i class="f lb"></i><i class="f lbb"></i><i class="f ll"></i><i class="f lr"></i><i class="f top"></i><i class="f lf"></i><i class="f lfb"><b class="gem-set"><b class="gem"></b></b></i></div>
   </div>
 </div>`;
 
@@ -76,7 +80,7 @@ function renderMain() {
   const main = $('#bx-main');
   if (!uid) {
     main.innerHTML = `<div class="bx-card"><div class="bx-card-art">${cubeHTML('idle')}</div><div class="bx-card-body">
-      <h2>${BOX_TYPES.classique.name}</h2><p class="muted">Connecte-toi pour gagner des box : une à chaque victoire en ligne.</p>
+      <h2>Coffre commun</h2><p class="muted">Connecte-toi pour gagner des box : une à chaque victoire en ligne.</p>
       <a class="btn btn-primary" href="connexion.html?retour=box.html">Se connecter</a></div></div>`;
     return;
   }
@@ -86,11 +90,11 @@ function renderMain() {
   main.innerHTML = `<div class="bx-card${n ? ' has' : ''}">
       <div class="bx-card-art">${cubeHTML('idle')}${n ? `<span class="bx-count">×${n}</span>` : ''}</div>
       <div class="bx-card-body">
-        <h2>${BOX_TYPES.classique.name}</h2>
+        <h2>Coffre commun</h2>
         <p class="muted">Un plateau, une pièce (pion, tour, cavalier, fou, dame ou roi), une fin de partie ou une prise et son. Et parfois, très rarement, un jeu de pièces complet.</p>
-        <p class="bx-have">${n ? `Tu as <b>${n} box</b> à ouvrir.` : 'Plus de box à ouvrir : gagne une partie en ligne pour en avoir une.'}</p>
+        <p class="bx-have">${n ? `Tu as <b>${n} coffre${n > 1 ? 's' : ''}</b> à ouvrir.` : 'Plus de coffre à ouvrir : gagne une partie en ligne pour en avoir un.'}</p>
         <div class="bx-actions">
-          <button class="btn btn-primary bx-open-btn" type="button" data-open ${n && !banned ? '' : 'disabled'}>🎁 Ouvrir une box</button>
+          <button class="btn btn-primary bx-open-btn" type="button" data-open ${n && !banned ? '' : 'disabled'}>🗝 Ouvrir le coffre</button>
           <a class="btn btn-ghost" href="jouer.html">Jouer en ligne</a>
         </div>
         <div class="bx-dust">
@@ -302,16 +306,13 @@ let demoCtl = null;
 let stopHum = () => {};
 let tapResolve = null;
 
-/** Attend un coup sur la box (clic, toucher, Espace, Entrée) ou, sans rien, quelques instants. */
-function waitTap(ms) {
+/** Attend que le joueur frappe le coffre (clic, toucher, Espace, Entrée) : rien ne se fait tout seul. */
+function waitTap() {
   return new Promise((resolve) => {
-    const t = setTimeout(done, ms);
-    function done() {
-      clearTimeout(t);
+    tapResolve = () => {
       tapResolve = null;
       resolve();
-    }
-    tapResolve = done;
+    };
   });
 }
 stage.addEventListener('pointerdown', (e) => {
@@ -365,7 +366,7 @@ const setTier = (id) => {
 function hit(k, color) {
   const cube = scene.querySelector('.cube');
   boxSfx.hit(k);
-  cube.style.setProperty('--lift', `${6 + k * 5}px`);
+  cube.style.setProperty('--open', `${5 + k * 4}deg`);
   cube.style.setProperty('--leak', String(Math.min(1, 0.35 + k * 0.18)));
   cube.animate(
     [
@@ -406,9 +407,11 @@ async function burstOpen(id) {
   boxSfx.open(id);
   cube.classList.add('open');
   cube.style.setProperty('--leak', '1');
+  // Le couvercle bascule sur sa charnière (à l'arrière), rebondit un peu et reste ouvert
+  const hinge = (deg) => `translateZ(calc(var(--s) * -0.42)) rotateX(${deg}deg) translateZ(calc(var(--s) * 0.42))`;
   cube.querySelector('.cb-lid').animate(
-    [{ transform: 'translate3d(0, -20px, 0)' }, { transform: `translate3d(${rnd(-60, 60)}px, -340px, -120px) rotateX(-160deg) rotateZ(${rnd(-40, 40)}deg)`, opacity: 0 }],
-    { duration: 900, easing: 'cubic-bezier(.15,.8,.3,1)', fill: 'forwards' },
+    [{ transform: hinge(16) }, { transform: hinge(128), offset: 0.55 }, { transform: hinge(104), offset: 0.8 }, { transform: hinge(112) }],
+    { duration: 800, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' },
   );
   $('#bx-beam').animate([{ transform: 'translateX(-50%) scaleY(0)', opacity: 0 }, { transform: 'translateX(-50%) scaleY(1)', opacity: 1, offset: 0.3 }, { transform: 'translateX(-50%) scaleY(1.05)', opacity: 0 }], { duration: 1500, easing: 'ease-out' });
   flash('#fff', 0.9, 700);
@@ -421,8 +424,8 @@ async function burstOpen(id) {
     const conf = ['#ff5fa2', '#ffd84a', '#3cf2a3', '#4fa8ff', '#b26bff'];
     emit({ x: innerWidth / 2, y: -10, n: 90 + lvl * 30, speed: [1, 5], angle: [Math.PI * 0.2, Math.PI * 0.8], color: conf, kind: 'confetti', size: [3, 6], life: [120, 200], gravity: 0.08, drag: 0.99 });
   }
-  cube.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateY(60px) scale(.7)', opacity: 0 }], { duration: 650, delay: 250, easing: 'ease-in', fill: 'forwards' });
-  await wait(520);
+  cube.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateY(60px) scale(.7)', opacity: 0 }], { duration: 650, delay: 700, easing: 'ease-in', fill: 'forwards' });
+  await wait(900);
 }
 
 async function doOpen(key, fake = null) {
@@ -436,7 +439,7 @@ async function doOpen(key, fake = null) {
   scene.hidden = false;
   scene.innerHTML = `${cubeHTML('stage-cube')}<i class="bx-beam" id="bx-beam"></i>`;
   $('#bx-hint').hidden = true;
-  stage.style.setProperty('--c', '#8f6bff'); // la box éteinte, violette
+  stage.style.setProperty('--c', '#2fe38a'); // le coffre éteint : la lueur verte de sa gemme
   stage.dataset.level = '-1';
   stage.hidden = false;
   document.body.classList.add('bx-opening');
@@ -458,7 +461,8 @@ async function doOpen(key, fake = null) {
     hint.hidden = false;
     // Coups : le 1er allume la box ; chaque coup suivant peut monter d'un cran ; le dernier l'ouvre
     for (let k = 0; k <= target + 1; k++) {
-      await waitTap(k === 0 ? 2200 : 1500);
+      await waitTap();
+      if (!opening) return; // fermé en cours de route
       if (k === 0) {
         hint.textContent = 'Encore !';
         setTier('commun');
@@ -471,7 +475,7 @@ async function doOpen(key, fake = null) {
       }
     }
     hint.hidden = true;
-    hint.textContent = 'Touche la box !';
+    hint.textContent = 'Touche le coffre !';
     await wait(200);
     await burstOpen(res.rarity);
   } else {

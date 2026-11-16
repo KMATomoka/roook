@@ -979,93 +979,137 @@ export function lowTimeBeep() {
   tone({ freq: 1760, type: 'square', dur: 0.06, vol: 0.04 });
 }
 
-// --- Box (page « Mes box ») : arrivée, coups de suspense, ouverture, révélation -------------
+// --- Coffre (page « Mes box ») : arrivée, coups de suspense, ouverture, révélation ---------
+// Un coffre de bois cerclé de fer : sons de bois sourds, ferrures qui tintent, grincement des charnières.
 // Les raretés montent comme une gamme : chaque palier rejoue un accord plus haut et plus large.
 const TIER_ROOT = { commun: 392, rare: 466.16, epique: 554.37, jeu: 659.25 };
 const TIER_LEVEL = { commun: 0, rare: 1, epique: 2, jeu: 3 };
-/** Grondement grave qui monte pendant le suspense ; renvoie de quoi l'arrêter. */
+
+/** Choc de bois sourd (le coffre qu'on pose, qu'on frappe). */
+function woodThud(at = 0, vol = 1, pitch = 1) {
+  burst({ at, dur: 0.09, vol: 0.32 * vol, type: 'lowpass', freq: 520 * pitch, q: 0.9 });
+  burst({ at, dur: 0.035, vol: 0.14 * vol, freq: 1100 * pitch, q: 2.5 });
+  tone({ freq: 105 * pitch, endFreq: 58 * pitch, at, dur: 0.22, vol: 0.3 * vol });
+}
+/** Ferrures qui tintent (petits partiels métalliques, discrets). */
+function ironRattle(at = 0, vol = 1) {
+  [1240, 1790, 2630].forEach((f, i) => tone({ freq: f * (0.97 + Math.random() * 0.06), type: 'sine', at: at + i * 0.012, dur: 0.16 - i * 0.03, vol: 0.018 * vol, attack: 0.002 }));
+}
+/** Grincement de charnière : une dent de scie filtrée qui glisse. */
+function creak(at = 0, dur = 0.5, vol = 1) {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + at;
+  const o = a.createOscillator();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(70, t);
+  o.frequency.linearRampToValueAtTime(130, t + dur * 0.6);
+  o.frequency.linearRampToValueAtTime(95, t + dur);
+  const f = a.createBiquadFilter();
+  f.type = 'bandpass';
+  f.frequency.value = 900;
+  f.Q.value = 6;
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.05 * vol, t + 0.05);
+  g.gain.setValueAtTime(0.05 * vol, t + dur * 0.8);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(f).connect(g).connect(master);
+  o.start(t);
+  o.stop(t + dur + 0.05);
+}
+
+/**
+ * Ambiance pendant qu'on attend de frapper : une nappe douce et basse (fondamentale et quinte en sinus,
+ * qui respirent lentement), très discrète. Renvoie de quoi l'arrêter.
+ */
 function boxHum(level = 0) {
   const a = audio();
   if (!a) return () => {};
   const t = a.currentTime;
+  const root = 98 * Math.pow(2, (level * 2) / 12); // un ton plus haut à chaque palier
   const g = a.createGain();
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(0.09 + level * 0.03, t + 0.6);
+  g.gain.exponentialRampToValueAtTime(0.022 + level * 0.006, t + 1.4);
   const f = a.createBiquadFilter();
   f.type = 'lowpass';
-  f.frequency.setValueAtTime(220 + level * 120, t);
-  f.frequency.linearRampToValueAtTime(700 + level * 300, t + 4);
-  const oscs = [55, 55 * 1.5, 110.6].map((fr, i) => {
+  f.frequency.value = 600 + level * 200;
+  // Respiration lente du volume
+  const lfo = a.createOscillator();
+  const lfoGain = a.createGain();
+  lfo.frequency.value = 0.35;
+  lfoGain.gain.value = 0.008;
+  lfo.connect(lfoGain).connect(g.gain);
+  const oscs = [root, root * 1.5, root * 2.003].map((fr, i) => {
     const o = a.createOscillator();
-    o.type = i === 2 ? 'sawtooth' : 'triangle';
-    o.frequency.setValueAtTime(fr * (1 + level * 0.06), t);
-    o.frequency.linearRampToValueAtTime(fr * (1.25 + level * 0.06), t + 5);
-    o.connect(f);
+    o.type = 'sine';
+    o.frequency.value = fr;
+    const og = a.createGain();
+    og.gain.value = [1, 0.55, 0.25][i];
+    o.connect(og).connect(f);
     o.start(t);
     return o;
   });
   f.connect(g).connect(master);
+  lfo.start(t);
   return () => {
     const n = a.currentTime;
     g.gain.cancelScheduledValues(n);
     g.gain.setValueAtTime(Math.max(g.gain.value, 0.0001), n);
-    g.gain.exponentialRampToValueAtTime(0.0001, n + 0.25);
-    oscs.forEach((o) => o.stop(n + 0.3));
+    g.gain.exponentialRampToValueAtTime(0.0001, n + 0.4);
+    [...oscs, lfo].forEach((o) => o.stop(n + 0.45));
   };
 }
 export const boxSfx = {
-  /** La box tombe sur la scène. */
+  /** Le coffre tombe sur la scène : un souffle léger, puis le bois qui se pose. */
   land() {
-    noiseSweep({ at: 0, dur: 0.45, type: 'bandpass', f: [300, 2600, 600], q: 1.4, vol: 0.18, peak: 0.6 });
-    tone({ freq: 130, endFreq: 42, at: 0.42, dur: 0.38, vol: 0.55 });
-    burst({ at: 0.42, dur: 0.12, vol: 0.4, type: 'lowpass', freq: 900 });
-    burst({ at: 0.44, dur: 0.05, vol: 0.18, freq: 2600, q: 3 });
+    noiseSweep({ at: 0, dur: 0.4, type: 'bandpass', f: [300, 1400, 500], q: 1.2, vol: 0.05, peak: 0.7 });
+    woodThud(0.42, 1.1, 0.9);
+    ironRattle(0.44, 0.8);
   },
   hum: boxHum,
-  /** Un coup sur la box (n : 0, 1, 2… de plus en plus fort et aigu). */
+  /** Un coup sur le coffre (n : 0, 1, 2… un peu plus fort et plus aigu). */
   hit(n = 0) {
-    const p = 1 + n * 0.12;
-    tone({ freq: 160 * p, endFreq: 48, at: 0, dur: 0.3, vol: 0.5 });
-    burst({ at: 0, dur: 0.09, vol: 0.5, type: 'lowpass', freq: 1400 * p });
-    burst({ at: 0.005, dur: 0.04, vol: 0.25, freq: 3200 * p, q: 4 });
-    // Cliquetis du couvercle
-    burst({ at: 0.07, dur: 0.03, vol: 0.12, freq: 4200, q: 5 });
-    burst({ at: 0.12, dur: 0.025, vol: 0.08, freq: 4800, q: 5 });
+    const p = 1 + n * 0.07;
+    woodThud(0, 0.85 + n * 0.08, p);
+    ironRattle(0.03, 0.9 + n * 0.15);
+    // Une petite note claire qui monte à chaque coup : on sent que ça approche
+    tone({ freq: 523.25 * Math.pow(2, (n * 2) / 12), type: 'triangle', at: 0.04, dur: 0.35, vol: 0.03, attack: 0.008 });
   },
-  /** La rareté monte d'un cran : montée de bruit, puis accord. */
+  /** La rareté monte d'un cran : montée douce, puis accord. */
   tierUp(tier) {
     const lvl = TIER_LEVEL[tier] || 0;
     const r = TIER_ROOT[tier] || 392;
-    noiseSweep({ at: 0, dur: 0.5, type: 'bandpass', f: [400, 6000, 9000], q: 2, vol: 0.12 + lvl * 0.03, peak: 0.9 });
-    [1, 1.25, 1.5, 2].forEach((m, i) => tone({ freq: r * m, type: 'triangle', at: 0.42 + i * 0.035, dur: 0.9, vol: 0.06, attack: 0.01 }));
-    tone({ freq: r / 2, type: 'sawtooth', at: 0.42, dur: 0.7, vol: 0.05 });
-    if (lvl >= 2) tone({ freq: 70, endFreq: 30, at: 0.42, dur: 0.9, vol: 0.5 });
-    if (lvl >= 3) [2, 2.5, 3, 4].forEach((m, i) => bell(r * m, 0.5 + i * 0.07, 0.05));
+    noiseSweep({ at: 0, dur: 0.45, type: 'bandpass', f: [600, 5000, 7000], q: 2, vol: 0.05 + lvl * 0.015, peak: 0.9 });
+    [1, 1.25, 1.5, 2].forEach((m, i) => tone({ freq: r * m, type: 'triangle', at: 0.38 + i * 0.04, dur: 0.9, vol: 0.045, attack: 0.012 }));
+    if (lvl >= 2) tone({ freq: 65, endFreq: 40, at: 0.38, dur: 0.8, vol: 0.3 });
+    if (lvl >= 3) [2, 2.5, 3, 4].forEach((m, i) => bell(r * m, 0.45 + i * 0.07, 0.035));
   },
-  /** Le couvercle saute : explosion, souffle, pluie d'étincelles. */
+  /** Le couvercle s'ouvre : grincement, souffle de lumière, étincelles. */
   open(tier) {
     const lvl = TIER_LEVEL[tier] || 0;
-    burst({ at: 0, dur: 0.6 + lvl * 0.2, vol: 0.7, type: 'lowpass', freq: 2200, endFreq: 120, q: 0.7 });
-    tone({ freq: 95, endFreq: 28, at: 0, dur: 0.8 + lvl * 0.25, vol: 0.7 });
-    noiseSweep({ at: 0.02, dur: 0.9, type: 'highpass', f: [2000, 7000, 3000], q: 0.8, vol: 0.12, peak: 0.25 });
-    const n = 6 + lvl * 5;
-    for (let i = 0; i < n; i++) tone({ freq: 1800 + Math.random() * 2600, type: 'sine', at: 0.08 + Math.random() * (0.6 + lvl * 0.25), dur: 0.18, vol: 0.025 + Math.random() * 0.02 });
+    creak(0, 0.42, 0.9);
+    woodThud(0.36, 0.7, 0.8);
+    noiseSweep({ at: 0.1, dur: 0.9 + lvl * 0.2, type: 'bandpass', f: [400, 3800, 1500], q: 0.8, vol: 0.09 + lvl * 0.02, peak: 0.35 });
+    tone({ freq: 80, endFreq: 36, at: 0.1, dur: 0.7 + lvl * 0.2, vol: 0.32 + lvl * 0.06 });
+    const n = 5 + lvl * 4;
+    for (let i = 0; i < n; i++) tone({ freq: 1600 + Math.random() * 2400, type: 'sine', at: 0.2 + Math.random() * (0.6 + lvl * 0.25), dur: 0.16, vol: 0.016 + Math.random() * 0.014 });
   },
   /** Accord tenu quand l'objet apparaît (plus riche selon la rareté). */
   reveal(tier, isNew = true) {
     const lvl = TIER_LEVEL[tier] || 0;
     const r = TIER_ROOT[tier] || 392;
     const chord = lvl >= 2 ? [1, 1.25, 1.5, 1.875, 2, 2.5] : lvl === 1 ? [1, 1.25, 1.5, 2] : [1, 1.5, 2];
-    if (lvl >= 1) pad(chord.map((m) => r * m / 2), { at: 0, dur: 1.8 + lvl * 0.5, vol: 0.035 + lvl * 0.01, open: 2600 + lvl * 800 });
-    chord.forEach((m, i) => tone({ freq: r * m, type: 'triangle', at: i * 0.06, dur: 1.2 + lvl * 0.3, vol: 0.05, attack: 0.01 }));
-    if (isNew) [2, 2.5, 3, 4, 5].slice(0, 2 + lvl).forEach((m, i) => bell(r * m, 0.35 + i * 0.09, 0.045));
+    if (lvl >= 1) pad(chord.map((m) => (r * m) / 2), { at: 0, dur: 1.8 + lvl * 0.5, vol: 0.028 + lvl * 0.008, open: 2400 + lvl * 700 });
+    chord.forEach((m, i) => tone({ freq: r * m, type: 'triangle', at: i * 0.06, dur: 1.2 + lvl * 0.3, vol: 0.04, attack: 0.012 }));
+    if (isNew) [2, 2.5, 3, 4, 5].slice(0, 2 + lvl).forEach((m, i) => bell(r * m, 0.35 + i * 0.09, 0.035));
   },
   /** Doublon : la carte se change en poussière d'étoile. */
   dust(n = 1) {
-    for (let i = 0; i < Math.min(12, 3 + n); i++) tone({ freq: 2200 + i * 180, type: 'sine', at: i * 0.05, dur: 0.12, vol: 0.03 });
-    noiseSweep({ at: 0, dur: 0.6, type: 'highpass', f: [5000, 9000, 6000], q: 0.7, vol: 0.06, peak: 0.4 });
+    for (let i = 0; i < Math.min(12, 3 + n); i++) tone({ freq: 2200 + i * 180, type: 'sine', at: i * 0.05, dur: 0.12, vol: 0.022 });
+    noiseSweep({ at: 0, dur: 0.6, type: 'highpass', f: [5000, 9000, 6000], q: 0.7, vol: 0.04, peak: 0.4 });
   },
-  /** Petit clic des boutons d'aperçu, pièce qui se pose sur son socle. */
+  /** Petit clic quand on équipe. */
   thunk() {
     tok(0, 0.8);
   },

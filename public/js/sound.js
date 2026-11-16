@@ -39,8 +39,11 @@ export function stopAllSounds() {
   master = ctx.createGain();
   master.gain.value = 0.9;
   master.connect(comp);
-  // La musique était branchée sur l'ancien « master » : elle s'arrête et sera recréée au besoin
+  // La musique, l'eau (Océan) et l'écho du canyon (Western) étaient branchés sur l'ancien « master » :
+  // on les oublie, ils seront recréés sur le nouveau (avant, les sons Océan et Western devenaient muets)
   stopMusicNow();
+  seaBus = null;
+  canyonIn = null;
 }
 
 function audio() {
@@ -956,14 +959,54 @@ const ocean = {
   },
   check: () => heartbeat(0.05),
 };
+/** Grondement du kraken : une voix grave qui ondule, filtrée pour s'entendre aussi sur un petit haut-parleur. */
+function krakenGroan(at = 0, dur = 2.2) {
+  const a = sea();
+  if (!a) return;
+  const t = a.currentTime + at;
+  const o = a.createOscillator();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(62, t);
+  o.frequency.linearRampToValueAtTime(48, t + dur);
+  const lfo = a.createOscillator();
+  const lg = a.createGain();
+  lfo.frequency.value = 5.5;
+  lg.gain.value = 4;
+  lfo.connect(lg).connect(o.frequency);
+  const f = a.createBiquadFilter();
+  f.type = 'bandpass';
+  f.Q.value = 2.2;
+  f.frequency.setValueAtTime(380, t);
+  f.frequency.linearRampToValueAtTime(620, t + dur * 0.4);
+  f.frequency.linearRampToValueAtTime(300, t + dur);
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.32, t + 0.35);
+  g.gain.setValueAtTime(0.32, t + dur * 0.6);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(f).connect(g).connect(seaBus);
+  o.start(t);
+  lfo.start(t);
+  o.stop(t + dur + 0.05);
+  lfo.stop(t + dur + 0.05);
+}
 /** Mat « Les Abysses ». Victoire : notes de nacre, chant de baleine, bulles. Défaite : grondement, cœur qui bat, bulles lentes. */
 function oceanMate(outcome) {
   if (outcome === 'loss') {
     thump(0.3, 0.6);
     drone(0.3, 4.5);
+    // Le noir se referme : deux notes graves et tristes qui descendent (ré, la bémol : un triton)
+    seaTone('triangle', 293.7, 277.2, 0.35, 2.2, 0.09, 0.08);
+    seaTone('triangle', 207.7, 196, 0.5, 2.4, 0.08, 0.1);
+    // L'œil du kraken s'ouvre : grondement qu'on entend (des harmoniques, pas seulement des basses)
+    krakenGroan(0.9);
     heartbeat(1.2);
-    heartbeat(2.2);
-    bubbles(2.4, 10, 2, 0.07);
+    heartbeat(2.0);
+    // Les tentacules : remous, puis le roi est entraîné vers le fond (glissando grave et bulles)
+    swirl(2.0, 1.4, 0.26);
+    seaTone('sine', 330, 82, 2.4, 1.8, 0.1, 0.05);
+    bubbles(2.5, 12, 2, 0.09);
+    heartbeat(3.0);
     return;
   }
   chimes(0.4);

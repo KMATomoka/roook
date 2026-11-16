@@ -1441,22 +1441,31 @@ export function createFx(frame, getOrientation) {
       // La baleine passe au loin
       const wh = el(clip, 'fx-ocean-whale', { left: `${-W * 0.75}px`, top: `${W * 0.08}px`, width: `${W * 0.7}px`, height: `${W * 0.315}px`, opacity: '.5', filter: 'blur(1px)' }, WHALE);
       once(wh, [{ transform: 'translate(0,0) rotate(2deg)' }, { transform: `translate(${W * 0.9}px, ${-W * 0.03}px) rotate(-2deg)`, offset: 0.5 }, { transform: `translate(${W * 1.85}px, ${W * 0.01}px) rotate(2deg)` }], { duration: 7000, easing: 'linear' });
-      // Le roi vaincu vacille, tombe sur le côté (lentement, comme dans l'eau), puis coule en s'éteignant
-      const side = kx > W / 2 ? -1 : 1; // il tombe vers le centre du plateau
-      king.style.transformOrigin = '50% 88%';
-      king.animate(
-        [
-          { transform: 'none', filter: 'none', opacity: 1 },
-          { transform: `rotate(${-6 * side}deg)`, offset: 0.1 },
-          { transform: `rotate(${10 * side}deg)`, offset: 0.2 },
-          { transform: `rotate(${88 * side}deg) translateX(${-6 * side}%)`, filter: 'brightness(.85)', offset: 0.45 },
-          { transform: `rotate(${82 * side}deg) translateX(${-6 * side}%)`, offset: 0.52 },
-          { transform: `rotate(${86 * side}deg) translateX(${-6 * side}%)`, filter: 'brightness(.75) saturate(.75)', opacity: 1, offset: 0.6 },
-          { transform: `rotate(${92 * side}deg) translate(${-6 * side}%, 30%)`, filter: 'brightness(.45) saturate(.5) blur(1px)', opacity: 0.25 },
-        ],
-        { duration: 3600, delay: 300, easing: 'cubic-bezier(.45,0,.55,1)', fill: 'forwards' },
-      );
-      for (let k = 0; k < 5; k++) later(() => seaBubbles(clip, kx, ky + s * 0.2, s, 4, { spread: 0.3, rise: 1.4 }), 400 + k * 450);
+      // Le roi vaincu coule comme dans l'eau : il perd pied, puis descend lentement vers le fond en se balançant
+      // de gauche à droite (comme une feuille), de plus en plus petit, sombre et flou, jusqu'à disparaître
+      const depth = Math.min(3.2, (W - ky) / s + 0.6); // il descend de quelques cases (sans sortir du plateau)
+      const side = kx > W / 2 ? -1 : 1;
+      const sink = [];
+      for (let i = 0; i <= 10; i++) {
+        const k = i / 10;
+        const fall = Math.pow(k, 1.35); // il accélère un peu, puis reste lent (la résistance de l'eau)
+        const sway = i === 0 ? 0 : Math.sin(k * Math.PI * 3.2) * (0.28 - k * 0.12) * side;
+        sink.push({
+          transform: `translate(${(sway * 100).toFixed(1)}%, ${(fall * depth * 100).toFixed(1)}%) rotate(${(sway * 70 + k * 25 * side).toFixed(1)}deg) scale(${(1 - k * 0.32).toFixed(3)})`,
+          filter: `brightness(${(1 - k * 0.6).toFixed(2)}) saturate(${(1 - k * 0.5).toFixed(2)}) blur(${(k * 1.6).toFixed(2)}px)`,
+          opacity: i < 7 ? 1 : (1 - (i - 6) / 4).toFixed(2),
+          offset: k,
+        });
+      }
+      king.animate(sink, { duration: 4200, delay: 350, easing: 'cubic-bezier(.35,.1,.6,1)', fill: 'forwards' });
+      // Des bulles s'échappent du roi pendant qu'il coule
+      for (let k = 0; k < 6; k++) {
+        later(() => {
+          const r = king.getBoundingClientRect();
+          const cr = clip.getBoundingClientRect();
+          seaBubbles(clip, r.left - cr.left + r.width / 2, r.top - cr.top + r.height * 0.3, s, 4, { spread: 0.25, rise: 1.6 });
+        }, 600 + k * 550);
+      }
       // Ton roi (ou celui du vainqueur) brille comme une perle
       if (winSq) {
         const w = at(winSq);

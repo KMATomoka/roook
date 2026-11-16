@@ -982,7 +982,8 @@ export function lowTimeBeep() {
 // --- Coffre (page « Mes box ») : arrivée, coups de suspense, ouverture, révélation ---------
 // Un coffre de bois cerclé de fer : sons de bois sourds, ferrures qui tintent, grincement des charnières.
 // Les raretés montent comme une gamme : chaque palier rejoue un accord plus haut et plus large.
-const TIER_ROOT = { commun: 392, rare: 466.16, epique: 554.37, jeu: 659.25 };
+// Accords des raretés, dans la tonalité de la musique (ré mineur) : Fa, La, Si♭, puis Ré majeur (triomphe)
+const TIER_ROOT = { commun: 349.23, rare: 440, epique: 466.16, jeu: 587.33 };
 const TIER_LEVEL = { commun: 0, rare: 1, epique: 2, jeu: 3 };
 
 /** Choc de bois sourd (le coffre qu'on pose, qu'on frappe). */
@@ -1026,8 +1027,8 @@ function creak(at = 0, dur = 0.5, vol = 1) {
  */
 function boxHum(level = 0) {
   if (!audio()) return () => {};
-  const scale = [0, 2, 4, 7, 9, 12, 14];
-  const base = 784 * Math.pow(2, (level * 2) / 12);
+  const scale = [0, 3, 5, 7, 10, 12, 15]; // ré mineur pentatonique (comme la musique)
+  const base = 587.33 * Math.pow(2, (level >= 2 ? 12 : 0) / 12);
   let timer = 0;
   let stopped = false;
   const twinkle = () => {
@@ -1036,7 +1037,7 @@ function boxHum(level = 0) {
     for (let k = 0; k < n; k++) {
       const f = base * Math.pow(2, scale[Math.floor(Math.random() * scale.length)] / 12);
       const at = k * 0.13;
-      tone({ freq: f, type: 'sine', at, dur: 1.1, vol: 0.012, attack: 0.03 });
+      tone({ freq: f, type: 'sine', at, dur: 1.1, vol: 0.009, attack: 0.03 });
       tone({ freq: f * 2.01, type: 'sine', at, dur: 0.5, vol: 0.003, attack: 0.02 });
       tone({ freq: f, type: 'sine', at: at + 0.22, dur: 0.9, vol: 0.004, attack: 0.03 }); // écho
     }
@@ -1056,7 +1057,7 @@ export const boxSfx = {
     woodThud(0, 0.85 + n * 0.08, p);
     ironRattle(0.03, 0.9 + n * 0.15);
     // Une petite note claire qui monte à chaque coup : on sent que ça approche
-    tone({ freq: 523.25 * Math.pow(2, (n * 2) / 12), type: 'triangle', at: 0.04, dur: 0.35, vol: 0.03, attack: 0.008 });
+    tone({ freq: 587.33 * Math.pow(2, [0, 3, 5, 7, 10, 12][Math.min(5, n)] / 12), type: 'triangle', at: 0.04, dur: 0.35, vol: 0.03, attack: 0.008 });
   },
   /** La rareté monte d'un cran : montée douce, puis accord. */
   tierUp(tier) {
@@ -1094,5 +1095,205 @@ export const boxSfx = {
   /** Petit clic quand on équipe. */
   thunk() {
     tok(0, 0.8);
+  },
+};
+
+// --- Musique de fond des coffres --------------------------------------------------------------
+// Une petite musique « dark fantasy » composée à la volée (aucun fichier) : ré mineur, 72 à la noire,
+// grille Ré m – Si♭ – Fa – Do, deux mesures par accord. Nappe de cordes synthétiques, basse douce, arpège de harpe
+// avec écho, et une réverbération de grande salle. Elle s'intensifie avec la rareté (niveau 0 à 3) :
+// arpège plus dense, tambours graves, grelots, cloches. Très discrète, on peut la couper (bouton 🎵).
+const MUSIC_PREF = 'roque:musique';
+let musicOn = true;
+try {
+  musicOn = localStorage.getItem(MUSIC_PREF) !== 'off';
+} catch {}
+export const isMusicOn = () => musicOn;
+export function setMusicOn(v) {
+  musicOn = !!v;
+  try {
+    localStorage.setItem(MUSIC_PREF, musicOn ? 'on' : 'off');
+  } catch {}
+  if (!musicOn) boxMusic.stop(0.4);
+}
+const midi = (m) => 440 * Math.pow(2, (m - 69) / 12);
+const CHORDS = [
+  { pad: [50, 53, 57, 62], bass: 38, arp: [62, 65, 69, 74, 69, 65] }, // Ré m
+  { pad: [46, 50, 53, 58], bass: 34, arp: [58, 62, 65, 70, 65, 62] }, // Si♭
+  { pad: [45, 48, 53, 57], bass: 41, arp: [57, 60, 65, 69, 65, 60] }, // Fa
+  { pad: [43, 48, 52, 55], bass: 36, arp: [55, 60, 64, 67, 64, 60] }, // Do
+];
+const BEAT = 60 / 72;
+const music = { bus: null, wet: null, delay: null, timer: 0, playing: false, next: 0, beat: 0, level: 0, stopAt: 0 };
+
+/** Réverbération : une réponse de salle fabriquée avec du bruit qui s'éteint (2,8 s). */
+function musicBus(a) {
+  if (music.bus) return music.bus;
+  const out = a.createGain();
+  out.gain.value = 0;
+  out.connect(master);
+  const dry = a.createGain();
+  dry.gain.value = 0.8;
+  dry.connect(out);
+  const conv = a.createConvolver();
+  const len = Math.floor(a.sampleRate * 2.8);
+  const ir = a.createBuffer(2, len, a.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = ir.getChannelData(ch);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2);
+  }
+  conv.buffer = ir;
+  const wet = a.createGain();
+  wet.gain.value = 0.5;
+  conv.connect(wet).connect(out);
+  // Écho de l'arpège (une croche pointée)
+  const delay = a.createDelay(1);
+  delay.delayTime.value = BEAT * 0.75;
+  const fb = a.createGain();
+  fb.gain.value = 0.32;
+  const lp = a.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 2400;
+  delay.connect(lp).connect(fb).connect(delay);
+  lp.connect(conv);
+  lp.connect(dry);
+  // Entrée : tout passe par le sec et la réverbération
+  const input = a.createGain();
+  input.connect(dry);
+  input.connect(conv);
+  music.bus = { out, input, delay };
+  return music.bus;
+}
+/** Une note de la musique, à l'instant absolu t. */
+function mnote(a, dest, { freq, type = 'sine', t, dur, vol, attack = 0.01, release = 0.3, detune = 0, filter = 0 }) {
+  const o = a.createOscillator();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, t);
+  o.detune.value = detune;
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + attack);
+  g.gain.setValueAtTime(vol, t + Math.max(attack, dur - release));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  let node = o;
+  if (filter) {
+    const f = a.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = filter;
+    node = o.connect(f);
+  }
+  node.connect(g).connect(dest);
+  o.start(t);
+  o.stop(t + dur + 0.05);
+}
+function mdrum(a, dest, t, vol) {
+  const o = a.createOscillator();
+  const g = a.createGain();
+  o.frequency.setValueAtTime(95, t);
+  o.frequency.exponentialRampToValueAtTime(42, t + 0.35);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+  o.connect(g).connect(dest);
+  o.start(t);
+  o.stop(t + 0.55);
+}
+function mshaker(a, dest, t, vol) {
+  const src = a.createBufferSource();
+  src.buffer = noiseBuf;
+  const f = a.createBiquadFilter();
+  f.type = 'highpass';
+  f.frequency.value = 6500;
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+  src.connect(f).connect(g).connect(dest);
+  src.start(t, Math.random() * 0.5);
+  src.stop(t + 0.12);
+}
+/** Programme un temps (noire) de la musique. */
+function musicBeat(a, t, beat) {
+  const { input, delay } = music.bus;
+  const lvl = music.level;
+  const chord = CHORDS[Math.floor(beat / 8) % CHORDS.length];
+  const inBar = beat % 8;
+  if (inBar === 0) {
+    // Nappe et basse, tenues tout l'accord (8 temps), qui se fondent dans la suivante
+    const len = BEAT * 8 + 1.2;
+    for (const m of chord.pad) {
+      for (const det of [-8, 8]) mnote(a, input, { freq: midi(m), type: 'sawtooth', t, dur: len, vol: 0.007, attack: 1.6, release: 1.4, detune: det, filter: 700 + lvl * 250 });
+    }
+    mnote(a, input, { freq: midi(chord.bass), type: 'sine', t, dur: len, vol: 0.06, attack: 0.4, release: 1.2 });
+    mnote(a, input, { freq: midi(chord.bass + 12), type: 'triangle', t, dur: len, vol: 0.012, attack: 0.8, release: 1.2 });
+    // Une cloche lointaine sur certains accords (à chaque accord dès l'épique)
+    if (lvl >= 2 || Math.random() < 0.35) {
+      const bf = midi(chord.arp[3] + 12);
+      [1, 2.01, 2.76].forEach((m, i) => mnote(a, input, { freq: bf * m, t, dur: 2.2 - i * 0.5, vol: (0.012 + lvl * 0.004) / (i + 1), attack: 0.003, release: 2 - i * 0.5 }));
+    }
+  }
+  // Arpège de harpe : croches (doubles croches au niveau 3), plus dense quand la rareté monte
+  const steps = lvl >= 3 ? 4 : 2;
+  for (let k = 0; k < steps; k++) {
+    const st = t + (k * BEAT) / steps;
+    const play = lvl >= 1 ? true : k === 0 ? Math.random() < 0.85 : Math.random() < 0.35;
+    if (!play) continue;
+    const idx = (inBar * steps + k) % chord.arp.length;
+    const f = midi(chord.arp[idx] + (lvl >= 2 && k % 2 ? 12 : 0));
+    const v = 0.022 + lvl * 0.004;
+    mnote(a, input, { freq: f, type: 'triangle', t: st, dur: 0.9, vol: v, attack: 0.004, release: 0.85 });
+    mnote(a, input, { freq: f * 2, type: 'sine', t: st, dur: 0.4, vol: v * 0.3, attack: 0.003, release: 0.38 });
+    // un peu de la harpe part dans l'écho
+    const eg = a.createGain();
+    eg.gain.value = 0.5;
+    eg.connect(delay);
+    mnote(a, eg, { freq: f, type: 'triangle', t: st, dur: 0.5, vol: v * 0.6, attack: 0.004, release: 0.45 });
+  }
+  // Tambours graves (rare et plus) et grelots (épique et plus)
+  if (lvl >= 1 && inBar % 4 === 0) mdrum(a, input, t, 0.09 + lvl * 0.03);
+  if (lvl >= 2 && inBar % 2 === 1) mdrum(a, input, t + BEAT * 0.5, 0.05);
+  if (lvl >= 2) for (let k = 0; k < 2; k++) mshaker(a, input, t + k * BEAT * 0.5 + BEAT * 0.25, 0.012 + lvl * 0.004);
+}
+export const boxMusic = {
+  /** Lance la musique (ou la remet au calme si elle joue déjà). */
+  start() {
+    music.level = 0;
+    if (!musicOn) return;
+    const a = audio();
+    if (!a) return;
+    const bus = musicBus(a);
+    const now = a.currentTime;
+    bus.out.gain.cancelScheduledValues(now);
+    bus.out.gain.setValueAtTime(Math.max(bus.out.gain.value, 0.0001), now);
+    bus.out.gain.exponentialRampToValueAtTime(0.55, now + 2.5);
+    if (music.playing) return;
+    music.playing = true;
+    music.next = now + 0.1;
+    music.beat = 0;
+    clearInterval(music.timer);
+    music.timer = setInterval(() => {
+      if (!music.playing) return;
+      // Programme les temps qui tombent dans les 0,3 prochaines secondes
+      while (music.next < a.currentTime + 0.3) {
+        musicBeat(a, music.next, music.beat);
+        music.next += BEAT;
+        music.beat++;
+      }
+    }, 80);
+  },
+  /** Intensité selon la rareté (0 commun … 3 jeu complet). */
+  setLevel(n) {
+    music.level = Math.max(0, Math.min(3, n));
+  },
+  /** Coupe la musique en fondu. */
+  stop(fade = 1.2) {
+    if (!music.playing || !music.bus || !ctx) return;
+    const now = ctx.currentTime;
+    const g = music.bus.out.gain;
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(Math.max(g.value, 0.0001), now);
+    g.exponentialRampToValueAtTime(0.0001, now + fade);
+    music.playing = false;
+    clearInterval(music.timer);
   },
 };

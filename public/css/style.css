@@ -2441,6 +2441,16 @@ body.bx-opening { overflow: hidden; }
 @keyframes bx-spin { to { rotate: 360deg; } }
 .bx-fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
 .bx-flash { position: absolute; inset: 0; pointer-events: none; z-index: 6; opacity: 0; background: #fff; }
+/* Bouton 🎵 : couper ou remettre la musique de fond */
+.bx-music {
+  position: absolute; top: max(14px, env(safe-area-inset-top)); right: 14px; z-index: 7; width: 44px; height: 44px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 1.15rem; cursor: pointer; color: #fff;
+  background: rgba(12, 9, 22, 0.6); border: 1px solid rgba(255, 255, 255, 0.18); transition: opacity 0.15s, border-color 0.15s;
+}
+.bx-music .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.bx-music:hover { border-color: rgba(255, 255, 255, 0.5); }
+.bx-music.off { opacity: 0.45; }
+.bx-music.off::after { content: ''; position: absolute; width: 26px; height: 2px; background: #fff; transform: rotate(-45deg); border-radius: 2px; }
 .bx-inner { position: relative; z-index: 3; width: min(440px, 94vw); min-height: min(560px, 92vh); display: grid; place-items: center; }
 .bx-scene { grid-area: 1 / 1; position: relative; cursor: pointer; touch-action: manipulation; }
 .bx-scene[hidden] { display: none; }

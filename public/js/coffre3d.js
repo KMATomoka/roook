@@ -6,7 +6,8 @@
 // Lumières : une principale chaude (avec ombres), un contre-jour de la couleur de la rareté, et une lumière
 // dans le coffre qui s'allume quand le couvercle se soulève.
 //
-// createChest(hôte, options) → { setTint, setLeak, setOpen, hit, open, reset, dispose } ou null sans WebGL.
+// createChest(hôte, options) → { setTint, setLeak, setOpen, hit, open, reset, moveTo, setPaused, dispose }, ou null
+// sans WebGL. Un seul coffre (un seul contexte WebGL) par page : moveTo le fait passer de la carte à la scène.
 import * as THREE from '../vendor/three/three.module.min.js';
 
 // Dimensions (unités Three.js) : corps W × D × H, épaisseur des planches T, couvercle : lèvre A + arc RY
@@ -449,7 +450,7 @@ export function createChest(host, { idle = true, tint = '#2fe38a', leak = 0, zoo
     return null;
   }
   if (!renderer.getContext()) return null;
-  renderer.setPixelRatio(Math.min(LOW_POWER ? 1.3 : 2, devicePixelRatio || 1));
+  renderer.setPixelRatio(Math.min(LOW_POWER ? 1.3 : 1.5, devicePixelRatio || 1));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.3;
@@ -458,6 +459,8 @@ export function createChest(host, { idle = true, tint = '#2fe38a', leak = 0, zoo
   const canvas = renderer.domElement;
   canvas.className = 'chest3d-canvas';
   host.appendChild(canvas);
+  let curHost = host;
+  let curZoom = zoom;
 
   const scene = new THREE.Scene();
   scene.environment = envMap(renderer);
@@ -465,7 +468,7 @@ export function createChest(host, { idle = true, tint = '#2fe38a', leak = 0, zoo
   const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 50);
   /** Place la caméra : elle recule quand le cadre est étroit (téléphone), pour que le coffre tienne en largeur. */
   const placeCamera = () => {
-    const f = Math.max(1, 1.3 / camera.aspect) / zoom;
+    const f = Math.max(1, 1.3 / camera.aspect) / curZoom;
     camera.position.set(0, 1.55 * f, 4.6 * f);
     camera.lookAt(0, 0.5, 0);
   };
@@ -532,8 +535,8 @@ export function createChest(host, { idle = true, tint = '#2fe38a', leak = 0, zoo
   applyTint();
 
   function resize() {
-    const w = host.clientWidth || 300;
-    const h = host.clientHeight || 260;
+    const w = curHost.clientWidth || 300;
+    const h = curHost.clientHeight || 260;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
@@ -557,8 +560,8 @@ export function createChest(host, { idle = true, tint = '#2fe38a', leak = 0, zoo
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     if (!st.visible || st.paused) return;
-    // Au repos sur téléphone : une image sur deux suffit (30 images par seconde)
-    if (LOW_POWER && st.idle) {
+    // Au repos : une image sur deux suffit (30 images par seconde), sur ordinateur comme sur téléphone
+    if (st.idle) {
       st.skip = !st.skip;
       if (st.skip) return;
     }
@@ -625,6 +628,23 @@ export function createChest(host, { idle = true, tint = '#2fe38a', leak = 0, zoo
     },
     setIdle(v) {
       st.idle = v;
+    },
+    /**
+     * Déplace le coffre dans un autre hôte (la carte de la page ↔ la scène d'ouverture), sans recréer la 3D.
+     * opts : { zoom, idle, sharp } (sharp : plus de pixels, pour la grande scène).
+     */
+    moveTo(h, { zoom: z = curZoom, idle: i = st.idle, sharp = false } = {}) {
+      ro.unobserve(curHost);
+      io.unobserve(curHost);
+      curHost = h;
+      curZoom = z;
+      st.idle = i;
+      h.appendChild(canvas);
+      renderer.setPixelRatio(Math.min(LOW_POWER ? 1.3 : sharp ? 2 : 1.5, devicePixelRatio || 1));
+      ro.observe(h);
+      io.observe(h);
+      resize();
+      last = performance.now();
     },
     /** Met le rendu en pause (coffre caché sous la scène, ou parti) : plus aucun calcul. */
     setPaused(v) {

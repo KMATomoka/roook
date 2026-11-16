@@ -16,7 +16,12 @@ import {
 } from './theme.js';
 import { RATES, DUST_PER_BOX, watchBoxes, openBox, grantTestBox } from './box.js';
 import { createFx } from './fx.js';
-import { createChest, LOW_POWER } from './coffre3d.js';
+import { boxMusic, isMusicOn, setMusicOn, isMuted } from './sound.js';
+// Téléphones et petites tablettes : effets allégés (même règle que js/coffre3d.js)
+const LOW_POWER = matchMedia('(pointer: coarse)').matches || innerWidth < 760;
+// La 3D (Three.js, 700 Ko) se charge après la page, pour qu'elle s'affiche tout de suite
+let chestModule = null;
+const loadChest3d = () => (chestModule ||= import('./coffre3d.js').catch(() => null));
 import { boxSfx } from './sound.js';
 
 const ICONS = { board: '▦', pieces: '♞', endAnim: '♚', capture: '✦', P: '♟', R: '♜', N: '♞', B: '♝', Q: '♛', K: '♚' };
@@ -56,20 +61,25 @@ const cubeHTML = (cls = '') => `<div class="cube chest ${cls}" aria-hidden="true
   </div>
 </div>`;
 
-/** Le coffre : en vraie 3D (WebGL, js/coffre3d.js) si possible, sinon la version CSS ci-dessus. */
-function makeChest(host, opts) {
-  const c3 = createChest(host, opts);
-  if (c3) return c3;
-  const cls = opts.idle ? 'idle' : 'stage-cube';
-  host.innerHTML = cubeHTML(cls);
+/** La version CSS du coffre (sans WebGL), avec la même interface que le coffre 3D. */
+function cssChest(host0) {
+  let host = host0;
+  let cls = 'idle';
+  const draw = () => (host.innerHTML = cubeHTML(cls));
+  draw();
   const cube = () => host.querySelector('.cube');
   const hinge = (deg) => `translateZ(calc(var(--s) * -0.45)) rotateX(${deg}deg) translateZ(calc(var(--s) * 0.45))`;
   return {
-    setTint: (c) => cube().style.setProperty('--c', c),
-    setLeak: (v) => cube().style.setProperty('--leak', String(v)),
-    setOpen: (d) => cube().style.setProperty('--open', `${d}deg`),
-    setIdle() {},
+    setTint: (c) => cube()?.style.setProperty('--c', c),
+    setLeak: (v) => cube()?.style.setProperty('--leak', String(v)),
+    setOpen: (d) => cube()?.style.setProperty('--open', `${d}deg`),
     setPaused() {},
+    moveTo(h, { idle = true } = {}) {
+      host.innerHTML = '';
+      host = h;
+      cls = idle ? 'idle' : 'stage-cube';
+      draw();
+    },
     hit() {
       cube().animate([{ transform: 'none' }, { transform: 'translateY(10px) scale(1.14, .8)', offset: 0.14 }, { transform: `translateY(-22px) scale(.92, 1.12) rotate(${rnd(-7, 7)}deg)`, offset: 0.45 }, { transform: 'none' }], { duration: 560, easing: 'ease-out' });
     },
@@ -77,29 +87,40 @@ function makeChest(host, opts) {
       cube().style.setProperty('--leak', '1');
       cube().querySelector('.cb-lid').animate([{ transform: hinge(16) }, { transform: hinge(128), offset: 0.55 }, { transform: hinge(104), offset: 0.8 }, { transform: hinge(112) }], { duration: 800, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' });
     },
-    reset() {
-      host.innerHTML = cubeHTML(cls);
-    },
-    dispose() {
-      host.innerHTML = '';
-    },
+    reset: draw,
   };
 }
-// Les deux coffres de la page (gardés d'un affichage à l'autre : on ne recrée pas un WebGL à chaque fois)
+// Un seul coffre pour toute la page : il vit dans la carte, et passe dans la scène le temps d'une ouverture
 const cardHost = document.createElement('div');
 cardHost.className = 'chest3d chest-card';
-let cardChest = null;
 const stageHost = document.createElement('div');
 stageHost.className = 'chest3d chest-stage';
-let stageChest = null;
-/** Pose le coffre de la page dans sa carte (il brille quand il y en a à ouvrir). */
+let chest = null;
+let chestReady = null;
+let boxCount = 0;
+/** Crée le coffre (3D si possible, sinon CSS), une seule fois. */
+function ensureChest() {
+  return (chestReady ||= loadChest3d().then((mod) => {
+    chest = mod?.createChest(cardHost, { idle: true, tint: '#3cf2a3', zoom: 1.1 }) || cssChest(cardHost);
+    restCardChest();
+    return chest;
+  }));
+}
+/** Le coffre au repos dans la carte : il brille un peu quand il y en a à ouvrir. */
+function restCardChest() {
+  if (!chest) return;
+  chest.setTint('#3cf2a3');
+  chest.setLeak(boxCount ? 0.25 : 0);
+  chest.setOpen(0);
+}
+/** Pose le coffre de la page dans sa carte. */
 function placeCardChest(n) {
+  boxCount = n;
   const art = $('#bx-card-art');
   if (!art) return;
   art.prepend(cardHost);
-  cardChest ||= makeChest(cardHost, { idle: true, tint: '#3cf2a3', zoom: 1.1 });
-  cardChest.setLeak(n ? 0.25 : 0);
-  cardChest.setOpen(0);
+  if (!opening) restCardChest();
+  ensureChest();
 }
 
 const { user, banned } = await session;
@@ -414,15 +435,16 @@ function slam(text, color) {
 const setTier = (id) => {
   stage.style.setProperty('--c', TIERS[id].color);
   stage.dataset.level = String(ORDER.indexOf(id));
-  stageChest?.setTint(TIERS[id].color);
+  chest?.setTint(TIERS[id].color);
+  boxMusic.setLevel(ORDER.indexOf(id));
 };
 
 /** Un coup sur la box : elle s'écrase, rebondit, le couvercle se soulève et la lumière fuit. */
 function hit(k, color) {
   boxSfx.hit(k);
-  stageChest.setOpen(4 + k * 3);
-  stageChest.setLeak(Math.min(1, 0.3 + k * 0.18));
-  stageChest.hit(k);
+  chest.setOpen(4 + k * 3);
+  chest.setLeak(Math.min(1, 0.3 + k * 0.18));
+  chest.hit(k);
   shake(3 + k * 2);
   ring(color, 2.2 + k * 0.4);
   const c = center();
@@ -450,7 +472,7 @@ async function burstOpen(id) {
   stopHum();
   boxSfx.open(id);
   // Le couvercle bascule sur sa charnière (à l'arrière), rebondit un peu et reste ouvert
-  stageChest.open();
+  chest.open();
   $('#bx-beam').animate([{ transform: 'translateX(-50%) scaleY(0)', opacity: 0 }, { transform: 'translateX(-50%) scaleY(1)', opacity: 1, offset: 0.35 }, { transform: 'translateX(-50%) scaleY(1.08)', opacity: 0 }], { duration: 1700, delay: 150, easing: 'ease-out' });
   flash('#fff', 0.9, 700);
   shake(12 + lvl * 4, 500);
@@ -464,7 +486,7 @@ async function burstOpen(id) {
     for (let i = 0; i < 24; i++) emit({ x: rnd(0, innerWidth), y: rnd(-60, -10), n: 4 + lvl, speed: [0.5, 3], angle: [Math.PI * 0.3, Math.PI * 0.7], color: conf, kind: 'confetti', size: [3, 6], life: [160, 240], gravity: 0.06, drag: 0.99 });
   }
   stageHost.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateY(60px) scale(.8)', opacity: 0 }], { duration: 650, delay: 900, easing: 'ease-in', fill: 'forwards' })
-    .finished.then(() => stageChest.setPaused(true), () => {}); // parti : plus de rendu 3D pendant la carte
+    .finished.then(() => opening && chest.setPaused(true), () => {}); // parti : plus de rendu 3D pendant la carte
   await wait(1100);
 }
 
@@ -488,12 +510,14 @@ async function doOpen(key, fake = null) {
   stage.hidden = false;
   document.body.classList.add('bx-opening');
   // Le coffre de la scène : créé une fois (quand la scène est affichée, pour avoir sa taille), puis remis à zéro
-  stageChest ||= makeChest(stageHost, { idle: false, tint: '#2fe38a', zoom: 1.08 });
-  stageChest.setIdle(false);
-  stageChest.reset();
-  stageChest.setPaused(false);
-  cardChest?.setPaused(true); // le coffre de la page est caché sous la scène : on ne le dessine plus
-  stageChest.setTint('#2fe38a');
+  // Le coffre de la page passe dans la scène (déjà prêt : pas de chargement au moment d'ouvrir)
+  await ensureChest();
+  chest.moveTo(stageHost, { idle: false, zoom: 1.08, sharp: true });
+  chest.reset();
+  chest.setPaused(false);
+  chest.setTint('#2fe38a');
+  boxMusic.start();
+  updateMusicBtn();
 
   let res;
   try {
@@ -646,8 +670,13 @@ function closeStage() {
   parts = [];
   document.body.classList.remove('bx-opening');
   renderMain();
-  stageChest?.setPaused(true);
-  cardChest?.setPaused(false);
+  boxMusic.stop();
+  if (chest) {
+    chest.moveTo(cardHost, { idle: true, zoom: 1.1 });
+    chest.reset();
+    chest.setPaused(false);
+    restCardChest();
+  }
 }
 
 // Carte holographique : elle penche vers la souris et un reflet la suit
@@ -731,15 +760,21 @@ if (demoArg) {
   setTimeout(() => window.bxDemo(r, p, sl, n !== 'old'), 300);
 }
 
-// Le coffre de la scène est préparé en avance, quand la page est calme : sinon sa création (WebGL, shaders)
-// figerait l'écran au moment d'ouvrir, surtout sur téléphone
-function prepareStageChest() {
-  if (stageChest || opening) return;
-  scene.prepend(stageHost);
-  stageChest = makeChest(stageHost, { idle: false, tint: '#2fe38a', zoom: 1.08 });
-  stageChest.setPaused(true);
+// Bouton 🎵 de la scène : couper ou remettre la musique (le choix est gardé)
+const musicBtn = $('#bx-music');
+function updateMusicBtn() {
+  const on = isMusicOn() && !isMuted();
+  musicBtn.setAttribute('aria-pressed', String(on));
+  musicBtn.title = on ? 'Couper la musique' : 'Mettre la musique';
+  musicBtn.classList.toggle('off', !on);
 }
-addEventListener('load', () => (window.requestIdleCallback || setTimeout)(prepareStageChest, { timeout: 2500 }));
+musicBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  setMusicOn(!isMusicOn());
+  if (isMusicOn() && !stage.hidden) boxMusic.start();
+  updateMusicBtn();
+});
+musicBtn.addEventListener('pointerdown', (e) => e.stopPropagation()); // ce n'est pas un coup sur le coffre
 
 // ---------------------------------------------------------------------------
 renderRates();

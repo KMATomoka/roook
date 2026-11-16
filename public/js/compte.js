@@ -6,6 +6,7 @@
 import { escapeHtml, getPref, setPref } from './common.js';
 import './theme.js'; // apparence choisie dans l'inventaire (plateau, pièces…)
 import { watchBoxes } from './box.js'; // box gagnées (compteur dans la barre du haut)
+import { ICONS } from './icons.js'; // icônes dessinées du menu (à la place des emojis)
 import {
   auth, db, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   sendPasswordResetEmail, verifyBeforeUpdateEmail, deleteUser,
@@ -97,10 +98,10 @@ if (new URLSearchParams(location.search).get('debug') === 'largeur') {
   const bar = document.querySelector('.topbar');
   const nav = bar?.querySelector('.topnav');
   if (nav) {
-    const ICONS = { 'jouer.html': '♞', 'apprendre.html': '🎓', 'amis.html': '👥', 'bilan.html': '📊', 'inventaire.html': '🎒' };
+    const NAV_ICONS = { 'jouer.html': ICONS.knight, 'apprendre.html': ICONS.cap, 'amis.html': ICONS.friends, 'bilan.html': ICONS.chart, 'inventaire.html': ICONS.bag };
     nav.id ||= 'topnav';
     nav.querySelectorAll('a').forEach((a) => {
-      const ico = ICONS[a.getAttribute('href')];
+      const ico = NAV_ICONS[a.getAttribute('href')];
       if (ico && !a.querySelector('.nav-ico')) a.insertAdjacentHTML('afterbegin', `<span class="nav-ico" aria-hidden="true">${ico}</span>`);
     });
     const btn = document.createElement('button');
@@ -485,14 +486,14 @@ function renderAccount(user) {
   } else {
     el.innerHTML = `
       ${SEARCH_HTML}
-      ${user.role === 'admin' || user.role === 'fondateur' ? '<a class="icon-btn admin-link" href="admin.html" title="Administration" aria-label="Administration">🛡</a>' : ''}
-      <a class="box-chip" href="box.html" title="Mes box" aria-label="Mes box"><span class="box-chip-ico" aria-hidden="true">🎁</span><b class="box-chip-n">0</b></a>
+      ${user.role === 'admin' || user.role === 'fondateur' ? '<a class="icon-btn admin-link" href="admin.html" title="Administration" aria-label="Administration">${ICONS.shield}</a>' : ''}
+      <a class="box-chip" href="box.html" title="Mes box" aria-label="Mes box"><span class="box-chip-ico" aria-hidden="true">${ICONS.chest}</span><b class="box-chip-n">0</b></a>
       <a class="account-chip" href="profil.html" title="Mon profil">
         ${picHtml(user.username, user.avatar, 'account-initial')}
         <span class="account-name">${escapeHtml(user.username)}</span>
         <span class="account-badge" hidden></span>
       </a>
-      <button class="icon-btn account-logout" title="Se déconnecter" aria-label="Se déconnecter">⎋</button>`;
+      <button class="icon-btn account-logout" title="Se déconnecter" aria-label="Se déconnecter">${ICONS.logout}</button>`;
     el.querySelector('.account-logout').addEventListener('click', async () => {
       await signOutClean();
       location.href = './';
@@ -521,10 +522,10 @@ function renderAccount(user) {
     nav.insertAdjacentHTML(
       'beforeend',
       `<div class="nav-extra">
-        <a href="box.html"${location.pathname.endsWith('/box.html') ? ' aria-current="page"' : ''}><span class="nav-ico" aria-hidden="true">🎁</span>Mes box<span class="nav-box-n"></span></a>
-        <a href="profil.html"${location.pathname.endsWith('/profil.html') && !location.search ? ' aria-current="page"' : ''}><span class="nav-ico" aria-hidden="true">👤</span>Mon profil</a>
-        ${isStaff ? `<a href="admin.html"${location.pathname.endsWith('/admin.html') ? ' aria-current="page"' : ''}><span class="nav-ico" aria-hidden="true">🛡</span>Administration</a>` : ''}
-        <button type="button" class="nav-logout"><span class="nav-ico" aria-hidden="true">⎋</span>Se déconnecter</button>
+        <a href="box.html"${location.pathname.endsWith('/box.html') ? ' aria-current="page"' : ''}><span class="nav-ico" aria-hidden="true">${ICONS.chestOpen}</span>Mes box<span class="nav-box-n"></span></a>
+        <a href="profil.html"${location.pathname.endsWith('/profil.html') && !location.search ? ' aria-current="page"' : ''}><span class="nav-ico" aria-hidden="true">${ICONS.user}</span>Mon profil</a>
+        ${isStaff ? `<a href="admin.html"${location.pathname.endsWith('/admin.html') ? ' aria-current="page"' : ''}><span class="nav-ico" aria-hidden="true">${ICONS.shield}</span>Administration</a>` : ''}
+        <button type="button" class="nav-logout"><span class="nav-ico" aria-hidden="true">${ICONS.logout}</span>Se déconnecter</button>
       </div>`,
     );
     nav.querySelector('.nav-logout').addEventListener('click', async () => {
@@ -539,9 +540,9 @@ function renderAccount(user) {
 // ---------------------------------------------------------------------------
 const SEARCH_HTML = `
   <div class="player-search" role="search">
-    <button class="icon-btn search-toggle" type="button" aria-label="Rechercher un joueur" title="Rechercher un joueur">⌕</button>
+    <button class="icon-btn search-toggle" type="button" aria-label="Rechercher un joueur" title="Rechercher un joueur">${ICONS.search}</button>
     <div class="search-box">
-      <span class="search-icon" aria-hidden="true">⌕</span>
+      <span class="search-icon" aria-hidden="true">${ICONS.search}</span>
       <input type="search" class="search-input" placeholder="Rechercher un joueur" maxlength="20" autocomplete="off" spellcheck="false" aria-label="Rechercher un joueur">
       <div class="search-results" hidden></div>
     </div>

@@ -105,8 +105,18 @@ addEventListener('keydown', (e) => (e.key === 'Control' || e.key === 'Meta') && 
 addEventListener('keyup', (e) => (e.key === 'Control' || e.key === 'Meta') && (shiftDown = false));
 addEventListener('blur', () => (shiftDown = false));
 /** Lâcher une pièce pendant le tour adverse : prémove ou retour à sa place. */
-function practiceDrop(from, to) {
-  premove = premoveOn || shiftDown ? { from, to } : null;
+async function practiceDrop(from, to) {
+  const armed = premoveOn || shiftDown;
+  premove = null;
+  syncBoard();
+  if (!armed) return;
+  // Promotion : on demande la pièce tout de suite, comme pour un coup normal (annulé = pas de prémove)
+  let promotion;
+  if (isPromotion(chess, from, to)) {
+    promotion = await askPromotion(myColor);
+    if (!promotion) return;
+  }
+  premove = { from, to, promotion };
   syncBoard();
 }
 /** C'est à moi : on joue le prémove s'il est encore possible. */
@@ -117,7 +127,7 @@ function playPremove() {
   const to = castleDest(chess, p.from, p.to);
   let move = null;
   try {
-    move = chess.move({ from: p.from, to, promotion: isPromotion(chess, p.from, to) ? 'q' : undefined });
+    move = chess.move({ from: p.from, to, promotion: isPromotion(chess, p.from, to) ? p.promotion || 'q' : undefined });
   } catch {}
   if (!move) {
     toast('Prémove annulé : ce coup n’est plus possible.', { cls: 'info', duration: 2200 });

@@ -69,7 +69,7 @@ function svg(col, t) {
   <radialGradient id="gr" cx=".38" cy=".34" r=".75">
     <stop offset="0" stop-color="${c.hi}"/><stop offset=".35" stop-color="${c.light}"/><stop offset=".75" stop-color="${c.mid}"/><stop offset="1" stop-color="${c.edge}"/>
   </radialGradient>
-  <filter id="wood" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+  <filter id="wood" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
     <feTurbulence type="fractalNoise" baseFrequency="0.22 0.012" numOctaves="2" seed="${col === 'w' ? 5 : 9}" result="n"/>
     <feColorMatrix in="n" type="matrix" values="0 0 0 0 ${c.grain.split(' ')[0]}  0 0 0 0 ${c.grain.split(' ')[1]}  0 0 0 0 ${c.grain.split(' ')[2]}  0 0 0 -2.6 1.45" result="gr"/>
     <feComposite in="gr" in2="SourceAlpha" operator="in" result="gi"/>

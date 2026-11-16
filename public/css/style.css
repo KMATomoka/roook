@@ -556,17 +556,17 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   --coord-on-light-shadow: 0 1px 0 rgba(255, 250, 235, 0.6);
   --board-shadow: 0 0 0 2px #d8b04c, 0 0 0 5px #2a170b, 0 0 0 6px rgba(227, 196, 106, 0.55), 0 18px 45px rgba(0, 0, 0, 0.55), 0 0 50px rgba(216, 176, 76, 0.16);
 }
-/* Damier en bois : frêne clair et acajou, grain fin et droit (scripts/damier-bois.js), cadre de frêne clair */
+/* Damier en bois : érable clair et noyer foncé, grain fin et droit (scripts/damier-bois.js), cadre de bois sombre */
 .board-bois {
-  --sq-light: #ecd6b1;
-  --sq-dark: #a9502a;
-  --sq-last: rgba(255, 210, 90, 0.42);
-  --sq-selected: rgba(255, 222, 130, 0.58);
-  --coord-on-dark: #fbe9d2;
-  --coord-on-dark-shadow: 0 1px 2px rgba(60, 20, 4, 0.6);
-  --coord-on-light: #8a3e1c;
-  --coord-on-light-shadow: 0 1px 0 rgba(255, 248, 232, 0.6);
-  --board-shadow: 0 0 0 2px #c79a62, 0 0 0 9px #e6c99a, 0 0 0 10px #b98a52, 0 18px 45px rgba(0, 0, 0, 0.55);
+  --sq-light: #e4c393;
+  --sq-dark: #7a4a2b;
+  --sq-last: rgba(255, 214, 110, 0.42);
+  --sq-selected: rgba(255, 226, 140, 0.58);
+  --coord-on-dark: #f6e3c4;
+  --coord-on-dark-shadow: 0 1px 2px rgba(30, 14, 4, 0.7);
+  --coord-on-light: #5a3418;
+  --coord-on-light-shadow: 0 1px 0 rgba(255, 244, 222, 0.5);
+  --board-shadow: 0 0 0 4px #5a3418, 0 0 0 8px #2e180a, 0 0 0 9px rgba(228, 195, 147, 0.35), 0 18px 45px rgba(0, 0, 0, 0.55);
   --board-img: url('../img/damier-bois.svg');
   --board-img-size: 100% 100%;
 }
@@ -2639,12 +2639,12 @@ html:has(body.bx-opening), body.bx-opening { overflow: hidden; overscroll-behavi
 .inv-set-piece .cg-wrap { position: relative; width: 34px; height: 34px; }
 .inv-set-piece piece { position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; transform: none !important; background-size: contain; background-repeat: no-repeat; will-change: auto; }
 /* Grand aperçu : la pièce choisie est mise en avant */
-#inv-detail-board[data-ptype="pawn"] cg-board piece.pawn,
-#inv-detail-board[data-ptype="rook"] cg-board piece.rook,
-#inv-detail-board[data-ptype="knight"] cg-board piece.knight,
-#inv-detail-board[data-ptype="bishop"] cg-board piece.bishop,
-#inv-detail-board[data-ptype="queen"] cg-board piece.queen,
-#inv-detail-board[data-ptype="king"] cg-board piece.king { filter: drop-shadow(0 0 6px var(--tier)) drop-shadow(0 0 2px #fff); }
+#inv-detail-board[data-hl="pawn"] cg-board piece.pawn,
+#inv-detail-board[data-hl="rook"] cg-board piece.rook,
+#inv-detail-board[data-hl="knight"] cg-board piece.knight,
+#inv-detail-board[data-hl="bishop"] cg-board piece.bishop,
+#inv-detail-board[data-hl="queen"] cg-board piece.queen,
+#inv-detail-board[data-hl="king"] cg-board piece.king { filter: drop-shadow(0 0 6px var(--tier)) drop-shadow(0 0 2px #fff); }
 
 /* Coffres sur téléphone : le spectacle, sans les effets les plus lourds à dessiner (en fin de fichier pour passer
    devant les règles de base) */

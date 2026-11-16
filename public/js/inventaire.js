@@ -282,7 +282,7 @@ function renderDetail(autoplay = false) {
   dress(dHost, overrideFor(p.id));
   const fen = isPack ? START : tab === 'board' ? MIDDLE : tab === 'pieces' ? START : DEMOS[tab].fen;
   // Pièce choisie : elle est mise en avant sur le grand aperçu
-  dHost.dataset.ptype = isPiece ? PIECE_ROLE[slot] : '';
+  dHost.dataset.hl = isPiece ? PIECE_ROLE[slot] : ''; // pièce mise en avant (pas un bouton)
   detail.ground.set({ fen, lastMove: undefined, check: false });
   if (autoplay && DEMOS[tab]) playDemo(500);
 }

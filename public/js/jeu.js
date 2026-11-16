@@ -81,18 +81,41 @@ function movableColor() {
   if (mode === 'ami') return online.status === 'playing' && myColor && chess.turn() === myColor ? colorName(myColor) : undefined;
 }
 
+/**
+ * Pendant le tour de l'adversaire, on peut quand même prendre ses pièces, les promener et voir où elles pourraient
+ * aller (comme si c'était son tour) ; posée, la pièce revient à sa place : rien n'est joué.
+ */
+function practiceColor() {
+  if (over || viewPly !== null || !myColor || (mode !== 'ami' && mode !== 'ia')) return null;
+  if (mode === 'ami' && online.status !== 'playing') return null;
+  return chess.turn() !== myColor ? myColor : null;
+}
+/** Coups possibles de mes pièces si c'était à moi de jouer. */
+function practiceDests(c) {
+  try {
+    const f = c.fen().split(' ');
+    f[1] = myColor;
+    f[3] = '-'; // pas de prise en passant possible pour moi maintenant
+    return legalDests(new Chess(f.join(' ')));
+  } catch {
+    return new Map();
+  }
+}
+
 function syncBoard() {
   const c = shownChess();
   const h = c.history({ verbose: true });
   const last = h[h.length - 1];
   const mc = movableColor();
+  const pc = mc ? null : practiceColor();
   ground.set({
     fen: c.fen(),
     orientation: colorName(orientation),
-    turnColor: colorName(c.turn()),
+    // Tour de l'adversaire : le plateau croit que c'est à moi, pour que je puisse soulever mes pièces
+    turnColor: colorName(pc || c.turn()),
     lastMove: last ? [last.from, last.to] : undefined,
     check: c.inCheck() ? colorName(c.turn()) : false,
-    movable: { color: mc, dests: mc ? legalDests(c) : new Map() },
+    movable: { color: mc || (pc ? colorName(pc) : undefined), dests: mc ? legalDests(c) : pc ? practiceDests(c) : new Map() },
   });
   marks.update(c.fen());
   fx.setPaused(viewPly !== null);
@@ -381,6 +404,8 @@ $('#btn-resign').addEventListener('click', () => {
 // Coup joué par l'utilisateur
 // ---------------------------------------------------------------------------
 async function onUserMove(from, to) {
+  // Ce n'était pas mon tour : la pièce revient à sa place, rien n'est joué
+  if (chess.turn() !== myColor && practiceColor()) return syncBoard();
   to = castleDest(chess, from, to); // roi posé sur sa tour = roque
   let promotion;
   if (isPromotion(chess, from, to)) {

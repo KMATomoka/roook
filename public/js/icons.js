@@ -123,6 +123,14 @@ export const ICONS = {
     <path d="M24 44 H40" stroke-width="2.6"/>`,
     'bag',
   ),
+  /** Roue crantée (paramètres). */
+  gear: svg(
+    `<path d="M28 5 H36 L37.5 12 Q41.5 13.3 44.8 15.7 L51.5 12.8 L57.2 18.5 L54.3 25.2 Q56.7 28.5 58 32.5 L65 34 V42 L58 43.5 Q56.7 47.5 54.3 50.8 L57.2 57.5 L51.5 63.2 L44.8 60.3 Q41.5 62.7 37.5 64 L36 71 H28 L26.5 64 Q22.5 62.7 19.2 60.3 L12.5 63.2 L6.8 57.5 L9.7 50.8 Q7.3 47.5 6 43.5 L-1 42 V34 L6 32.5 Q7.3 28.5 9.7 25.2 L6.8 18.5 L12.5 12.8 L19.2 15.7 Q22.5 13.3 26.5 12 Z" transform="translate(32 32) scale(.82) translate(-32 -38)" fill="#a98bff"/>
+    <circle cx="32" cy="32" r="10.5" fill="#ffd36b"/>
+    <circle cx="32" cy="32" r="4.5" fill="#1d1530" stroke="none"/>
+    ${sparkle(53, 9, 4, '#c7f5e3')}`,
+    'gear',
+  ),
   /** Loupe dorée (rechercher un joueur). */
   search: svg(
     `<path d="M40 40 L55 55" stroke-width="10"/>

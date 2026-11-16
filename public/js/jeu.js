@@ -36,10 +36,10 @@ let gameId = mode === 'ami' ? onlineId + '-' + Date.now().toString(36) : mode + 
 let savedThisGame = false;
 
 const ground = Chessground($('#board'), {
-  coordinates: true,
+  coordinates: getPref('coords', true), // réglage de la page Paramètres
   animation: { enabled: true, duration: 180 },
   highlight: { lastMove: true, check: true },
-  movable: { free: false, showDests: true, events: { after: onUserMove } },
+  movable: { free: false, showDests: getPref('coups', true), events: { after: onUserMove } },
   premovable: { enabled: false },
   draggable: { showGhost: true },
   drawable: { enabled: false }, // les flèches au clic droit sont gérées par arrows.js
@@ -131,7 +131,7 @@ async function practiceDrop(from, to) {
   // Promotion : on demande la pièce tout de suite, comme pour un coup normal (annulé = pas de prémove)
   let promotion;
   if (isPromotion(chess, from, to)) {
-    promotion = await askPromotion(myColor);
+    promotion = getPref('autoDame', false) ? 'q' : await askPromotion(myColor);
     if (!promotion) return;
   }
   premove = { from, to, promotion };
@@ -490,7 +490,7 @@ async function onUserMove(from, to) {
   to = castleDest(chess, from, to); // roi posé sur sa tour = roque
   let promotion;
   if (isPromotion(chess, from, to)) {
-    promotion = await askPromotion(chess.turn());
+    promotion = getPref('autoDame', false) ? 'q' : await askPromotion(chess.turn());
     if (!promotion) return syncBoard();
   }
   let move;

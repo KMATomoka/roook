@@ -14,6 +14,21 @@ try {
 } catch {}
 
 export const isMuted = () => muted;
+/** Volume général (0 à 1), réglé dans la page Paramètres. */
+let volume = 1;
+try {
+  const v = Number(localStorage.getItem('roque:volume'));
+  if (localStorage.getItem('roque:volume') !== null && v >= 0 && v <= 1) volume = v;
+} catch {}
+const MASTER = 0.9; // niveau de sortie à 100 %
+export const getVolume = () => volume;
+export function setVolume(v) {
+  volume = Math.max(0, Math.min(1, v));
+  try {
+    localStorage.setItem('roque:volume', String(volume));
+  } catch {}
+  if (master && ctx) master.gain.setTargetAtTime(MASTER * volume, ctx.currentTime, 0.02);
+}
 export function setMuted(v) {
   muted = !!v;
   try {
@@ -37,7 +52,7 @@ export function stopAllSounds() {
   old.gain.linearRampToValueAtTime(0, now + 0.04);
   setTimeout(() => old.disconnect(), 80);
   master = ctx.createGain();
-  master.gain.value = 0.9;
+  master.gain.value = MASTER * volume;
   master.connect(comp);
   // La musique, l'eau (Océan) et l'écho du canyon (Western) étaient branchés sur l'ancien « master » :
   // on les oublie, ils seront recréés sur le nouveau (avant, les sons Océan et Western devenaient muets)
@@ -57,7 +72,7 @@ function audio() {
       comp.ratio.value = 4;
       comp.connect(ctx.destination);
       master = ctx.createGain();
-      master.gain.value = 0.9;
+      master.gain.value = MASTER * volume;
       master.connect(comp);
       noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
       const d = noiseBuf.getChannelData(0);

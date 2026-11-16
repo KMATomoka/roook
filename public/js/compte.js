@@ -104,6 +104,10 @@ if (new URLSearchParams(location.search).get('debug') === 'largeur') {
       const ico = NAV_ICONS[a.getAttribute('href')];
       if (ico && !a.querySelector('.nav-ico')) a.insertAdjacentHTML('afterbegin', `<span class="nav-ico" aria-hidden="true">${ico}</span>`);
     });
+    // Paramètres : dans le menu du téléphone (sur ordinateur, c'est la roue crantée de la barre)
+    if (!nav.querySelector('.nav-settings')) {
+      nav.insertAdjacentHTML('beforeend', `<a class="nav-settings" href="parametres.html"${location.pathname.endsWith('/parametres.html') ? ' aria-current="page"' : ''}><span class="nav-ico" aria-hidden="true">${ICONS.gear}</span>Paramètres</a>`);
+    }
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'menu-toggle';
@@ -475,6 +479,7 @@ function syncEmail(u) {
     .catch(() => {});
 }
 
+const SETTINGS_HTML = `<a class="icon-btn settings-link" href="parametres.html" title="Paramètres" aria-label="Paramètres">${ICONS.gear}</a>`;
 function renderAccount(user) {
   const bar = document.querySelector('.topbar');
   if (!bar || document.body.classList.contains('page-auth')) return;
@@ -482,7 +487,7 @@ function renderAccount(user) {
   el.className = 'account';
   if (!user) {
     const back = encodeURIComponent(location.pathname.split('/').pop() + location.search + location.hash || './');
-    el.innerHTML = `<a class="btn btn-primary small" href="connexion.html?retour=${back}">Se connecter</a>`;
+    el.innerHTML = `${SETTINGS_HTML}<a class="btn btn-primary small" href="connexion.html?retour=${back}">Se connecter</a>`;
   } else {
     el.innerHTML = `
       ${SEARCH_HTML}
@@ -493,6 +498,7 @@ function renderAccount(user) {
         <span class="account-name">${escapeHtml(user.username)}</span>
         <span class="account-badge" hidden></span>
       </a>
+      ${SETTINGS_HTML}
       <button class="icon-btn account-logout" title="Se déconnecter" aria-label="Se déconnecter">${ICONS.logout}</button>`;
     el.querySelector('.account-logout').addEventListener('click', async () => {
       await signOutClean();

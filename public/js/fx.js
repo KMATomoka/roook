@@ -10,7 +10,15 @@ const ROLE = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'k
 const COLOR = { w: 'white', b: 'black' };
 const VALUE = { p: 1, n: 3, b: 3, r: 5, q: 9 };
 const FILES = 'abcdefgh';
-const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches || noFx();
+/** Animations des packs coupées dans la page Paramètres. */
+const noFx = () => {
+  try {
+    return localStorage.getItem('roque:effets') === 'false';
+  } catch {
+    return false;
+  }
+};
 // Téléphone et tablette : moins de particules et pas de lueur floutée sur chacune (sinon ça saccade)
 const LITE = matchMedia('(max-width: 900px), (pointer: coarse)').matches;
 const lite = (n) => (LITE ? Math.ceil(n * 0.55) : n);

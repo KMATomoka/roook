@@ -451,7 +451,7 @@ function showBanScreen(ban) {
       <button class="btn btn-primary" type="button">Se déconnecter</button>
     </div>`;
   el.querySelector('button').addEventListener('click', async () => {
-    await signOut(auth).catch(() => {});
+    await signOutClean();
     location.href = './';
   });
   document.body.appendChild(el);
@@ -492,7 +492,7 @@ function renderAccount(user) {
       </a>
       <button class="icon-btn account-logout" title="Se déconnecter" aria-label="Se déconnecter">⎋</button>`;
     el.querySelector('.account-logout').addEventListener('click', async () => {
-      await signOut(auth).catch(() => {});
+      await signOutClean();
       location.href = './';
     });
   }
@@ -512,7 +512,7 @@ function renderAccount(user) {
       </div>`,
     );
     nav.querySelector('.nav-logout').addEventListener('click', async () => {
-      await signOut(auth).catch(() => {});
+      await signOutClean();
       location.href = './';
     });
   }
@@ -553,7 +553,7 @@ export async function searchPlayers(text) {
       ]);
       if (!name) return null; // compte supprimé
       const relation = isFriend ? 'friend' : sent.child(id).exists() ? 'sent' : received.child(id).exists() ? 'received' : 'none';
-      return { id, username: name, avatar, relation, online: !!st?.connections, playing: !!st?.playing };
+      return { id, username: name, avatar, relation, online: isOnline(st), playing: !!st?.playing };
     }),
   );
   return players.filter(Boolean);
@@ -737,17 +737,61 @@ function applyMyPic(url) {
 }
 
 // ---------------------------------------------------------------------------
-// Présence : une entrée par onglet ouvert, effacée automatiquement à la fermeture
+// Présence : une entrée par onglet ouvert, effacée par Firebase à la fermeture de la page.
+// Sa valeur est l'heure (Firebase) de son dernier « signe de vie » : l'onglet la rafraîchit toutes les 4 minutes.
+// Une entrée muette depuis 10 minutes est morte (page tuée, téléphone éteint, effacement refusé…) : elle ne compte
+// plus, et son propriétaire la supprime à sa prochaine visite. Avant, une entrée restée en place (par exemple après
+// « Se déconnecter » : la base refuse alors l'effacement automatique, le compte n'étant plus connecté) laissait le
+// joueur « en ligne » pour toujours.
 // ---------------------------------------------------------------------------
+const PRESENCE_TTL = 10 * 60 * 1000;
+const PRESENCE_BEAT = 4 * 60 * 1000;
+/** Un joueur est-il en ligne, d'après son nœud status/{uid} ? */
+export const isOnline = (st) => Object.values(st?.connections || {}).some((v) => typeof v === 'number' && serverNow() - v < PRESENCE_TTL);
+let presenceRef = null;
+
 function startPresence() {
   const uid = currentUser.id;
-  onValue(ref(db, '.info/connected'), (s) => {
-    if (!s.val()) return;
-    const me = push(ref(db, `status/${uid}/connections`));
-    onDisconnect(me).remove();
-    set(me, true);
-    onDisconnect(ref(db, `status/${uid}/lastSeen`)).set(serverTimestamp());
+  const conns = ref(db, `status/${uid}/connections`);
+  onValue(ref(db, '.info/connected'), async (s) => {
+    if (!s.val() || !currentUser) return;
+    const me = push(conns);
+    presenceRef = me;
+    try {
+      await onDisconnect(me).remove();
+      await set(me, serverTimestamp());
+      onDisconnect(ref(db, `status/${uid}/lastSeen`)).set(serverTimestamp());
+      // Ménage : les entrées mortes de mes anciens onglets
+      const dead = {};
+      for (const [k, v] of Object.entries((await get(conns)).val() || {})) {
+        if (k !== me.key && (typeof v !== 'number' || serverNow() - v > PRESENCE_TTL)) dead[k] = null;
+      }
+      if (Object.keys(dead).length) await update(conns, dead);
+    } catch {
+      // hors ligne ou compte suspendu : rien à faire
+    }
   });
+  setInterval(() => {
+    if (presenceRef && currentUser) set(presenceRef, serverTimestamp()).catch(() => {});
+  }, PRESENCE_BEAT);
+}
+
+/** Avant « Se déconnecter » : on s'efface soi-même (une fois déconnecté, la base refuserait de le faire). */
+async function leavePresence() {
+  if (!presenceRef || !currentUser) return;
+  const r = presenceRef;
+  presenceRef = null;
+  await Promise.all([
+    onDisconnect(r).cancel(),
+    remove(r),
+    remove(ref(db, `status/${currentUser.id}/playing`)),
+    set(ref(db, `status/${currentUser.id}/lastSeen`), serverTimestamp()),
+  ]).catch(() => {});
+}
+/** Se déconnecter proprement (présence effacée d'abord). */
+async function signOutClean() {
+  await leavePresence();
+  await signOut(auth).catch(() => {});
 }
 
 /** Indique aux amis qu'on est en partie (jusqu'à la fermeture de la page). */
@@ -789,7 +833,8 @@ export function watchFriends(cb) {
             const st = s.val() || {};
             const fr = friends.get(fid);
             if (!fr) return;
-            fr.online = !!st.connections;
+            fr.status = st;
+            fr.online = isOnline(st);
             fr.playing = !!st.playing;
             emit();
           }),
@@ -805,6 +850,18 @@ export function watchFriends(cb) {
     }
     emit();
   });
+  // Une entrée de présence qui ne donne plus signe de vie finit par ne plus compter : on revérifie chaque minute
+  setInterval(() => {
+    let changed = false;
+    for (const fr of friends.values()) {
+      const on = isOnline(fr.status);
+      if (on !== fr.online) {
+        fr.online = on;
+        changed = true;
+      }
+    }
+    if (changed) emit();
+  }, 60000);
   onValue(ref(db, `friendRequests/${uid}`), (s) => {
     incoming = Object.entries(s.val() || {}).map(([id, v]) => ({ id, username: v.username, at: v.at }));
     emit();
@@ -1019,7 +1076,7 @@ export function challenge(friend) {
 async function sendInvite(friend, color, time) {
   const me = currentUser;
   const st = (await get(ref(db, `status/${friend.id}`))).val() || {};
-  if (!st.connections) throw new Error(`${friend.username} n’est pas connecté.`);
+  if (!isOnline(st)) throw new Error(`${friend.username} n’est pas connecté.`);
   if (st.playing) throw new Error(`${friend.username} est déjà en partie.`);
   const invRef = push(ref(db, `invites/${friend.id}`));
   const expires = serverNow() + 60000;
@@ -1085,7 +1142,7 @@ export const me = () => currentUser;
 
 /** Déconnexion, puis retour à l'accueil. */
 export async function logout() {
-  await signOut(auth).catch(() => {});
+  await signOutClean();
   location.href = './';
 }
 
@@ -1125,7 +1182,7 @@ export async function loadProfile(uid) {
     badge: shownBadge(user.badge, role, !!user.royalProof),
     hasRoyalProof: !!user.royalProof,
     avatar,
-    online: !!status?.connections,
+    online: isOnline(status),
     playing: !!status?.playing,
     lastSeen: status?.lastSeen || 0,
     role: role === 'fondateur' || role === 'admin' ? role : 'member',

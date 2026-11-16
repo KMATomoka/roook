@@ -138,11 +138,21 @@ function renderRates() {
     const list = PACKS.filter((p) => p.rarity === id).map((p) => p.name).join(', ');
     return id === 'commun' ? `${list} — déjà à toi : se change en ✨ poussière d’étoile` : `${list} : un plateau, une pièce, une fin de partie ou une prise`;
   };
-  $('#bx-rates').innerHTML =
-    RATES.map((r) => `<li style="--c:${TIERS[r.id].color}"><span class="bx-rate-name">${r.id === 'jeu' ? '♚ ' : ''}${escapeHtml(r.name)}</span><b>${String(r.pct).replace('.', ',')} %</b><small>${escapeHtml(who(r.id))}</small></li>`).join('')
-    + `<li style="--c:${RARITY.legendaire.color}" class="bx-rate-off"><span class="bx-rate-name">Légendaire</span><b>—</b><small>Royal chess : une mission spéciale (100 victoires en ligne), jamais dans les box</small></li>`
-    + '<li style="--c:#ffd84a" class="bx-rate-off"><span class="bx-rate-name">Pack entier</span><b>—</b><small>Plus dans les box : bientôt dans la boutique</small></li>';
+  // Seulement ce qu'on peut trouver dans le coffre
+  const list = $('#bx-rates');
+  if (list) list.innerHTML = RATES.map((r) => `<li style="--c:${TIERS[r.id].color}"><span class="bx-rate-name">${r.id === 'jeu' ? '♚ ' : ''}${escapeHtml(r.name)}</span><b>${String(r.pct).replace('.', ',')} %</b><small>${escapeHtml(who(r.id))}</small></li>`).join('');
 }
+/** Titre du coffre avec sa bulle ⓘ : les taux de drop s'affichent au survol (ou d'un toucher sur téléphone). */
+const chestTitle = () => `<h2 class="bx-title">Coffre commun
+  <span class="bx-info-wrap">
+    <button class="bx-info" type="button" aria-label="Taux de drop" aria-expanded="false" aria-controls="bx-rates-pop">i</button>
+    <span class="bx-rates-pop" id="bx-rates-pop" role="tooltip">
+      <span class="bx-rates-head">Taux de drop</span>
+      <ul class="bx-rates" id="bx-rates"></ul>
+      <span class="bx-rates-foot">Plus le drop est gros, plus il faut frapper le coffre avant qu’il s’ouvre.</span>
+    </span>
+  </span>
+</h2>`;
 
 // ---------------------------------------------------------------------------
 // Box disponibles
@@ -151,8 +161,9 @@ function renderMain() {
   const main = $('#bx-main');
   if (!uid) {
     main.innerHTML = `<div class="bx-card"><div class="bx-card-art" id="bx-card-art"></div><div class="bx-card-body">
-      <h2>Coffre commun</h2><p class="muted">Connecte-toi pour gagner des box : une à chaque victoire en ligne.</p>
+      ${chestTitle()}<p class="muted">Connecte-toi pour gagner des box : une à chaque victoire en ligne.</p>
       <a class="btn btn-primary" href="connexion.html?retour=box.html">Se connecter</a></div></div>`;
+    renderRates();
     placeCardChest(0);
     return;
   }
@@ -162,7 +173,7 @@ function renderMain() {
   main.innerHTML = `<div class="bx-card${n ? ' has' : ''}">
       <div class="bx-card-art" id="bx-card-art">${n ? `<span class="bx-count">×${n}</span>` : ''}</div>
       <div class="bx-card-body">
-        <h2>Coffre commun</h2>
+        ${chestTitle()}
         <p class="muted">Un plateau, une pièce (pion, tour, cavalier, fou, dame ou roi), une fin de partie ou une prise et son. Et parfois, très rarement, un jeu de pièces complet.</p>
         <p class="bx-have">${n ? `Tu as <b>${n} coffre${n > 1 ? 's' : ''}</b> à ouvrir.` : 'Plus de coffre à ouvrir : gagne une partie en ligne pour en avoir un.'}</p>
         <div class="bx-actions">
@@ -177,6 +188,7 @@ function renderMain() {
         ${staff ? '<p class="bx-staff"><button class="btn btn-ghost small" type="button" data-grant>🛠 +1 box de test</button> <span class="muted">(admins et fondateur)</span></p>' : ''}
       </div>
     </div>`;
+  renderRates();
   placeCardChest(n);
 }
 
@@ -709,6 +721,19 @@ result.addEventListener('pointerleave', () => {
 // Clics
 // ---------------------------------------------------------------------------
 document.addEventListener('click', async (e) => {
+  // Bulle ⓘ des taux : un toucher l'ouvre ou la ferme ; un clic ailleurs la ferme
+  const info = e.target.closest('.bx-info');
+  for (const w of document.querySelectorAll('.bx-info-wrap.open')) {
+    if (!info || !w.contains(info)) {
+      w.classList.remove('open');
+      w.querySelector('.bx-info').setAttribute('aria-expanded', 'false');
+    }
+  }
+  if (info) {
+    const w = info.closest('.bx-info-wrap');
+    info.setAttribute('aria-expanded', String(w.classList.toggle('open')));
+    return;
+  }
   if (e.target.closest('[data-open]')) return state.keys.length && doOpen(state.keys[0]);
   if (e.target.closest('[data-dust]')) return doOpen(null);
   if (e.target.closest('[data-grant]')) {

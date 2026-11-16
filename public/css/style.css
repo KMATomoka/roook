@@ -2214,6 +2214,34 @@ body { overflow-x: clip; position: relative; }
   background: #3cf2a3; color: #0c0a16; box-shadow: 0 0 0 3px #0e0b1c, 0 0 18px rgba(60, 242, 163, 0.6);
 }
 .bx-card-body h2 { margin: 0 0 6px; }
+/* Bulle ⓘ des taux de drop, à côté du nom du coffre : au survol (ordinateur) ou d'un toucher (téléphone) */
+.bx-card-body { position: relative; }
+.bx-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.bx-info-wrap { display: inline-flex; }
+.bx-info {
+  width: 24px; height: 24px; border-radius: 50%; display: inline-grid; place-items: center; padding: 0; cursor: pointer;
+  font: italic 700 0.85rem Georgia, 'Times New Roman', serif; color: var(--muted);
+  background: rgba(255, 255, 255, 0.04); border: 1.5px solid currentColor; transition: color 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.bx-info:hover, .bx-info-wrap.open .bx-info { color: var(--text); background: rgba(255, 255, 255, 0.1); }
+.bx-rates-pop {
+  position: absolute; left: 0; top: 2.6rem; z-index: 40; width: min(600px, 100%); padding: 14px 14px 12px; border-radius: 14px; text-align: left;
+  background: #15112a; border: 1px solid var(--line-strong, rgba(255, 255, 255, 0.16)); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+  font: 500 0.9rem var(--font); letter-spacing: 0; text-transform: none;
+  opacity: 0; visibility: hidden; transform: translateY(-6px); transition: opacity 0.15s, transform 0.15s, visibility 0s 0.15s;
+}
+@media (hover: hover) { .bx-info-wrap:hover .bx-rates-pop { opacity: 1; visibility: visible; transform: none; transition: opacity 0.15s, transform 0.15s; } }
+.bx-info-wrap.open .bx-rates-pop, .bx-info-wrap:has(.bx-info:focus-visible) .bx-rates-pop { opacity: 1; visibility: visible; transform: none; transition: opacity 0.15s, transform 0.15s; }
+.bx-rates-head { display: block; margin: 0 0 10px; font: 800 0.95rem var(--font); color: var(--text); }
+.bx-rates-foot { display: block; margin-top: 10px; color: var(--muted); font-size: 0.8rem; }
+.bx-rates-pop .bx-rates { gap: 6px; }
+.bx-rates-pop .bx-rates li { grid-template-columns: 118px 58px 1fr; padding: 8px 12px; border-radius: 10px; }
+.bx-rates-pop .bx-rate-name { font-size: 0.86rem; }
+.bx-rates-pop .bx-rates b { font-size: 0.92rem; }
+.bx-rates-pop .bx-rates small { font-size: 0.78rem; }
+@media (max-width: 640px) { .bx-rates-pop .bx-rates li { grid-template-columns: 1fr auto; } }
+@media (max-width: 700px) { .bx-title { justify-content: center; } }
 .bx-card-body p { margin: 0 0 10px; }
 .bx-have b { color: #3cf2a3; }
 .bx-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0 16px; }

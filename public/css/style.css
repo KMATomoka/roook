@@ -558,7 +558,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   background-size: 25% 25%, 25% 25%;
 }
 /* Pack Western : turquoise (bijoux navajos) et terre cuite (roches des canyons) ; motif navajo et grains de sable
-   (scripts/damier-western.js), cadre de cuir sombre liseré de turquoise */
+   (scripts/damier-western.js), cadre de cuir sombre liseré de cuivre (le turquoise reste au pack Océan) */
 .board-western {
   --sq-light: #cfe9e1;
   --sq-dark: #c46f45;
@@ -568,7 +568,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   --coord-on-dark-shadow: 0 1px 2px rgba(60, 20, 6, 0.6);
   --coord-on-light: #1d5a52;
   --coord-on-light-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
-  --board-shadow: 0 0 0 3px #3fb3a3, 0 0 0 7px #3a1a0e, 0 0 0 8px rgba(63, 179, 163, 0.45), 0 18px 45px rgba(0, 0, 0, 0.55), 0 0 50px rgba(196, 111, 69, 0.18);
+  --board-shadow: 0 0 0 3px #d27b4f, 0 0 0 7px #3a1a0e, 0 0 0 8px rgba(240, 194, 90, 0.5), 0 18px 45px rgba(0, 0, 0, 0.55), 0 0 50px rgba(210, 123, 79, 0.2);
 }
 .board-western cg-board {
   background-image: url('../img/damier-western.svg'), conic-gradient(var(--sq-dark) 0 25%, transparent 0 50%, var(--sq-dark) 0 75%, transparent 0);
@@ -1269,7 +1269,7 @@ a.person-link:hover { color: var(--accent-soft); }
 @media (max-width: 600px) { .pf-account { flex-direction: column; } }
 .badge.founder { color: var(--mint); border-color: rgba(60, 242, 163, 0.55); background: rgba(60, 242, 163, 0.12); }
 .badge.ocean { color: #b8fff4; border-color: rgba(70, 230, 212, 0.6); background: linear-gradient(135deg, rgba(70, 230, 212, 0.2), rgba(243, 196, 214, 0.14)); }
-.badge.western { color: #9fe8dc; border-color: rgba(63, 179, 163, 0.6); background: linear-gradient(135deg, rgba(63, 179, 163, 0.2), rgba(196, 111, 69, 0.18)); }
+.badge.western { color: #ffcfa8; border-color: rgba(210, 123, 79, 0.65); background: linear-gradient(135deg, rgba(210, 123, 79, 0.24), rgba(240, 194, 90, 0.14)); }
 .badge.sakura { color: #ffc4d3; border-color: rgba(247, 150, 178, 0.6); background: linear-gradient(135deg, rgba(247, 150, 178, 0.22), rgba(200, 55, 45, 0.12)); }
 .badge.royal { color: #f0d88f; border-color: rgba(226, 182, 78, 0.6); background: linear-gradient(135deg, rgba(226, 182, 78, 0.22), rgba(150, 100, 20, 0.12)); }
 
@@ -1597,7 +1597,7 @@ a.person-link:hover { color: var(--accent-soft); }
 .pf-badge-opt.founder { --c: var(--mint); }
 .pf-badge-opt.royal { --c: #e2b64e; }
 .pf-badge-opt.sakura { --c: #f7a3bb; }
-.pf-badge-opt.western { --c: #5fcfbf; }
+.pf-badge-opt.western { --c: #e0895a; }
 .pf-badge-opt.ocean { --c: #46e6d4; }
 .pf-badge-opt.none { --c: var(--muted); }
 .pf-badge-opt.on { border-color: var(--c); box-shadow: 0 0 0 1px var(--c), 0 0 18px color-mix(in srgb, var(--c) 30%, transparent); }

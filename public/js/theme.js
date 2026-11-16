@@ -48,7 +48,7 @@ export const PACKS = [
     name: 'Western chess',
     desc: 'Le Far West : turquoise et terre cuite du Sud-Ouest, motifs navajos, étoile de shérif, duels au revolver et virevoltants.',
     items: {
-      board: { name: 'Damier Canyon', desc: 'Turquoise pâle et terre cuite à motif navajo, cadre de cuir liseré de turquoise.' },
+      board: { name: 'Damier Canyon', desc: 'Turquoise pâle et terre cuite à motif navajo, cadre de cuir liseré de cuivre.' },
       pieces: { name: 'Pièces Frontier', desc: 'Turquoise pour les Blancs, terre cuite pour les Noirs : tour en coffre-fort, cheval géométrique navajo, étoiles de shérif, dame à couronne de balles.' },
       endAnim: { name: 'Règlement de comptes', desc: 'Le viseur se resserre, BANG : le roi vaincu tombe dans la poussière, un virevoltant passe, pancarte de saloon et sifflement de western. Défaite : pancarte trouée, vent du désert et harmonica.' },
       capture: { name: 'Duel', desc: 'Coup de revolver sur la pièce prise : éclair du canon, impact, la pièce est projetée, poussière, douille qui tinte ; bottes à éperons et chien qu’on arme à l’échec.' },

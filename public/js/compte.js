@@ -486,7 +486,7 @@ function renderAccount(user) {
   } else {
     el.innerHTML = `
       ${SEARCH_HTML}
-      ${user.role === 'admin' || user.role === 'fondateur' ? '<a class="icon-btn admin-link" href="admin.html" title="Administration" aria-label="Administration">${ICONS.shield}</a>' : ''}
+      ${user.role === 'admin' || user.role === 'fondateur' ? `<a class="icon-btn admin-link" href="admin.html" title="Administration" aria-label="Administration">${ICONS.shield}</a>` : ''}
       <a class="box-chip" href="box.html" title="Mes box" aria-label="Mes box"><span class="box-chip-ico" aria-hidden="true">${ICONS.chest}</span><b class="box-chip-n">0</b></a>
       <a class="account-chip" href="profil.html" title="Mon profil">
         ${picHtml(user.username, user.avatar, 'account-initial')}

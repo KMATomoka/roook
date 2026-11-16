@@ -43,7 +43,24 @@ const ground = Chessground($('#board'), {
   premovable: { enabled: false },
   draggable: { showGhost: true },
   drawable: { enabled: false }, // les flèches au clic droit sont gérées par arrows.js
+  trustAllEvents: true, // pour le clic « sans Maj » qu'on renvoie (prémove avec Maj, voir plus bas)
 });
+// Prémove avec Maj : l'échiquier réserve Maj+clic au dessin de flèches et refuserait de prendre la pièce. On
+// arrête ce clic avant lui et on lui renvoie le même, sans Maj (on a noté que Maj était enfoncée).
+$('#board').addEventListener(
+  'mousedown',
+  (e) => {
+    if (!e.shiftKey || !e.isTrusted || e.button !== 0) return;
+    e.stopPropagation();
+    e.preventDefault();
+    shiftDown = true;
+    e.target.dispatchEvent(new MouseEvent('mousedown', {
+      bubbles: true, cancelable: true, view: window, clientX: e.clientX, clientY: e.clientY, screenX: e.screenX, screenY: e.screenY,
+      button: 0, buttons: e.buttons, ctrlKey: e.ctrlKey, altKey: e.altKey, metaKey: e.metaKey, shiftKey: false,
+    }));
+  },
+  true,
+);
 const marks = attachArrows($('.board-frame'), ground, () => orientation);
 const fx = createFx($('.board-frame'), () => orientation);
 // Effets visuels seulement si on regarde la position actuelle
@@ -92,17 +109,18 @@ function practiceColor() {
 }
 /**
  * Prémove (jouer à l'avance) : pendant le tour adverse, une pièce lâchée revient à sa place, SAUF si on l'a voulu
- * (bouton ⚡ Prémove activé, ou touche Ctrl / Cmd enfoncée en lâchant la pièce) : le coup est alors mis en attente, et joué dès que c'est
+ * (bouton ⚡ Prémove activé, ou touche Maj / Ctrl / Cmd enfoncée en lâchant la pièce) : le coup est alors mis en attente, et joué dès que c'est
  * notre tour s'il est encore possible. Une autre pièce lâchée sans le vouloir annule le prémove.
  */
 let premove = null; // { from, to }
 let premoveOn = getPref('premove', '0') === '1';
-// Ctrl (Cmd sur Mac) : lu sur la souris elle-même au moment où on lâche (Maj est réservée aux flèches)
-let shiftDown = false;
-const readMods = (e) => (shiftDown = !!(e.ctrlKey || e.metaKey));
-for (const t of ['mousedown', 'mousemove', 'mouseup', 'pointerup']) addEventListener(t, readMods, true);
-addEventListener('keydown', (e) => (e.key === 'Control' || e.key === 'Meta') && (shiftDown = true));
-addEventListener('keyup', (e) => (e.key === 'Control' || e.key === 'Meta') && (shiftDown = false));
+// Maj (ou Ctrl / Cmd) : lue sur la souris elle-même au moment où on lâche la pièce
+var shiftDown = false;
+const PM_KEYS = ['Shift', 'Control', 'Meta'];
+const readMods = (e) => e.isTrusted && (shiftDown = !!(e.shiftKey || e.ctrlKey || e.metaKey));
+for (const t of ['mousemove', 'mouseup', 'pointerup']) addEventListener(t, readMods, true);
+addEventListener('keydown', (e) => PM_KEYS.includes(e.key) && (shiftDown = true));
+addEventListener('keyup', (e) => PM_KEYS.includes(e.key) && (shiftDown = false));
 addEventListener('blur', () => (shiftDown = false));
 /** Lâcher une pièce pendant le tour adverse : prémove ou retour à sa place. */
 async function practiceDrop(from, to) {

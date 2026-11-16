@@ -9,7 +9,7 @@
 // 10 ✨ ouvrent une box de plus. Les admins peuvent s'offrir des box de test.
 // Tout est dans la base : loot/{uid} (box ouvertes, éléments, ✨) et lootGrants/{uid} (box offertes).
 import { db, ref, update, push, set, onValue, serverTimestamp } from './fb.js';
-import { PACKS, PIECE_TYPES, PACK_ITEMS } from './theme.js';
+import { PACKS, PIECE_TYPES, PACK_ITEMS, packHas } from './theme.js';
 
 /** Types de box (d'autres viendront plus tard). */
 export const BOX_TYPES = {
@@ -81,7 +81,7 @@ export function drawBox(owned) {
     const p = pick(missing);
     return { rarity, pack: p.id, slots: [...PIECE_TYPES], fresh: PIECE_TYPES.filter((t) => !has(p, t)), dust: 0 };
   }
-  const pool = PACKS.filter((p) => p.rarity === rarity).flatMap((p) => PACK_ITEMS.map((s) => [p, s]));
+  const pool = PACKS.filter((p) => p.rarity === rarity).flatMap((p) => PACK_ITEMS.filter((s) => packHas(p, s)).map((s) => [p, s]));
   const [p, s] = pick(pool);
   const fresh = has(p, s) ? [] : [s];
   return { rarity, pack: p.id, slots: [s], fresh, dust: fresh.length ? 0 : DUST[rarity] };

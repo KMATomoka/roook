@@ -60,6 +60,19 @@ export const PACKS = [
     },
   },
   {
+    id: 'bois',
+    pieceTag: 'en bois', // « Cavalier en bois »
+    name: 'Bois',
+    rarity: 'commun',
+    // Pas un pack complet : seulement un plateau et des pièces (absent de l'onglet Packs, de Fin de partie, de Prise)
+    only: ['board', 'pieces'],
+    desc: 'Un vrai jeu en bois : damier d’érable clair et de noyer foncé avec le grain du bois, pièces tournées en buis et en ébène.',
+    items: {
+      board: { name: 'Damier noyer et érable', desc: 'Cases d’érable clair et de noyer foncé, chacune avec son grain, cadre de bois sombre.' },
+      pieces: { name: 'Pièces tournées', desc: 'Des pièces Staunton tournées : buis clair pour les Blancs, ébène pour les Noirs, avec le grain du bois.' },
+    },
+  },
+  {
     id: 'japon',
     pieceTag: 'Edo', // « Cavalier Edo »
     name: 'Sakura chess',
@@ -137,10 +150,12 @@ let owned = readLocal(OWNED_CACHE) || {};
 /** Mission spéciale (Royal) accomplie ? */
 const missionDone = (p) => wins >= p.unlock.wins || (!!p.unlock.staff && staff);
 /** Un élément (plateau, pièces…) d'un pack est-il à ce joueur ? */
+/** Ce pack a-t-il cet élément ? (Bois : seulement un plateau et des pièces) */
+export const packHas = (p, slot) => !p.only || p.only.includes(PIECE_TYPES.includes(slot) ? 'pieces' : slot);
 // slot : board, endAnim, capture, une pièce (P, R, N…), ou « pieces » (les 6 pièces)
 export const isItemUnlocked = (id, slot) => {
   const p = packById(id);
-  if (!p) return false;
+  if (!p || !packHas(p, slot)) return false;
   if (p.rarity === 'commun') return true;
   if (p.unlock) return missionDone(p);
   if (slot === 'pieces') return PIECE_TYPES.every((t) => isItemUnlocked(id, t));

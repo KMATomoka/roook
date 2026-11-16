@@ -8,7 +8,7 @@ import { Chessground } from '../vendor/chessground/chessground.min.js';
 import { $, $$, Chess, escapeHtml } from './common.js';
 import { toast } from './compte.js';
 import {
-  PACKS, SLOTS, SLOT_NAMES, RARITY, PIECE_TYPES, PIECE_NAMES, PIECE_ROLE, PACK_ITEMS, THEME_CLASS,
+  PACKS, SLOTS, SLOT_NAMES, RARITY, PIECE_TYPES, PIECE_NAMES, PIECE_ROLE, PACK_ITEMS, THEME_CLASS, packHas,
   getEquip, setEquip, equipPack, equipOwnedPieces, onEquipChange, themeClasses, ready, isUnlocked, isItemUnlocked,
   unlockedCount, piecesCount, piecesPack, itemName, unlockProgress, loadPackFont,
 } from './theme.js';
@@ -28,7 +28,7 @@ const DEMOS = {
 const ICONS = { packs: '◆', board: '▦', pieces: '♞', endAnim: '♚', capture: '✦' };
 const TABS = [{ id: 'packs', name: 'Packs' }, ...SLOTS.map((s) => ({ id: s, name: SLOT_NAMES[s] }))];
 // Couleur de chaque pack (comme la rareté d'un objet)
-const TIER = { astrea: '#9b7bff', classic: '#c4c8d0', japon: '#e8553f', western: '#d27b4f', ocean: '#46e6d4', royal: '#e2b64e' };
+const TIER = { astrea: '#9b7bff', classic: '#c4c8d0', bois: '#c08a55', japon: '#e8553f', western: '#d27b4f', ocean: '#46e6d4', royal: '#e2b64e' };
 const packById = (id) => PACKS.find((p) => p.id === id);
 const allPieces = (id) => Object.fromEntries(PIECE_TYPES.map((t) => [t, id]));
 const whole = (id) => ({ ...Object.fromEntries(SLOTS.map((s) => [s, id])), piece: allPieces(id) });
@@ -135,11 +135,18 @@ function renderTabs() {
       <span aria-hidden="true">${ICONS[t.id]}</span> ${escapeHtml(t.name)}</button>`,
   ).join('');
 }
+/** Le pack choisi doit être dans la liste de l'onglet (Bois n'est pas dans l'onglet Packs) ; sinon le premier. */
+function fixSelected() {
+  const p = PACKS.find((x) => x.id === selected);
+  const visible = (x) => (tab === 'packs' ? !x.only : packHas(x, curSlot()));
+  if (!p || !visible(p)) selected = (PACKS.find((x) => x.id === getEquip().endAnim && visible(x)) || PACKS.find(visible)).id;
+}
 function goTo(newTab, pick = null, type = null) {
   tab = newTab;
   pieceType = tab === 'pieces' ? type : null;
   const eq = getEquip();
   selected = pick || (tab === 'packs' ? eq.board : tab === 'pieces' ? (pieceType ? eq.piece[pieceType] : piecesPack(eq) || eq.pieces) : eq[tab]);
+  fixSelected();
   renderTabs();
   renderPiecePick();
   renderGrid();
@@ -166,7 +173,8 @@ function renderPiecePick() {
 function renderGrid() {
   const eq = getEquip();
   const grid = $('#inv-items');
-  grid.innerHTML = PACKS.map((p) => {
+  // Onglet Packs : les packs complets ; sinon, les packs qui ont cet élément (Bois : plateau et pièces seulement)
+  grid.innerHTML = PACKS.filter((p) => (tab === 'packs' ? !p.only : packHas(p, tab))).map((p) => {
     const name = tab === 'packs' ? p.name : itemName(p.id, curSlot());
     const on = isOn(p.id, eq);
     const locked = lockedHere(p);
@@ -352,6 +360,7 @@ $('main').addEventListener('click', async (e) => {
 
 // ---------------------------------------------------------------------------
 function refresh() {
+  fixSelected();
   renderCurrent();
   renderPiecePick();
   renderGrid();

@@ -556,6 +556,20 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   --coord-on-light-shadow: 0 1px 0 rgba(255, 250, 235, 0.6);
   --board-shadow: 0 0 0 2px #d8b04c, 0 0 0 5px #2a170b, 0 0 0 6px rgba(227, 196, 106, 0.55), 0 18px 45px rgba(0, 0, 0, 0.55), 0 0 50px rgba(216, 176, 76, 0.16);
 }
+/* Pack Bois : érable clair et noyer foncé, avec le grain du bois (scripts/damier-bois.js), cadre de bois sombre */
+.board-bois {
+  --sq-light: #e4c393;
+  --sq-dark: #7a4a2b;
+  --sq-last: rgba(255, 214, 110, 0.42);
+  --sq-selected: rgba(255, 226, 140, 0.58);
+  --coord-on-dark: #f6e3c4;
+  --coord-on-dark-shadow: 0 1px 2px rgba(30, 14, 4, 0.7);
+  --coord-on-light: #5a3418;
+  --coord-on-light-shadow: 0 1px 0 rgba(255, 244, 222, 0.5);
+  --board-shadow: 0 0 0 4px #5a3418, 0 0 0 8px #2e180a, 0 0 0 9px rgba(228, 195, 147, 0.35), 0 18px 45px rgba(0, 0, 0, 0.55);
+  --board-img: url('../img/damier-bois.svg');
+  --board-img-size: 100% 100%;
+}
 /* Pack Sakura : rose sakura et indigo (ai) ; étoiles asanoha sur les cases roses, vagues seigaiha sur les indigo (scripts/damier-japon.js), cadre de laque vermillon */
 .board-japon {
   --sq-light: #fbe2e8;
@@ -617,9 +631,11 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 /* Échiquier violet (remplace le thème bois) : damier en conic-gradient, a8 toujours clair */
 cg-board {
   background-color: var(--sq-light);
-  background-image: conic-gradient(var(--sq-dark) 0 25%, transparent 0 50%, var(--sq-dark) 0 75%, transparent 0);
-  background-size: 25% 25%;
+  background-image: var(--board-img, conic-gradient(var(--sq-dark) 0 25%, transparent 0 50%, var(--sq-dark) 0 75%, transparent 0));
+  background-size: var(--board-img-size, 25% 25%);
 }
+/* Une image de plateau (pack Bois) ne vaut que pour son thème : les autres l'effacent (aperçus de l'inventaire) */
+.board-astrea, .board-classic, .board-royal, .board-japon, .board-western, .board-ocean { --board-img: initial; --board-img-size: initial; }
 /* Coordonnées : toujours lisibles — texte clair sur case sombre, texte sombre sur case claire.
    a1 est une case sombre : avec les Blancs en bas, rangées impaires et colonnes a, c, e, g sont sur cases sombres. */
 .cg-wrap coords { opacity: 1; }
@@ -906,6 +922,21 @@ body::after {
   --p-bQ: url('../img/pieces-ocean/bQ.svg');
   --p-bK: url('../img/pieces-ocean/bK.svg');
 }
+/* Pack Bois : buis (Blancs) et ébène (Noirs), pièces tournées, générées par scripts/pieces-bois.js */
+.pieces-bois {
+  --p-wP: url('../img/pieces-bois/wP.svg');
+  --p-wN: url('../img/pieces-bois/wN.svg');
+  --p-wB: url('../img/pieces-bois/wB.svg');
+  --p-wR: url('../img/pieces-bois/wR.svg');
+  --p-wQ: url('../img/pieces-bois/wQ.svg');
+  --p-wK: url('../img/pieces-bois/wK.svg');
+  --p-bP: url('../img/pieces-bois/bP.svg');
+  --p-bN: url('../img/pieces-bois/bN.svg');
+  --p-bB: url('../img/pieces-bois/bB.svg');
+  --p-bR: url('../img/pieces-bois/bR.svg');
+  --p-bQ: url('../img/pieces-bois/bQ.svg');
+  --p-bK: url('../img/pieces-bois/bK.svg');
+}
 /* Pack Western : turquoise (Blancs) et terre cuite (Noirs), générées par scripts/pieces-western.js */
 .pieces-western {
   --p-wP: url('../img/pieces-western/wP.svg');
@@ -936,6 +967,12 @@ body::after {
 
 /* Une pièce d'un autre pack que le jeu de base (inventaire : chaque pièce a son skin) : classe pc-N-ocean…
    Classe doublée pour passer devant .pieces-… (Classic : vendor/…cburnett.css, généré par scripts/build.js). */
+.pc-P-bois.pc-P-bois { --p-wP: url('../img/pieces-bois/wP.svg'); --p-bP: url('../img/pieces-bois/bP.svg'); }
+.pc-R-bois.pc-R-bois { --p-wR: url('../img/pieces-bois/wR.svg'); --p-bR: url('../img/pieces-bois/bR.svg'); }
+.pc-N-bois.pc-N-bois { --p-wN: url('../img/pieces-bois/wN.svg'); --p-bN: url('../img/pieces-bois/bN.svg'); }
+.pc-B-bois.pc-B-bois { --p-wB: url('../img/pieces-bois/wB.svg'); --p-bB: url('../img/pieces-bois/bB.svg'); }
+.pc-Q-bois.pc-Q-bois { --p-wQ: url('../img/pieces-bois/wQ.svg'); --p-bQ: url('../img/pieces-bois/bQ.svg'); }
+.pc-K-bois.pc-K-bois { --p-wK: url('../img/pieces-bois/wK.svg'); --p-bK: url('../img/pieces-bois/bK.svg'); }
 .pc-P-astrea.pc-P-astrea { --p-wP: url('../img/pieces/wP.svg'); --p-bP: url('../img/pieces/bP.svg'); }
 .pc-R-astrea.pc-R-astrea { --p-wR: url('../img/pieces/wR.svg'); --p-bR: url('../img/pieces/bR.svg'); }
 .pc-N-astrea.pc-N-astrea { --p-wN: url('../img/pieces/wN.svg'); --p-bN: url('../img/pieces/bN.svg'); }

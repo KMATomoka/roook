@@ -1,7 +1,7 @@
 // Page « Profil » : statistiques d'un joueur en ligne (victoires, défaites, taux, séries, couleurs, rival…),
 // ses dernières parties, et pour son propre profil : le choix public / privé.
 import { $, escapeHtml } from './common.js';
-import { ICONS } from './icons.js'; // icônes dessinées (à la place des emojis)
+import { ICONS, ico } from './icons.js'; // icônes dessinées (à la place des emojis)
 import {
   session, toast, picHtml, loadProfile, setProfilePrivate, profileUrl, addFriend, acceptFriend, challenge, cadenceLabel, logout,
   setAvatar, removeAvatar, myEmail, changeEmail, setBio, BIO_MAX,
@@ -141,7 +141,7 @@ function render(p) {
       <div class="pf-id">
         <h1>${escapeHtml(p.username)}
           ${badgesRow(p, me)}
-          ${p.isPrivate ? '<span class="badge">🔒 privé</span>' : ''}
+          ${p.isPrivate ? `<span class="badge">${ico('lock')} privé</span>` : ''}
           ${p.relation === 'friend' ? '<span class="badge me">ami</span>' : ''}
         </h1>
         <p class="pf-meta">${presenceTxt}<span>Membre depuis ${date(p.createdAt, { month: 'long', year: 'numeric' })}</span>${p.friends ? `<span>${plural(p.friends.length, 'ami')}</span>` : ''}</p>
@@ -155,7 +155,7 @@ function render(p) {
 
     ${!p.visible ? `
       <section class="card pf-locked">
-        <div class="pf-lock">🔒</div>
+        <div class="pf-lock">${ico('lock')}</div>
         <h2>Ce profil est privé</h2>
         <p class="muted">Seuls les amis de ${escapeHtml(p.username)} voient ses statistiques et ses parties.${p.relation === 'none' ? ' Ajoute-le en ami pour les voir.' : ''}</p>
       </section>` : s.all.n === 0 ? `
@@ -176,7 +176,7 @@ function bioHtml(p, me) {
   if (!me) return text;
   return `<div class="pf-bio-box" id="bio-box">
     ${text}
-    <button class="link-btn" type="button" data-bio="edit">✏️ ${p.bio ? 'Modifier ma bio' : 'Écrire ma bio'}</button>
+    <button class="link-btn" type="button" data-bio="edit">${ico('pencil')} ${p.bio ? 'Modifier ma bio' : 'Écrire ma bio'}</button>
     <form class="pf-bio-form" id="bio-form" hidden>
       <textarea name="bio" maxlength="${BIO_MAX}" rows="3" placeholder="Ex. : Joueur du dimanche, fan des ouvertures risquées. Défie-moi en blitz !">${escapeHtml(p.bio || '')}</textarea>
       <div class="pf-bio-bar">
@@ -214,7 +214,7 @@ function badgeCard(p) {
     const has = owned.includes(id);
     if (!has && id !== 'royal') return ''; // les badges de rôle ne s'affichent que si on les a
     const on = p.badge === id;
-    const lock = !has ? `<span class="pf-badge-lock">🔒 ${Math.min(wins, ROYAL_WINS)} / ${ROYAL_WINS} victoires</span>` : '';
+    const lock = !has ? `<span class="pf-badge-lock">${ico('lock')} ${Math.min(wins, ROYAL_WINS)} / ${ROYAL_WINS} victoires</span>` : '';
     return `<button type="button" class="pf-badge-opt ${b.cls} ${on ? 'on' : ''} ${has ? '' : 'locked'}" data-badge="${id}" ${has ? '' : 'disabled'} aria-pressed="${on}">
       <span class="pf-badge-emoji">${b.emoji}</span><span class="pf-badge-name">${b.name}</span>${lock || `<span class="pf-badge-state">${on ? '✓ Affiché' : 'Afficher'}</span>`}
     </button>`;
@@ -224,7 +224,7 @@ function badgeCard(p) {
   const locked = all.filter(([id]) => !owned.includes(id)).map(option).join('');
   return `<section class="card pf-badge-card">
     <div>
-      <h2>🏅 Badge affiché en partie</h2>
+      <h2>${ico('medal')} Badge affiché en partie</h2>
       <p class="muted">Tu peux en porter un seul : son emoji s’affiche à côté de ton pseudo pendant tes parties.</p>
     </div>
     <div class="pf-badge-opts">
@@ -247,7 +247,7 @@ function actions(p) {
   if (p.relation === 'none') return '<button class="btn btn-primary" data-act="add">+ Ajouter en ami</button>';
   if (p.relation === 'sent') return '<span class="search-tag">Demande d’ami envoyée</span>';
   if (p.relation === 'received') return '<button class="btn btn-primary" data-act="accept">Accepter sa demande</button>';
-  return `<button class="btn btn-primary" data-act="challenge" ${p.online && !p.playing ? '' : 'disabled'} title="${p.online ? '' : 'Il doit être en ligne'}">⚔ Défier</button>`;
+  return `<button class="btn btn-primary" data-act="challenge" ${p.online && !p.playing ? '' : 'disabled'} title="${p.online ? '' : 'Il doit être en ligne'}">${ico('swords')} Défier</button>`;
 }
 
 /** Mon compte : adresse e-mail (privée), pour se connecter et récupérer son mot de passe. */
@@ -255,7 +255,7 @@ function accountCard() {
   const email = myEmail();
   return `<section class="card pf-account">
     <div>
-      <h2>✉ Adresse e-mail</h2>
+      <h2>${ico('mail')} Adresse e-mail</h2>
       <p class="muted">${email ? `${escapeHtml(email)} · visible par toi seul. Elle sert à te connecter et à récupérer ton mot de passe.` : '<span class="warn">Pas d’adresse e-mail : ajoute-en une pour pouvoir récupérer ton mot de passe.</span>'}</p>
       <form class="email-form" id="email-form" hidden novalidate>
         <input name="email" type="email" maxlength="200" placeholder="nouvelle.adresse@exemple.fr" autocomplete="email" required>
@@ -270,7 +270,7 @@ function accountCard() {
 function privacyCard(p) {
   return `<section class="card pf-privacy">
     <div>
-      <h2>${p.isPrivate ? '🔒 Profil privé' : '🌍 Profil public'}</h2>
+      <h2>${p.isPrivate ? `${ico('lock')} Profil privé` : `${ico('globe')} Profil public`}</h2>
       <p class="muted">${p.isPrivate
         ? 'Seuls tes amis voient tes statistiques et tes parties. Les autres joueurs voient juste ton pseudo et ta photo.'
         : 'Tout le monde voit tes statistiques et tes parties. Passe en privé pour les réserver à tes amis.'}</p>
@@ -308,7 +308,7 @@ function howList(c, total) {
 }
 
 function statsHtml(p, s) {
-  const streakTxt = !s.streak ? '—' : s.streakKind === 'w' ? `🔥 ${plural(s.streak, 'victoire')}` : s.streakKind === 'l' ? `${plural(s.streak, 'défaite')}` : `${plural(s.streak, 'nulle')}`;
+  const streakTxt = !s.streak ? '—' : s.streakKind === 'w' ? `${ico('fire')} ${plural(s.streak, 'victoire')}` : s.streakKind === 'l' ? `${plural(s.streak, 'défaite')}` : `${plural(s.streak, 'nulle')}`;
   const rival = s.rival;
   return `
     <section class="pf-overview">
@@ -386,7 +386,7 @@ function gameLine(p, g) {
     <span class="pf-res ${o}">${o === 'w' ? 'Victoire' : o === 'l' ? 'Défaite' : 'Nulle'}</span>
     <span class="pf-game-main"><span>contre ${opp}</span><small class="muted">${REASON_SHORT[g.reason] || ''} · ${Math.ceil(plies(g) / 2)} coups · ${g.me === 'w' ? 'Blancs' : 'Noirs'}</small></span>
     <span class="pf-game-date muted">${date(g.date, { day: 'numeric', month: 'short' })}</span>
-    <a class="btn btn-ghost small" href="${review}">📊 Bilan</a>
+    <a class="btn btn-ghost small" href="${review}">${ico('chart')} Bilan</a>
   </li>`;
 }
 
@@ -425,7 +425,7 @@ function wire(p) {
       e.preventDefault();
       try {
         await setBio(area.value);
-        toast('Bio enregistrée ✨', { cls: 'info' });
+        toast(`Bio enregistrée ${ico('dust')}`, { cls: 'info' });
         load(p.id);
       } catch (ex) {
         toast(escapeHtml(ex.message), { cls: 'error' });
@@ -439,7 +439,7 @@ function wire(p) {
     if (!file) return;
     try {
       await setAvatar(file);
-      toast('Photo de profil mise à jour ✨', { cls: 'info' });
+      toast(`Photo de profil mise à jour ${ico('dust')}`, { cls: 'info' });
       load(p.id);
     } catch (ex) {
       toast(escapeHtml(ex.message), { cls: 'error' });
@@ -462,7 +462,7 @@ function wire(p) {
       await changeEmail(email);
       emailForm.hidden = true;
       emailForm.reset();
-      toast(`📬 Un lien de confirmation a été envoyé à <b>${escapeHtml(email)}</b>. Clique dessus, puis reconnecte-toi avec cette adresse.`, { cls: 'info', duration: 12000 });
+      toast(`${ico('mail')} Un lien de confirmation a été envoyé à <b>${escapeHtml(email)}</b>. Clique dessus, puis reconnecte-toi avec cette adresse.`, { cls: 'info', duration: 12000 });
     } catch (ex) {
       toast(escapeHtml(ex.message), { cls: 'error' });
     }
@@ -472,7 +472,7 @@ function wire(p) {
     e.target.disabled = true;
     try {
       await setProfilePrivate(on);
-      toast(on ? '🔒 Ton profil est maintenant privé : seuls tes amis voient tes statistiques.' : '🌍 Ton profil est maintenant public.', { cls: 'info' });
+      toast(on ? `${ico('lock')} Ton profil est maintenant privé : seuls tes amis voient tes statistiques.` : `${ico('globe')} Ton profil est maintenant public.`, { cls: 'info' });
       load(p.id);
     } catch (ex) {
       e.target.checked = !on;

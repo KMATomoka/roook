@@ -4,6 +4,7 @@
 // vérifiées par Stockfish), gagner une pièce, défendre.
 // Le contenu est dans apprendre-data.js ; la progression est gardée dans le navigateur.
 import { Chessground } from '../vendor/chessground/chessground.min.js';
+import { ico } from './icons.js'; // icônes dessinées (à la place des emojis)
 import { $, Chess, legalDests, castleDest, isPromotion, askPromotion, getPref, setPref, frSan } from './common.js';
 import './compte.js'; // compte, barre du haut, apparence choisie dans l'inventaire
 import { createFx } from './fx.js';
@@ -100,6 +101,7 @@ let mistake = false; // un coup raté dans cet exercice (la série sans faute s'
 let seq = 0; // ouvertures : prochain coup de la suite
 let gen = 0; // change à chaque nouvelle tâche (pour ignorer les minuteries d'avant)
 let usedHelp = false; // problèmes : indice ou solution utilisés
+let seqHl = null; // ouvertures : le coup à jouer, surligné sur l'échiquier ({ from, to })
 
 const later = (ms, f) => {
   const g = gen;
@@ -123,6 +125,11 @@ function dests() {
 function targetMap() {
   const m = new Map();
   for (const sq of task.targets || []) m.set(sq, visited.has(sq) ? 'learn-target done' : 'learn-target');
+  // Ouvertures : la pièce à bouger et sa case d'arrivée, bien visibles
+  if (seqHl && !busy && !finished) {
+    m.set(seqHl.from, 'seq-from');
+    m.set(seqHl.to, 'seq-to');
+  }
   return m;
 }
 
@@ -144,9 +151,17 @@ function sync(lastMove) {
   });
 }
 
+/** Ouvertures : ce que vient de jouer l'adversaire, dans un encadré à part (pièce, coup, explication). */
+function oppSays(m, note) {
+  const el = $('#p-feedback');
+  el.className = 'learn-feedback opp';
+  el.innerHTML = `<span class="opp-who">${m.color === 'w' ? 'Les Blancs ont joué' : 'Les Noirs ont joué'}</span>
+    <span class="opp-move">${icon(ROLE[m.piece], colorName(m.color))}<b>${frSan(m.san)}</b></span>${note ? `<span class="opp-note">${note.charAt(0).toUpperCase() + note.slice(1)}</span>` : ''}`;
+}
+
 function feedback(text, kind = '') {
   const el = $('#p-feedback');
-  el.textContent = text;
+  el.innerHTML = text;
   el.className = 'learn-feedback' + (kind ? ' ' + kind : '');
 }
 
@@ -235,10 +250,11 @@ function judge(m) {
     return;
   }
   if (g === 'sequence') {
-    const [san, say] = task.moves[seq];
+    const [san] = task.moves[seq];
     const want = san.split('|').map(noCheck);
-    if (!want.includes(noCheck(m.san))) return wrong(`Pas ce coup-là. ${say}`, 1900);
+    if (!want.includes(noCheck(m.san))) return wrong(`Pas ce coup-là : joue ${frSan(san.split('|')[0])}, la pièce surlignée en vert.`, 1900);
     seq++;
+    seqHl = null;
     feedback(pick(GOOD), 'good');
     return seqNext();
   }
@@ -353,7 +369,7 @@ function success(text) {
     }
     progress.lessons[L.id] = true;
     save();
-    feedback(`${text || pick(BRAVO)} Leçon terminée ! 🎉`, 'good');
+    feedback(`${text || pick(BRAVO)} Leçon terminée ! ${ico('party')}`, 'good');
     const same = LESSONS.filter((l) => groupOf(l) === groupOf(L));
     const next = same[same.indexOf(L) + 1];
     const after = isOpening(L) ? ['Toutes les ouvertures →', '#ouvertures'] : ['Passer aux entraînements →', '#exercices'];
@@ -371,7 +387,7 @@ function success(text) {
     const themes = task.themes.split(' ').map((t) => THEME_FR[t]).filter(Boolean);
     feedback(
       `${clean ? text || pick(BRAVO) : 'Résolu, mais pas du premier coup.'} ${d >= 0 ? '+' : '−'}${Math.abs(d)} au classement.` +
-        (clean && st.streak > 1 ? ` 🔥 ${st.streak} d’affilée !` : ''),
+        (clean && st.streak > 1 ? ` ${ico('fire')} ${st.streak} d’affilée !` : ''),
       clean ? 'good' : '',
     );
     if (themes.length) {
@@ -386,7 +402,7 @@ function success(text) {
     st.best = Math.max(st.best, st.streak);
     save();
     renderSteps();
-    if (st.streak > 1) feedback(`${text || pick(BRAVO)} 🔥 ${st.streak} d’affilée sans faute !`, 'good');
+    if (st.streak > 1) feedback(`${text || pick(BRAVO)} ${ico('fire')} ${st.streak} d’affilée sans faute !`, 'good');
     showNext('Position suivante →', `#infini/${cur.mode}`);
     prefetch = { mode: cur.mode, promise: generate(cur.mode) }; // la suivante se prépare pendant que tu regardes
   } else {
@@ -435,6 +451,7 @@ function startTask() {
   chess = task.goal === 'sequence' ? new Chess(fen) : cur.kind === 'lesson' ? load(fen) : new Chess(fen);
   player = task.side || (task.pre || task.goal === 'problem' ? other(fenTurn) : fenTurn);
   seq = 0;
+  seqHl = null;
   orientation = player;
   visited = new Set();
   finished = false;
@@ -495,12 +512,24 @@ function seqNext() {
     return success(task.end);
   }
   const mine = chess.turn() === player;
+  // Où on en est : « Ton coup 3 sur 6 »
+  const myMoves = task.moves.filter((_, i) => (i % 2 === 0) === (new Chess(task.fen || START).turn() === player));
+  const myDone = task.moves.slice(0, seq).filter((_, i) => (i % 2 === 0) === (new Chess(task.fen || START).turn() === player)).length;
   if (mine) {
     busy = false;
-    $('#p-text').innerHTML = `<b>${task.title}</b><br>${task.moves[seq][1]}`;
+    // Le coup à jouer : nommé, avec sa pièce, et surligné sur l'échiquier (pièce + case d'arrivée + flèche)
+    const san = task.moves[seq][0].split('|')[0];
+    const m = new Chess(chess.fen()).move(san);
+    seqHl = { from: m.from, to: m.to };
+    $('#p-text').innerHTML = `<span class="seq-count">${task.title} · ton coup ${myDone + 1} sur ${myMoves.length}</span>
+      <span class="seq-do">À toi : joue ${icon(ROLE[m.piece], colorName(m.color))}<b>${frSan(m.san)}</b></span>
+      <span class="seq-why">${task.moves[seq][1]}</span>`;
     sync();
+    ground.setAutoShapes([{ orig: m.from, dest: m.to, brush: 'paleGreen' }]);
     return;
   }
+  seqHl = null;
+  ground.setAutoShapes([]);
   busy = true;
   sync();
   later(seq === 0 ? 700 : 750, () => {
@@ -508,7 +537,8 @@ function seqNext() {
     const m = chess.move(san);
     fx.move(m, chess, { me: player });
     seq++;
-    feedback(note ? `${frSan(m.san)} : ${note}` : '', '');
+    // La réponse de l'adversaire : dans son propre encadré, avec sa pièce
+    oppSays(m, note);
     sync([m.from, m.to]);
     seqNext();
   });
@@ -518,12 +548,12 @@ function renderSteps(doneUpTo) {
   const ol = $('#p-steps');
   if (cur.kind === 'problem') {
     const st = progress.problems;
-    ol.innerHTML = `<li class="learn-stat">📈 Ton classement <b>${Math.round(st.rating)}</b></li><li class="learn-stat">🔥 Série <b>${st.streak}</b></li><li class="learn-stat">✓ Réussis <b>${st.solved}</b> / ${st.played}</li>`;
+    ol.innerHTML = `<li class="learn-stat">${ico('trend')} Ton classement <b>${Math.round(st.rating)}</b></li><li class="learn-stat">${ico('fire')} Série <b>${st.streak}</b></li><li class="learn-stat">✓ Réussis <b>${st.solved}</b> / ${st.played}</li>`;
     return;
   }
   if (cur.kind === 'infinite') {
     const st = progress.infinite;
-    ol.innerHTML = `<li class="learn-stat">🔥 Série sans faute <b>${st.streak}</b></li><li class="learn-stat">🏆 Record <b>${st.best}</b></li><li class="learn-stat">✓ Réussis <b>${st.solved}</b></li>`;
+    ol.innerHTML = `<li class="learn-stat">${ico('fire')} Série sans faute <b>${st.streak}</b></li><li class="learn-stat">${ico('trophy')} Record <b>${st.best}</b></li><li class="learn-stat">✓ Réussis <b>${st.solved}</b></li>`;
     return;
   }
   if (cur.kind === 'lesson') {
@@ -722,7 +752,7 @@ function renderHome(tab) {
   const lessonsDone = basics.filter((l) => progress.lessons[l.id]).length;
   const openingsDone = openings.filter((l) => progress.lessons[l.id]).length;
   const puzzlesDone = PUZZLES.filter((p) => progress.puzzles[p.id]).length;
-  $('#progress').innerHTML = `<h2>Ta progression</h2>${bar(lessonsDone, basics.length, '📘 Leçons')}${bar(openingsDone, openings.length, '♞ Ouvertures')}${bar(puzzlesDone, PUZZLES.length, '🎯 Exercices')}<p class="learn-progress-inf">🧩 Problèmes : classement <b>${Math.round(progress.problems.rating)}</b> · <b>${progress.problems.solved}</b> réussis</p><p class="learn-progress-inf">♾ Mats réussis : <b>${progress.infinite.solved}</b> · record <b>${progress.infinite.best}</b> d’affilée</p>`;
+  $('#progress').innerHTML = `<h2>Ta progression</h2>${bar(lessonsDone, basics.length, `${ico('book')} Leçons`)}${bar(openingsDone, openings.length, '♞ Ouvertures')}${bar(puzzlesDone, PUZZLES.length, '🎯 Exercices')}<p class="learn-progress-inf">🧩 Problèmes : classement <b>${Math.round(progress.problems.rating)}</b> · <b>${progress.problems.solved}</b> réussis</p><p class="learn-progress-inf">♾ Mats réussis : <b>${progress.infinite.solved}</b> · record <b>${progress.infinite.best}</b> d’affilée</p>`;
 
   const chaptersHtml = (chapters, list) => {
   const nextLesson = list.find((l) => !progress.lessons[l.id]);
@@ -754,9 +784,9 @@ function renderHome(tab) {
   const pb = progress.problems;
   $('#pane-exercices').innerHTML = `<article class="card learn-infinite learn-problems">
       <div class="learn-infinite-text">
-        <h2>🧩 Problèmes</h2>
+        <h2>${ico('puzzle')} Problèmes</h2>
         <p class="muted">Des milliers de vrais problèmes tirés de parties, choisis à ton niveau : fourchettes, clouages, mats en 2… Ton classement monte à chaque problème réussi du premier coup.</p>
-        <p class="learn-infinite-stats">📈 Classement <b>${Math.round(pb.rating)}</b> · ✓ Réussis <b>${pb.solved}</b> / ${pb.played} · 🏆 Record <b>${pb.best}</b> d’affilée</p>
+        <p class="learn-infinite-stats">${ico('trend')} Classement <b>${Math.round(pb.rating)}</b> · ✓ Réussis <b>${pb.solved}</b> / ${pb.played} · ${ico('trophy')} Record <b>${pb.best}</b> d’affilée</p>
       </div>
       <a class="btn btn-primary" href="#problemes/tous">Résoudre un problème →</a>
       ${themeLinks('')}
@@ -764,9 +794,9 @@ function renderHome(tab) {
     </article>
     <article class="card learn-infinite">
       <div class="learn-infinite-text">
-        <h2>♾ Mat à l’infini</h2>
+        <h2>${ico('infinity')} Mat à l’infini</h2>
         <p class="muted">Des positions de mat créées au hasard, sans fin : en 1, 2 ou 3 coups. Ton adversaire se défend toujours au mieux.</p>
-        <p class="learn-infinite-stats">🔥 Série sans faute <b>${inf.streak}</b> · 🏆 Record <b>${inf.best}</b> · ✓ Réussis <b>${inf.solved}</b></p>
+        <p class="learn-infinite-stats">${ico('fire')} Série sans faute <b>${inf.streak}</b> · ${ico('trophy')} Record <b>${inf.best}</b> · ✓ Réussis <b>${inf.solved}</b></p>
       </div>
       ${modeLinks('')}
     </article>
@@ -828,15 +858,15 @@ $('#btn-hint').addEventListener('click', async () => {
     if (!best || fen !== chess.fen()) return;
     const c = new Chess(fen);
     const m = c.move({ from: best.slice(0, 2), to: best.slice(2, 4), promotion: best[4] });
-    $('#p-hint').textContent = `💡 Joue ${PIECE_HINT[m.piece]}${c.inCheck() ? ', en donnant échec' : ''}.`;
+    $('#p-hint').innerHTML = `${ico('bulb')} Joue ${PIECE_HINT[m.piece]}${c.inCheck() ? ', en donnant échec' : ''}.`;
   } else if (task.goal === 'problem') {
     if (finished || busy) return;
     const m = solutionMove();
     if (!m) return;
     usedHelp = true;
     rateProblem(false);
-    $('#p-hint').textContent = `💡 Joue ${PIECE_HINT[m.piece]}. (Ce problème comptera comme raté.)`;
-  } else $('#p-hint').textContent = '💡 ' + task.hint;
+    $('#p-hint').innerHTML = `${ico('bulb')} Joue ${PIECE_HINT[m.piece]}. (Ce problème comptera comme raté.)`;
+  } else $('#p-hint').innerHTML = `${ico('bulb')} ${task.hint}`;
   $('#p-hint').hidden = false;
 });
 $('#btn-solution').addEventListener('click', async () => {

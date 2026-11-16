@@ -26,7 +26,7 @@
     </nav>
     <div class="topbar-right">
       <span class="mode-label" id="mode-label"></span>
-      <button class="icon-btn sound-toggle" id="sound-toggle" type="button" title="Couper le son">🔊</button>
+      <button class="icon-btn sound-toggle" id="sound-toggle" type="button" title="Couper le son"><span class="ico" data-ico="sound" aria-hidden="true"></span></button>
     </div>
   </header>
 
@@ -53,10 +53,10 @@
         <div class="moves-head">
           <h2>Coups</h2>
           <div class="nav">
-            <button class="icon-btn" data-nav="first" title="Début">⏮</button>
-            <button class="icon-btn" data-nav="prev" title="Précédent (←)">◀</button>
-            <button class="icon-btn" data-nav="next" title="Suivant (→)">▶</button>
-            <button class="icon-btn" data-nav="last" title="Position actuelle">⏭</button>
+            <button class="icon-btn" data-nav="first" title="Début"><span data-nav-ico="first"></span></button>
+            <button class="icon-btn" data-nav="prev" title="Précédent (←)"><span data-nav-ico="prev"></span></button>
+            <button class="icon-btn" data-nav="next" title="Suivant (→)"><span data-nav-ico="next"></span></button>
+            <button class="icon-btn" data-nav="last" title="Position actuelle"><span data-nav-ico="last"></span></button>
           </div>
         </div>
         <ol class="moves" id="moves"></ol>
@@ -65,10 +65,10 @@
       <div class="actions" id="actions">
         <button class="btn btn-ghost" id="btn-draw" hidden>½ Proposer nulle</button>
         <button class="btn btn-ghost" id="btn-flip">⇅ Tourner</button>
-        <button class="btn btn-ghost premove-btn" id="btn-premove" type="button" aria-pressed="false" hidden title="Jouer à l'avance : la pièce lâchée pendant le tour adverse sera jouée dès que c'est ton tour (sur ordinateur, pas besoin du bouton : garde Maj enfoncée en déplaçant la pièce)">⚡ Prémove</button>
+        <button class="btn btn-ghost premove-btn" id="btn-premove" type="button" aria-pressed="false" hidden title="Jouer à l'avance : la pièce lâchée pendant le tour adverse sera jouée dès que c'est ton tour (sur ordinateur, pas besoin du bouton : garde Maj enfoncée en déplaçant la pièce)"><span class="ico" data-ico="bolt" aria-hidden="true"></span> Prémove</button>
         <button class="btn btn-danger" id="btn-resign">⚑ Abandonner</button>
       </div>
-      <p class="leave-note" id="leave-note" hidden>⚠️ Quitter ou recharger la page pendant la partie = <strong>défaite par abandon</strong>.</p>
+      <p class="leave-note" id="leave-note" hidden><span class="ico" data-ico="warning" aria-hidden="true"></span> Quitter ou recharger la page pendant la partie = <strong>défaite par abandon</strong>.</p>
 
       <div class="card chat" id="chat" hidden>
         <h2>Discussion</h2>
@@ -82,7 +82,7 @@
   </main>
 
   <dialog id="leave-dialog" class="modal leave-dialog">
-    <div class="end-icon">⚠️</div>
+    <div class="end-icon"><span class="ico" data-ico="warning" aria-hidden="true"></span></div>
     <h2>Quitter la partie ?</h2>
     <p>La partie est en cours : si tu quittes maintenant, tu <strong>perds par abandon</strong>.</p>
     <div class="end-actions">
@@ -96,12 +96,12 @@
     <h2 id="end-title"></h2>
     <p id="end-sub"></p>
     <div class="end-offer" id="end-offer" hidden>
-      <div><span aria-hidden="true">⚔</span> <b id="end-offer-text"></b></div>
+      <div><span class="ico" data-ico="swords" aria-hidden="true"></span> <b id="end-offer-text"></b></div>
       <button class="btn btn-ghost small" type="button" id="end-offer-no">Refuser</button>
     </div>
     <p class="end-note" id="end-note" hidden></p>
     <div class="end-actions">
-      <a class="btn btn-primary" id="end-review">📊 Voir le bilan</a>
+      <a class="btn btn-primary" id="end-review"><span class="ico" data-ico="chart" aria-hidden="true"></span> Voir le bilan</a>
       <button class="btn btn-ghost" id="end-rematch">Revanche</button>
       <a class="btn btn-ghost" href="./">Accueil</a>
     </div>

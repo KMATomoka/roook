@@ -1,9 +1,11 @@
 // Page « Bilan » : le moteur analyse chaque coup, puis Noa, le coach, explique la partie.
 import { Chessground } from '../vendor/chessground/chessground.min.js';
+import { ico } from './icons.js'; // icônes dessinées (à la place des emojis)
 import { Engine, toWhiteCp, winPercent, formatEval } from './engine.js';
 import { attachArrows } from './arrows.js';
 import { explainMove, resetPhrasing } from './explain.js';
 import { scrollMoveIntoList } from './common.js';
+import { legalDests, castleDest, isPromotion, askPromotion } from './common.js';
 import { $, $$, Chess, colorName, getGame, loadGames, saveGame, resultText, escapeHtml, frSan, gameRow, serverGameToLocal, historyToGame } from './common.js';
 import { session, historyGame } from './compte.js';
 
@@ -31,6 +33,11 @@ let cur = 0;
 let orientation = 'w';
 let ground = null;
 let marks = null;
+// Variante jouée à la main : on bouge soi-même les pièces pour tester un coup, le moteur dit s'il est bon.
+// steps[i] = { move, fen, eval, best, cat, loss, pending } ; vIdx = nombre de coups de la variante affichés.
+let vari = null;
+let vIdx = 0;
+let vEngine = null;
 
 // ---------------------------------------------------------------------------
 // Chargement
@@ -299,9 +306,10 @@ function showReview() {
   ground = Chessground($('#board'), {
     viewOnly: false,
     coordinates: true,
-    movable: { free: false, color: undefined },
-    draggable: { enabled: false },
-    selectable: { enabled: false },
+    // On peut bouger soi-même les pièces (les deux camps) pour tester un autre coup
+    movable: { free: false, color: 'both', showDests: true, events: { after: (o, d) => onUserMove(o, d) } },
+    draggable: { enabled: true },
+    selectable: { enabled: true },
     drawable: { enabled: false }, // flèches au clic droit : arrows.js
     animation: { duration: 160 },
   });
@@ -310,21 +318,26 @@ function showReview() {
     const b = e.target.closest('[data-ply]');
     if (b) goTo(Number(b.dataset.ply));
   });
-  $$('[data-nav]').forEach((b) =>
-    b.addEventListener('click', () => {
-      const nav = b.dataset.nav;
-      goTo(nav === 'first' ? 0 : nav === 'prev' ? cur - 1 : nav === 'next' ? cur + 1 : plies.length);
-    }),
-  );
+  $$('[data-nav]').forEach((b) => b.addEventListener('click', () => navigate(b.dataset.nav)));
+  $('#comment').addEventListener('click', (e) => {
+    if (e.target.closest('[data-exit-var]')) return goTo(vari ? vari.base : cur);
+    const s = e.target.closest('[data-vstep]');
+    if (s && vari) {
+      vIdx = Number(s.dataset.vstep);
+      showVar();
+    }
+  });
   $('#flip').addEventListener('click', () => {
     orientation = orientation === 'w' ? 'b' : 'w';
-    goTo(cur);
+    if (vari) showVar();
+    else goTo(cur);
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowLeft') goTo(cur - 1);
-    if (e.key === 'ArrowRight') goTo(cur + 1);
-    if (e.key === 'ArrowUp') goTo(0);
-    if (e.key === 'ArrowDown') goTo(plies.length);
+    if (e.key === 'ArrowLeft') navigate('prev');
+    if (e.key === 'ArrowRight') navigate('next');
+    if (e.key === 'ArrowUp') navigate('first');
+    if (e.key === 'ArrowDown') navigate('last');
+    if (e.key === 'Escape' && vari) goTo(vari.base);
   });
   renderMoveList();
   // On commence sur la plus grosse erreur du joueur, sinon au début.
@@ -372,7 +385,7 @@ function writeCoach(st) {
       const best = uciToSan(fens[worst.ply - 1], bests[worst.ply - 1]);
       lines.push(`Le tournant : au coup <a href="#" data-goto="${worst.ply}">${moveLabel(worst)}</a>, ${best ? `<b>${frSan(best)}</b> était bien meilleur` : 'il y avait mieux'}.`);
     }
-    lines.push(`<span class="tip">💡 ${tip(who, phases)}</span>`);
+    lines.push(`<span class="tip">${ico('bulb')} ${tip(who, phases)}</span>`);
   } else {
     title = 'Le bilan des deux joueurs';
     for (const c of ['w', 'b']) {
@@ -452,7 +465,38 @@ function renderMoveList() {
   $('#moves').innerHTML = html;
 }
 
+/** Boutons et flèches : dans une variante, on avance ou recule dans la variante ; sinon dans la partie. */
+function navigate(nav) {
+  if (vari) {
+    if (nav === 'prev') {
+      if (vIdx > 1) {
+        vIdx--;
+        return showVar();
+      }
+      return goTo(vari.base);
+    }
+    if (nav === 'next') {
+      if (vIdx < vari.steps.length) {
+        vIdx++;
+        showVar();
+      }
+      return;
+    }
+    return goTo(nav === 'first' ? 0 : plies.length);
+  }
+  goTo(nav === 'first' ? 0 : nav === 'prev' ? cur - 1 : nav === 'next' ? cur + 1 : plies.length);
+}
+
+/** Les pièces de la position affichée peuvent bouger (les deux camps, selon le trait). */
+function setMovable(fen) {
+  const c = new Chess(fen);
+  ground.set({ movable: { color: c.isGameOver() ? undefined : 'both', dests: legalDests(c) } });
+}
+
 function goTo(ply) {
+  vari = null;
+  vIdx = 0;
+  $('.review-board')?.classList.remove('exploring');
   cur = Math.max(0, Math.min(plies.length, ply));
   const fen = fens[cur];
   const c = new Chess(fen);
@@ -471,6 +515,7 @@ function goTo(ply) {
   });
   marks.update(fen);
   marks.setAuto(shapes);
+  setMovable(fen);
   // Badge de la catégorie sur la case d'arrivée
   $('#board .move-badge')?.remove();
   if (m) {
@@ -503,6 +548,179 @@ function goTo(ply) {
   $$('#graph .cursor').forEach((el) => el.setAttribute('x1', gx(cur)) || el.setAttribute('x2', gx(cur)));
 }
 
+// ---------------------------------------------------------------------------
+// Tester ses propres coups (variante)
+// ---------------------------------------------------------------------------
+const varFen = () => (vari && vIdx > 0 ? vari.steps[vIdx - 1].fen : fens[vari ? vari.base : cur]);
+/** Évaluation (point de vue des Blancs) et meilleur coup de la position avant le coup n° i de la variante. */
+const varBefore = (i) => (i === 0 ? { eval: evals[vari.base], best: bests[vari.base] } : vari.steps[i - 1]);
+
+async function onUserMove(orig, dest) {
+  const fenBefore = vari ? varFen() : fens[cur];
+  const c = new Chess(fenBefore);
+  dest = castleDest(c, orig, dest);
+  let promotion;
+  if (isPromotion(c, orig, dest)) {
+    promotion = await askPromotion(c.turn());
+    if (!promotion) return vari ? showVar() : goTo(cur);
+  }
+  let m;
+  try {
+    m = c.move({ from: orig, to: dest, promotion });
+  } catch {
+    m = null;
+  }
+  if (!m) return vari ? showVar() : goTo(cur);
+  if (!vari) {
+    // Le coup de la partie : on avance simplement
+    const next = plies[cur];
+    if (next && next.from === m.from && next.to === m.to && (next.promotion || '') === (m.promotion || '')) return goTo(cur + 1);
+    vari = { base: cur, steps: [] };
+    vIdx = 0;
+  }
+  // Rejoué depuis le milieu de la variante : la suite est remplacée
+  vari.steps = vari.steps.slice(0, vIdx);
+  m.ply = vari.base + vari.steps.length + 1; // numéro du demi-coup (pour « 12. Cf3 »)
+  const step = { move: m, fen: c.fen(), pending: true };
+  vari.steps.push(step);
+  vIdx = vari.steps.length;
+  const i = vIdx - 1;
+  const v = vari;
+  showVar();
+  await evalStep(v, i);
+  if (vari === v && v.steps[i] === step) showVar();
+}
+
+/** Le moteur note le coup : évaluation après le coup, meilleur coup ensuite, et la chance de gain perdue. */
+async function evalStep(v, i) {
+  const step = v.steps[i];
+  const pos = new Chess(step.fen);
+  if (pos.isCheckmate()) {
+    step.eval = pos.turn() === 'w' ? -10000 : 10000;
+    step.best = null;
+  } else if (pos.isDraw() || pos.isStalemate()) {
+    step.eval = 0;
+    step.best = null;
+  } else {
+    vEngine ||= new Engine();
+    const res = await vEngine.analyse(step.fen, { depth: DEPTH });
+    step.eval = toWhiteCp(res.lines[0], pos.turn());
+    step.best = res.bestmove;
+  }
+  // L'évaluation d'avant (le coup précédent de la variante doit être noté d'abord)
+  const before = i === 0 ? { eval: evals[v.base], best: bests[v.base] } : v.steps[i - 1];
+  for (let k = 0; k < 100 && before.pending; k++) await new Promise((r) => setTimeout(r, 100));
+  const m = step.move;
+  const sign = m.color === 'w' ? 1 : -1;
+  const wb = winPercent(sign * before.eval);
+  const wa = winPercent(sign * step.eval);
+  const loss = Math.max(0, wb - wa);
+  const uci = m.from + m.to + (m.promotion || '');
+  let cat = uci === before.best ? 'best' : loss < 2 ? 'excellent' : loss < 7 ? 'good' : loss < 12 ? 'inaccuracy' : loss < 22 ? 'mistake' : 'blunder';
+  if (sign * step.eval < -9000 && sign * before.eval > -9000) cat = 'blunder'; // laisse un mat
+  if (sign * before.eval > 9000 && sign * step.eval < 9000 && cat !== 'best') cat = wa > 85 ? 'mistake' : 'blunder'; // mat raté
+  if (m.san.includes('#')) cat = 'best';
+  Object.assign(step, { cat, loss, pending: false });
+}
+
+/** Affiche la variante : plateau, flèche du meilleur coup, barre d'évaluation et l'avis de Noa. */
+function showVar() {
+  $('.review-board')?.classList.add('exploring');
+  const fen = varFen();
+  const c = new Chess(fen);
+  const step = vIdx > 0 ? vari.steps[vIdx - 1] : null;
+  const shapes = [];
+  if (step && !step.pending && ['inaccuracy', 'mistake', 'blunder'].includes(step.cat)) {
+    const b = varBefore(vIdx - 1).best;
+    if (b) shapes.push({ from: b.slice(0, 2), to: b.slice(2, 4), color: 'green' });
+  }
+  ground.set({
+    fen,
+    orientation: colorName(orientation),
+    lastMove: step ? [step.move.from, step.move.to] : undefined,
+    check: c.inCheck() ? colorName(c.turn()) : false,
+    turnColor: colorName(c.turn()),
+  });
+  marks.update(fen);
+  marks.setAuto(shapes);
+  setMovable(fen);
+  $('#board .move-badge')?.remove();
+  if (step && !step.pending) {
+    const badge = document.createElement('div');
+    badge.className = `move-badge badge ${CATS[step.cat].cls}`;
+    badge.textContent = CATS[step.cat].sym;
+    const file = step.move.to.charCodeAt(0) - 97;
+    const rank = Number(step.move.to[1]) - 1;
+    const x = orientation === 'w' ? file : 7 - file;
+    const y = orientation === 'w' ? 7 - rank : rank;
+    badge.style.left = `calc(${(x + 1) * 12.5}% - 14px)`;
+    badge.style.top = `calc(${y * 12.5}% - 8px)`;
+    $('#board').appendChild(badge);
+  }
+  // Barre d'évaluation : celle du coup testé (ou de la position de départ de la variante)
+  const cp = step ? (step.pending ? null : step.eval) : evals[vari.base];
+  if (cp !== null && cp !== undefined) {
+    const pct = winPercent(cp);
+    $('#eval-fill').style.height = `${orientation === 'w' ? pct : 100 - pct}%`;
+    $('#eval-num').textContent = formatEval(cp);
+    $('#eval-num').className = cp >= 0 ? 'w' : 'b';
+  }
+  $('#comment').innerHTML = varComment(step);
+  $$('#moves .mv').forEach((b) => b.classList.toggle('active', Number(b.dataset.ply) === vari.base));
+}
+
+function varComment(step) {
+  const base = vari.base;
+  const line = vari.steps
+    .map((s, k) => {
+      const p = base + k;
+      const num = p % 2 === 0 ? `${p / 2 + 1}. ` : k === 0 ? `${Math.ceil(p / 2)}… ` : '';
+      const cls = s.pending ? '' : CATS[s.cat].cls;
+      return `<button class="mv ${cls} ${k + 1 === vIdx ? 'active' : ''}" data-vstep="${k + 1}">${num}${frSan(s.move.san)}${s.pending ? '' : `<i>${CATS[s.cat].sym}</i>`}</button>`;
+    })
+    .join(' ');
+  const head = `<div class="var-bar"><span class="var-tag">Ton essai</span><div class="var-line">${line}</div>
+    <button class="btn btn-ghost small" type="button" data-exit-var>↩ Revenir à la partie</button></div>`;
+  if (!step) return head + noaSays('neutre', '<p>Joue un coup sur l’échiquier : je te dis s’il est bon.</p>');
+  if (step.pending) return head + noaSays('hmm', '<p>Je regarde ton coup…</p>');
+  const cat = CATS[step.cat];
+  const i = vIdx - 1;
+  const before = varBefore(i);
+  const fenBefore = i === 0 ? fens[base] : vari.steps[i - 1].fen;
+  let text = '';
+  try {
+    resetPhrasing((base + i) * 7 + 5);
+    text = explainMove({
+      fenBefore,
+      move: step.move,
+      cat: step.cat,
+      bestUci: before.best,
+      replyUci: step.best,
+      evalBefore: before.eval,
+      evalAfter: step.eval,
+      prior: [...plies.slice(0, base), ...vari.steps.slice(0, i).map((s) => s.move)],
+    });
+  } catch {
+    text = `<p>${cat.label}.</p>`;
+  }
+  // Comparé au coup joué dans la partie
+  let cmp = '';
+  if (i === 0 && plies[base]) {
+    const g = plies[base];
+    cmp = `<p class="muted var-cmp">Dans la partie : ${frSan(g.san)} <span class="cat-name ${CATS[g.cat].cls}">${CATS[g.cat].label}</span></p>`;
+  }
+  let sugg = '';
+  if (['inaccuracy', 'mistake', 'blunder'].includes(step.cat) && before.best) {
+    const san = uciToSan(fenBefore, before.best);
+    if (san) sugg = `<p class="pv"><span class="muted">Meilleur coup ici :</span> ${frSan(san)}</p>`;
+  }
+  const delta = step.loss >= 3 ? `<span class="loss">−${step.loss.toFixed(0)} % de chances de gain</span>` : '';
+  return `${head}<div class="comment-head"><span class="badge ${cat.cls}">${cat.sym}</span>
+      <h3>${moveLabel(step.move)} <span class="cat-name ${cat.cls}">${cat.label}</span></h3><span class="eval-pill">${formatEval(step.eval)}</span></div>
+    ${delta ? `<p class="muted mover-line">${delta}</p>` : ''}
+    ${noaSays(EMOTE[step.cat], text + sugg)}${cmp}`;
+}
+
 // Expression de Noa selon la qualité du coup
 const EMOTE = { best: 'frime', excellent: 'content', good: 'neutre', inaccuracy: 'hmm', mistake: 'grimace', blunder: 'surpris' };
 
@@ -514,7 +732,7 @@ function noaSays(emote, html) {
 function commentFor(ply) {
   if (ply === 0) {
     return `<div class="comment-head"><h3>Position de départ</h3></div>
-      ${noaSays('neutre', '<p>Salut, c’est Noa ! Avance coup par coup avec les flèches ← → (ou clique sur un coup) : je t’explique ce qui marche, ce qui coince, et ce qu’il fallait jouer.</p>')}`;
+      ${noaSays('neutre', '<p>Salut, c’est Noa ! Avance coup par coup avec les flèches ← → (ou clique sur un coup) : je t’explique ce qui marche, ce qui coince, et ce qu’il fallait jouer.</p><p>Tu peux aussi <b>bouger les pièces toi-même</b> pour tester un autre coup : je te dis s’il est bon.</p>')}`;
   }
   const m = plies[ply - 1];
   const cat = CATS[m.cat];

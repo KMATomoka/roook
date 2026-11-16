@@ -1,5 +1,6 @@
 // Page « Jouer » : adversaire au hasard, contre un ami (comptes), contre l'ordinateur (Noa, Adriz ou Astrea), ou sur le même écran ; et les dernières parties.
 import { LEVELS } from './engine.js';
+import { ico } from './icons.js'; // icônes dessinées (à la place des emojis)
 import { $, $$, getPref, setPref, loadGames, gameRow, escapeHtml, RIVALS, rivalOf, faceUrl } from './common.js';
 import { session, challenge, watchFriends, picHtml, profileUrl, CADENCES } from './compte.js';
 import { findOpponent } from './matchmaking.js';
@@ -50,7 +51,7 @@ function renderFriends() {
         const label = f.playing ? 'en partie' : f.online ? 'en ligne' : 'hors ligne';
         return `<li class="person">${picHtml(f.username, f.avatar, 'person-avatar', `<i class="presence ${status}"></i>`)}
           <span class="person-name"><a class="person-link" href="${profileUrl(f.id)}">${escapeHtml(f.username)}</a> <small class="status-${status}">${label}</small></span>
-          <span class="person-actions"><button class="btn btn-primary small" data-challenge="${f.id}" ${status === 'online' ? '' : 'disabled'}>⚔ Défier</button></span></li>`;
+          <span class="person-actions"><button class="btn btn-primary small" data-challenge="${f.id}" ${status === 'online' ? '' : 'disabled'}>${ico('swords')} Défier</button></span></li>`;
       })
       .join('')}</ul>
     <a class="more-link" href="amis.html">Gérer mes amis →</a>`;
@@ -87,7 +88,7 @@ function renderMatchForm() {
       <label>Temps pour chaque joueur
         <select name="cadence">${CADENCES.map(([k, label]) => `<option value="${k}"${k === saved ? ' selected' : ''}>${label}</option>`).join('')}</select>
       </label>
-      <button class="btn btn-primary">🎲 Trouver un adversaire</button>
+      <button class="btn btn-primary">${ico('dice')} Trouver un adversaire</button>
     </form>`;
   $('#form-mm').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -101,7 +102,7 @@ function startSearch(c) {
   const t0 = Date.now();
   let waiting = 1;
   mmBox.innerHTML = `<div class="mm-search" role="status">
-      <div class="mm-radar" aria-hidden="true"><span></span><span></span><span>🎲</span></div>
+      <div class="mm-radar" aria-hidden="true"><span></span><span></span><span>${ico('dice')}</span></div>
       <p class="mm-title">Recherche d’un adversaire…</p>
       <p class="muted">${escapeHtml(cadenceName(c))} · <span id="mm-time">0:00</span></p>
       <p class="muted mm-waiting" id="mm-waiting"></p>
@@ -128,7 +129,7 @@ function startSearch(c) {
     onFound: (gameId) => {
       clearInterval(searchTimer);
       cancelSearch = null;
-      mmBox.innerHTML = `<div class="mm-search found" role="status"><div class="mm-radar" aria-hidden="true"><span>⚔</span></div>
+      mmBox.innerHTML = `<div class="mm-search found" role="status"><div class="mm-radar" aria-hidden="true"><span>${ico('swords')}</span></div>
         <p class="mm-title">Adversaire trouvé !</p><p class="muted">La partie commence…</p></div>`;
       setTimeout(() => (location.href = 'jeu.html?partie=' + gameId), 600);
     },

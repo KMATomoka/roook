@@ -326,7 +326,7 @@ const rules = {
           $pack: {
             $slot: {
               '.write': `${ME} && ${OWNER('$uid')} && ${OK}`,
-              '.validate': "newData.val() === true && $pack.matches(/^(japon|western|ocean)$/) && $slot.matches(/^(board|pieces|endAnim|capture|P|R|N|B|Q|K)$/)",
+              '.validate': "newData.val() === true && $pack.matches(/^(japon|western|ocean|bois|dragon)$/) && $slot.matches(/^(board|pieces|endAnim|capture|P|R|N|B|Q|K)$/)",
             },
           },
         },

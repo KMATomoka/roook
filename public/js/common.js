@@ -89,7 +89,7 @@ export function getGame(id) {
 export const RIVALS = {
   noa: { id: 'noa', name: 'Noa', desc: 'L’astronaute de ROOOK', win: 'Trop facile. Tu prends ta revanche ?', draw: 'Hmm… on remet ça ?', lose: 'GG, bien joué !' },
   adriz: { id: 'adriz', name: 'Adriz', desc: 'Le pote qui ne lâche rien', win: 'EZ. Allez, une revanche ?', draw: 'Pas mal… on en refait une ?', lose: 'Bien joué, j’avoue !' },
-  astrea: { id: 'astrea', name: 'Astrea', desc: 'Le chat de l’espace', win: 'Miaou ! Trop facile 😼', draw: 'Mrrr… match nul ?', lose: 'Miaou… bien joué.' },
+  astrea: { id: 'astrea', name: 'Astrea', desc: 'Le chat de l’espace', win: 'Miaou ! Trop facile.', draw: 'Mrrr… match nul ?', lose: 'Miaou… bien joué.' },
 };
 export const rivalOf = (id) => RIVALS[id] || RIVALS.noa;
 // Adresse d'un visage (img/<adversaire>/<humeur>.svg), avec la version du site : ces adresses sont construites

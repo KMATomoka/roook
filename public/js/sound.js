@@ -59,6 +59,7 @@ export function stopAllSounds() {
   stopMusicNow();
   seaBus = null;
   canyonIn = null;
+  fireBus = null;
 }
 
 function audio() {
@@ -1029,9 +1030,196 @@ function oceanMate(outcome) {
   bubbles(0.9, 14, 2.5, 0.08);
 }
 
+// --- Sons « Epic Dragon » : feu (souffle, crépitement), pierre, rugissement, cors ---------------------------
+let fireBus = null;
+/** Sortie « dragon » : un peu saturée (le grain du feu et du rugissement), avec un écho de caverne. */
+function lair() {
+  const a = audio();
+  if (!a) return null;
+  if (!fireBus) {
+    fireBus = a.createGain();
+    const sh = a.createWaveShaper();
+    const curve = new Float32Array(1024);
+    for (let i = 0; i < curve.length; i++) {
+      const x = (i / (curve.length - 1)) * 2 - 1;
+      curve[i] = Math.tanh(x * 2.2) / Math.tanh(2.2);
+    }
+    sh.curve = curve;
+    const delay = a.createDelay();
+    delay.delayTime.value = 0.17;
+    const fb = a.createGain();
+    fb.gain.value = 0.28;
+    const wet = a.createGain();
+    wet.gain.value = 0.22;
+    fireBus.connect(sh);
+    sh.connect(master);
+    sh.connect(delay);
+    delay.connect(fb).connect(delay);
+    delay.connect(wet).connect(master);
+  }
+  return a;
+}
+/** Bruit filtré envoyé dans l'antre (souffle, grondement). */
+function lairNoise({ at = 0, dur = 0.6, vol = 0.3, type = 'bandpass', f0 = 400, f1 = 2400, q = 0.9, attack = 0.05 }) {
+  const a = lair();
+  if (!a) return;
+  const t = a.currentTime + at;
+  const src = a.createBufferSource();
+  src.buffer = noiseBuf;
+  src.loop = true;
+  const fl = a.createBiquadFilter();
+  fl.type = type;
+  fl.Q.value = q;
+  fl.frequency.setValueAtTime(f0, t);
+  fl.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.7);
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(fl).connect(g).connect(fireBus);
+  src.start(t, Math.random() * 0.5);
+  src.stop(t + dur + 0.05);
+}
+/** Note envoyée dans l'antre. */
+function lairTone(type, f0, f1, at, dur, vol, attack = 0.01, lp = 0) {
+  const a = lair();
+  if (!a) return;
+  const t = a.currentTime + at;
+  const o = a.createOscillator();
+  const g = a.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(f0, t);
+  if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.9);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  if (lp) {
+    const fl = a.createBiquadFilter();
+    fl.type = 'lowpass';
+    fl.frequency.value = lp;
+    o.connect(fl).connect(g).connect(fireBus);
+  } else o.connect(g).connect(fireBus);
+  o.start(t);
+  o.stop(t + dur + 0.05);
+}
+/** Crépitement de braises : de petits claquements secs au hasard. */
+const crackle = (at = 0, n = 10, span = 0.6, vol = 0.12) => {
+  for (let i = 0; i < n; i++) burst({ at: at + Math.random() * span, dur: 0.012 + Math.random() * 0.02, vol: vol * (0.4 + Math.random() * 0.6), freq: 2500 + Math.random() * 3500, q: 3 });
+};
+/** Souffle de feu : le « fwoosh » qui monte puis s'étouffe, avec ses crépitements. */
+const fwoosh = (at = 0, dur = 0.7, vol = 0.34) => {
+  lairNoise({ at, dur, vol, f0: 260, f1: 1900, q: 0.8, attack: dur * 0.18 });
+  lairNoise({ at, dur: dur * 1.1, vol: vol * 0.55, type: 'lowpass', f0: 180, f1: 700, attack: dur * 0.25 });
+  crackle(at + dur * 0.3, 12, dur, 0.1);
+};
+/** Pierre posée (un pas lourd sur l'obsidienne). */
+const stone = (at = 0, pitch = 1) => {
+  tone({ freq: 140 * pitch, endFreq: 70 * pitch, at, dur: 0.12, vol: 0.34 });
+  burst({ at, dur: 0.05, vol: 0.32, type: 'lowpass', freq: 900 * pitch, q: 0.8 });
+  burst({ at, dur: 0.02, vol: 0.12, freq: 3200, q: 2 });
+};
+/** Rugissement du dragon : une voix grave saturée qui descend, avec un souffle par-dessus. */
+function roar(at = 0, dur = 1.8, vol = 0.3, pitch = 1) {
+  const a = lair();
+  if (!a) return;
+  const t = a.currentTime + at;
+  for (const [type, det, v] of [['sawtooth', 0, 1], ['square', 9, 0.5]]) {
+    const o = a.createOscillator();
+    o.type = type;
+    o.detune.value = det;
+    o.frequency.setValueAtTime(150 * pitch, t);
+    o.frequency.exponentialRampToValueAtTime(210 * pitch, t + dur * 0.25);
+    o.frequency.exponentialRampToValueAtTime(70 * pitch, t + dur);
+    const lfo = a.createOscillator();
+    const lg = a.createGain();
+    lfo.frequency.value = 23;
+    lg.gain.value = 9;
+    lfo.connect(lg).connect(o.frequency);
+    const f = a.createBiquadFilter();
+    f.type = 'bandpass';
+    f.Q.value = 1.6;
+    f.frequency.setValueAtTime(520, t);
+    f.frequency.linearRampToValueAtTime(900, t + dur * 0.3);
+    f.frequency.linearRampToValueAtTime(380, t + dur);
+    const g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol * v, t + 0.12);
+    g.gain.setValueAtTime(vol * v, t + dur * 0.55);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(f).connect(g).connect(fireBus);
+    o.start(t);
+    lfo.start(t);
+    o.stop(t + dur + 0.05);
+    lfo.stop(t + dur + 0.05);
+  }
+  lairNoise({ at, dur, vol: vol * 0.45, f0: 700, f1: 1400, q: 1.2, attack: 0.15 });
+}
+/** Accord de cors (cuivres graves), pour la victoire. */
+const horns = (at, notes, dur = 1.6, vol = 0.07) =>
+  notes.forEach((f, i) => {
+    lairTone('sawtooth', f, f, at + i * 0.02, dur, vol, 0.12, 1300);
+    lairTone('triangle', f * 2, f * 2, at + i * 0.02, dur * 0.8, vol * 0.4, 0.1);
+  });
+/** Grondement de la terre (lave, plateau qui se fend). */
+const rumble = (at = 0, dur = 2.5, vol = 0.32) => lairNoise({ at, dur, vol, type: 'lowpass', f0: 140, f1: 70, q: 0.7, attack: 0.4 });
+/** Bulles de lave qui éclatent (« blop » gras). */
+const lavaBlops = (at = 0, n = 6, span = 1.5) => {
+  for (let i = 0; i < n; i++) {
+    const t = at + Math.random() * span;
+    lairTone('sine', 120 + Math.random() * 80, 60, t, 0.18, 0.22, 0.005);
+    burst({ at: t + 0.05, dur: 0.03, vol: 0.08, freq: 1800, q: 2 });
+  }
+};
+const dragon = {
+  move: () => {
+    stone(0);
+    crackle(0.03, 2, 0.08, 0.05);
+  },
+  capture: () => {
+    fwoosh(0, 0.75);
+    stone(0.05, 0.9);
+    crackle(0.5, 14, 0.9, 0.09);
+  },
+  castle: () => {
+    stone(0);
+    stone(0.16, 0.85);
+  },
+  promote: () => {
+    stone(0);
+    horns(0.08, [293.66, 440, 587.33], 1.1, 0.05);
+  },
+  check: () => {
+    roar(0.02, 0.8, 0.16, 1.25);
+    crackle(0.1, 6, 0.4, 0.07);
+  },
+};
+/** Mat « Le Souffle du Dragon ». Victoire : rugissement, souffle de feu, cors. Défaite : la terre gronde, la lave monte. */
+function dragonMate(outcome) {
+  if (outcome === 'loss') {
+    rumble(0.2, 3.6);
+    // le plateau se fend
+    burst({ at: 0.6, dur: 0.35, vol: 0.4, type: 'lowpass', freq: 1200, endFreq: 200, q: 0.8 });
+    crackle(0.6, 18, 0.8, 0.12);
+    lairTone('triangle', 196, 185, 0.7, 2.4, 0.08, 0.1);
+    lairTone('triangle', 138.6, 130.8, 0.85, 2.6, 0.08, 0.1);
+    lavaBlops(1.3, 8, 2.2);
+    // les yeux du dragon : un grondement lointain
+    roar(1.6, 2.4, 0.14, 0.7);
+    crackle(2.2, 16, 1.6, 0.08);
+    return;
+  }
+  // le dragon arrive (battements d'ailes), rugit, crache le feu
+  for (let i = 0; i < 4; i++) lairNoise({ at: 0.2 + i * 0.62, dur: 0.35, vol: 0.18, type: 'lowpass', f0: 380, f1: 160, attack: 0.08 });
+  roar(1.3, 1.6, 0.28);
+  fwoosh(1.95, 1.6, 0.42);
+  crackle(2.4, 30, 2, 0.1);
+  horns(3.2, [146.83, 220, 293.66, 369.99], 2.2, 0.07);
+  horns(4.1, [196, 293.66, 392, 493.88], 2.4, 0.07);
+}
+
 const royalSet = { move: () => tok(), capture, castle, promote, check };
-const SETS = { astrea: space, classic, royal: royalSet, japon: sakura, western, ocean };
-const MATES = { astrea: spaceMate, classic: classicMate, royal: royalMate, japon: sakuraMate, western: westernMate, ocean: oceanMate };
+const SETS = { astrea: space, classic, royal: royalSet, japon: sakura, western, ocean, dragon };
+const MATES = { astrea: spaceMate, classic: classicMate, royal: royalMate, japon: sakuraMate, western: westernMate, ocean: oceanMate, dragon: dragonMate };
 
 /**
  * Son d'un coup (objet « verbose » de chess.js).

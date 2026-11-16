@@ -8,11 +8,12 @@
 // Puis le couvercle saute, un rayon de lumière sort, et la carte de l'objet apparaît avec un vrai aperçu
 // (plateau en 3D, pièce sur son socle, fin de partie ou prise jouée sur un petit échiquier).
 import { Chessground } from '../vendor/chessground/chessground.min.js';
+import { ico } from './icons.js'; // icônes dessinées (à la place des emojis)
 import { $, Chess, escapeHtml } from './common.js';
 import { session, toast } from './compte.js';
 import {
-  PACKS, SLOT_NAMES, RARITY, PIECE_TYPES, PIECE_NAMES, PIECE_ROLE, PACK_ITEMS,
-  themeClasses, setEquip, equipOwnedPieces, getEquip, itemName, loadPackFont,
+  PACKS, PACK_COLOR, SLOT_NAMES, RARITY, PIECE_TYPES, PIECE_NAMES, PIECE_ROLE, PACK_ITEMS,
+  themeClasses, setEquip, equipOwnedPieces, getEquip, itemName, loadPackFont, packHas,
 } from './theme.js';
 import { RATES, DUST_PER_BOX, watchBoxes, openBox, grantTestBox } from './box.js';
 import { createFx } from './fx.js';
@@ -134,9 +135,9 @@ let opening = false;
 // ---------------------------------------------------------------------------
 function renderRates() {
   const who = (id) => {
-    if (id === 'jeu') return 'Les 6 pièces d’un pack rare ou épique d’un coup';
-    const list = PACKS.filter((p) => p.rarity === id).map((p) => p.name).join(', ');
-    return id === 'commun' ? `${list} — déjà à toi : se change en ✨ poussière d’étoile` : `${list} : un plateau, une pièce, une fin de partie ou une prise`;
+    if (id === 'jeu') return 'Les 6 pièces d’un pack d’un coup';
+    const list = PACKS.filter((p) => p.box && p.rarity === id).map((p) => p.name).join(', ');
+    return id === 'commun' ? `${list} : le plateau ou une pièce` : `${list} : un plateau, une pièce, une fin de partie ou une prise`;
   };
   // Seulement ce qu'on peut trouver dans le coffre
   const list = $('#bx-rates');
@@ -177,15 +178,15 @@ function renderMain() {
         <p class="muted">Un plateau, une pièce (pion, tour, cavalier, fou, dame ou roi), une fin de partie ou une prise et son. Et parfois, très rarement, un jeu de pièces complet.</p>
         <p class="bx-have">${n ? `Tu as <b>${n} coffre${n > 1 ? 's' : ''}</b> à ouvrir.` : 'Plus de coffre à ouvrir : gagne une partie en ligne pour en avoir un.'}</p>
         <div class="bx-actions">
-          <button class="btn btn-primary bx-open-btn" type="button" data-open ${n && !banned ? '' : 'disabled'}>🗝 Ouvrir le coffre</button>
+          <button class="btn btn-primary bx-open-btn" type="button" data-open ${n && !banned ? '' : 'disabled'}>${ico('key')} Ouvrir le coffre</button>
           <a class="btn btn-ghost" href="jouer.html">Jouer en ligne</a>
         </div>
         <div class="bx-dust">
-          <span>✨ Poussière d’étoile : <b>${state.dust}</b> / ${DUST_PER_BOX}</span>
+          <span>${ico('dust')} Poussière d’étoile : <b>${state.dust}</b> / ${DUST_PER_BOX}</span>
           <div class="bx-dust-bar"><i style="width:${Math.min(100, (state.dust / DUST_PER_BOX) * 100)}%"></i></div>
-          <button class="btn btn-ghost small" type="button" data-dust ${dustOk && !banned ? '' : 'disabled'}>Ouvrir une box avec ${DUST_PER_BOX} ✨</button>
+          <button class="btn btn-ghost small" type="button" data-dust ${dustOk && !banned ? '' : 'disabled'}>Ouvrir une box avec ${DUST_PER_BOX} ${ico('dust')}</button>
         </div>
-        ${staff ? '<p class="bx-staff"><button class="btn btn-ghost small" type="button" data-grant>🛠 +1 box de test</button> <span class="muted">(admins et fondateur)</span></p>' : ''}
+        ${staff ? `<p class="bx-staff"><button class="btn btn-ghost small" type="button" data-grant>${ico('tools')} +1 box de test</button> <span class="muted">(admins et fondateur)</span></p>` : ''}
       </div>
     </div>`;
   renderRates();
@@ -199,17 +200,20 @@ function renderCollection() {
   const packs = PACKS.filter((p) => p.box);
   const has = (p, s) => !!state.owned[p.id]?.[s] || (PIECE_TYPES.includes(s) && !!state.owned[p.id]?.pieces);
   $('#bx-collection').innerHTML = packs.map((p) => {
-    const n = PACK_ITEMS.filter((s) => has(p, s)).length;
+    const items = PACK_ITEMS.filter((s) => packHas(p, s)); // Bois : seulement le plateau et les pièces
+    const n = items.filter((s) => has(p, s)).length;
     const row = (s) => {
+      if (!packHas(p, s)) return '';
       const ok = has(p, s);
-      return `<li class="${ok ? 'ok' : ''}"><span aria-hidden="true">${ok ? ICONS[s] : '🔒'}</span><span><small>${SLOT_NAMES[s]}</small>${escapeHtml(p.items[s].name)}</span></li>`;
+      return `<li class="${ok ? 'ok' : ''}"><span aria-hidden="true">${ok ? ICONS[s] : ico('lock')}</span><span><small>${SLOT_NAMES[s]}</small>${escapeHtml(p.items[s].name)}</span></li>`;
     };
-    return `<article class="bx-pack" style="--c:${RARITY[p.rarity].color}">
-      <div class="bx-pack-head"><h3>${escapeHtml(p.name)}</h3><span class="bx-rarity">${RARITY[p.rarity].name}</span><b>${n} / ${PACK_ITEMS.length}</b></div>
-      <div class="bx-pack-bar"><i style="width:${(n / PACK_ITEMS.length) * 100}%"></i></div>
+    // La carte prend la couleur du pack (Sakura en rouge…), l'étiquette de rareté garde la sienne
+    return `<article class="bx-pack" style="--c:${PACK_COLOR[p.id]};--rc:${RARITY[p.rarity].color}">
+      <div class="bx-pack-head"><h3>${escapeHtml(p.name)}</h3><span class="bx-rarity">${RARITY[p.rarity].name}</span><b>${n} / ${items.length}</b></div>
+      <div class="bx-pack-bar"><i style="width:${(n / items.length) * 100}%"></i></div>
       <ul>${row('board')}</ul>
-      <div class="bx-pack-pieces cg-wrap pieces-${p.id}">${PIECE_TYPES.map((t) => `<span class="${has(p, t) ? 'ok' : ''}" title="${escapeHtml(itemName(p.id, t))}${has(p, t) ? '' : ' (à trouver)'}">${pieceEl(t, 'white')}${has(p, t) ? '' : '<b>🔒</b>'}</span>`).join('')}</div>
-      <ul>${row('endAnim')}${row('capture')}</ul>
+      <div class="bx-pack-pieces cg-wrap pieces-${p.id}">${PIECE_TYPES.map((t) => `<span class="${has(p, t) ? 'ok' : ''}" title="${escapeHtml(itemName(p.id, t))}${has(p, t) ? '' : ' (à trouver)'}">${pieceEl(t, 'white')}${has(p, t) ? '' : `<b>${ico('lock')}</b>`}</span>`).join('')}</div>
+      ${packHas(p, 'endAnim') ? `<ul>${row('endAnim')}${row('capture')}</ul>` : ''}
     </article>`;
   }).join('');
 }
@@ -614,7 +618,7 @@ function buildCard(res) {
     : slot === 'capture' ? '<div class="bx-res-demo"><button class="btn btn-ghost small" type="button" data-demo="win">▶ Revoir la prise</button></div>' : '';
   const status = isNew
     ? `<p class="bx-new">✦ ${isJeu ? `${res.fresh.length} pièce${res.fresh.length > 1 ? 's' : ''} débloquée${res.fresh.length > 1 ? 's' : ''} dans ton inventaire` : 'Débloqué dans ton inventaire'}</p>`
-    : `<p class="bx-dup">${p.rarity === 'commun' ? 'Tu l’as depuis le début' : 'Déjà obtenu'} : <b class="bx-dust-gain">+<span>0</span> ✨</b></p>`;
+    : `<p class="bx-dup">${p.free ? 'Tu l’as depuis le début' : 'Déjà obtenu'} : <b class="bx-dust-gain">+<span>0</span> ${ico('dust')}</b></p>`;
   result.style.setProperty('--c', t.color);
   result.className = `bx-result tier-${res.rarity}${ORDER.indexOf(res.rarity) >= 2 ? ' foil' : ''}${isNew ? ' is-new' : ' is-dup'}`;
   result.innerHTML = `<div class="bx-card3d">
@@ -742,7 +746,7 @@ document.addEventListener('click', async (e) => {
   if (e.target.closest('[data-grant]')) {
     try {
       await grantTestBox(uid);
-      toast('🛠 Box de test ajoutée.', { cls: 'info', duration: 2000 });
+      toast(`${ico('tools')} Box de test ajoutée.`, { cls: 'info', duration: 2000 });
     } catch {
       toast('Réservé aux admins et au fondateur.', { cls: 'error' });
     }

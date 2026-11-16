@@ -21,7 +21,7 @@ export const PACK_ITEMS = ['board', ...PIECE_TYPES, 'endAnim', 'capture'];
 const isPieceType = (s) => PIECE_TYPES.includes(s);
 
 /**
- * Raretés. Commun : à tout le monde dès le début. Rare et épique : chaque élément se trouve dans les box (js/box.js).
+ * Raretés. Seuls Astrea et Classic (free: true) sont à tout le monde dès le début ; les autres communs (Bois) se trouvent dans les box. Rare et épique : chaque élément se trouve dans les box (js/box.js).
  * Légendaire : une mission spéciale (Royal chess, 100 victoires), jamais dans les box.
  */
 export const RARITY = {
@@ -38,6 +38,7 @@ export const PACKS = [
     pieceTag: 'Astrea', // « Cavalier Astrea »
     name: 'Astrea chess',
     rarity: 'commun',
+    free: true, // à tout le monde dès le début
     desc: 'L’apparence d’origine de ROOOK, version espace : damier violet, pièces de l’espace, trous de ver, supernova et sons de vaisseau.',
     items: {
       board: { name: 'Damier Astrea', desc: 'Cases lavande et violet.' },
@@ -51,6 +52,7 @@ export const PACKS = [
     pieceTag: 'Staunton', // « Cavalier Staunton »
     name: 'Classic chess',
     rarity: 'commun',
+    free: true, // à tout le monde dès le début
     desc: 'Le noir et blanc de toujours : damier neutre, pièces Staunton, gestes sobres et sons de bois.',
     items: {
       board: { name: 'Damier classique', desc: 'Blanc cassé et gris anthracite.' },
@@ -64,6 +66,7 @@ export const PACKS = [
     pieceTag: 'en bois', // « Cavalier en bois »
     name: 'Bois',
     rarity: 'commun',
+    box: true, // pas débloqué d'office : le plateau et chaque pièce se trouvent dans les box
     // Pas un pack complet : seulement un plateau et des pièces (absent de l'onglet Packs, de Fin de partie, de Prise)
     only: ['board', 'pieces'],
     desc: 'Un vrai jeu en bois : damier d’érable clair et de noyer foncé avec le grain du bois, pièces tournées en buis et en ébène.',
@@ -115,6 +118,20 @@ export const PACKS = [
     },
   },
   {
+    id: 'dragon',
+    pieceTag: 'du Dragon', // « Cavalier du Dragon »
+    name: 'Epic Dragon',
+    rarity: 'epique',
+    box: true,
+    desc: 'L’antre du dragon : obsidienne fendue de lave et pierre de cendre, braises qui montent, pièces d’or et d’obsidienne, souffle de feu et dragon qui survole le plateau.',
+    items: {
+      board: { name: 'Antre du Dragon', desc: 'Pierre de cendre gravée d’écailles et obsidienne fendue de veines de lave ; des braises montent sur tout le plateau. Cadre de fer rougi.' },
+      pieces: { name: 'Or et Obsidienne', desc: 'Or et ivoire pour les Blancs, obsidienne aux contours de braise pour les Noirs : œuf de dragon, forteresse volcanique, mitre de flammes, tête de dragon, reine ailée, roi à cornes.' },
+      endAnim: { name: 'Le Souffle du Dragon', desc: 'Victoire : le ciel rougit, un dragon traverse le plateau et crache un torrent de feu, le roi vaincu tombe en cendres. Défaite : le plateau se fend, la lave engloutit ton roi sous le regard du dragon.' },
+      capture: { name: 'Souffle de feu', desc: 'Un jet de flammes s’abat sur la pièce prise, qui s’embrase et part en cendres et en braises ; un anneau de feu entoure le roi à l’échec.' },
+    },
+  },
+  {
     id: 'royal',
     pieceTag: 'royal', // « Cavalier royal »
     name: 'Royal chess',
@@ -132,6 +149,8 @@ export const PACKS = [
   },
 ];
 export const DEFAULT = 'astrea';
+/** Couleur de chaque pack (cartes de l'inventaire et de la collection) : Sakura rouge vermillon, Océan turquoise… */
+export const PACK_COLOR = { astrea: '#9b7bff', classic: '#c4c8d0', bois: '#c08a55', japon: '#e8553f', western: '#d27b4f', ocean: '#46e6d4', dragon: '#ff5a1f', royal: '#e2b64e' };
 const IDS = new Set(PACKS.map((p) => p.id));
 
 const LOCAL = 'roque:equip'; // sans compte
@@ -156,7 +175,7 @@ export const packHas = (p, slot) => !p.only || p.only.includes(PIECE_TYPES.inclu
 export const isItemUnlocked = (id, slot) => {
   const p = packById(id);
   if (!p || !packHas(p, slot)) return false;
-  if (p.rarity === 'commun') return true;
+  if (p.free) return true;
   if (p.unlock) return missionDone(p);
   if (slot === 'pieces') return PIECE_TYPES.every((t) => isItemUnlocked(id, t));
   // owned[id].pieces : le jeu complet trouvé d'un coup
@@ -270,6 +289,7 @@ const PACK_FONTS = {
   japon: `family=Yuji+Syuku&text=${encodeURIComponent('勝負王手' + FR)}`,
   western: 'family=Rye',
   ocean: 'family=Cinzel:wght@700;900',
+  dragon: 'family=Cinzel+Decorative:wght@700;900',
 };
 const fontsLoaded = new Set();
 /** Charge la police d'un pack (une seule fois). */

@@ -2,7 +2,8 @@
 // Tout passe par l'API Web Animations : rien ne reste dans la page une fois l'effet terminé.
 // L'inventaire (js/theme.js) choisit la variante : « astrea » (espace), « classic » (sobre), « royal » (couronnement,
 // particules d'or), « japon » (Sakura : coup de sabre, pétales de cerisier, soleil rouge, sceaux 勝 / 負)
-// « western » (coups de feu, viseur, virevoltant, pancarte de saloon) ou « ocean » (siphon, aileron, baleine, kraken).
+// « western » (coups de feu, viseur, virevoltant, pancarte de saloon), « ocean » (siphon, aileron, baleine, kraken)
+// ou « dragon » (souffle de feu, braises, dragon qui survole le plateau, lave).
 import { playSound } from './sound.js';
 import { getEquip } from './theme.js';
 
@@ -1577,6 +1578,310 @@ export function createFx(frame, getOrientation) {
   }
 
   // -------------------------------------------------------------------------
+  // Pack Epic Dragon : souffle de feu, braises, cendres, dragon qui survole le plateau, lave
+  // -------------------------------------------------------------------------
+  // Le dragon vu de profil, qui vole vers la droite (ailes animées à part : .wn, .wf)
+  const DRAGON = `<svg viewBox="0 0 240 140"><defs>
+    <linearGradient id="fx-dg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a1712"/><stop offset=".6" stop-color="#26090a"/><stop offset="1" stop-color="#120304"/></linearGradient>
+    <linearGradient id="fx-db" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9a3a"/><stop offset="1" stop-color="#b8300c"/></linearGradient>
+    <linearGradient id="fx-dw" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6a1f16"/><stop offset="1" stop-color="#2a0a0a"/></linearGradient></defs>
+    <g class="wf" style="transform-box:fill-box;transform-origin:85% 100%"><path d="M150 60 C150 34 140 14 118 2 C126 16 127 24 125 30 C117 26 108 26 100 30 C110 36 114 42 114 48 C124 47 136 50 146 62Z" fill="#3a100c" stroke="#120403" stroke-width="2"/></g>
+    <path d="M4 72 L18 66 L15 76 Z" fill="url(#fx-dg)" stroke="#120403" stroke-width="2"/>
+    <path d="M12 72 C34 64 56 82 80 72 C92 67 100 66 110 68 L108 79 C96 77 88 79 78 83 C54 93 30 77 14 75 Z" fill="url(#fx-dg)" stroke="#120403" stroke-width="2"/>
+    <path d="M118 84 L112 102 L122 99 Z M150 84 L150 102 L158 97 Z" fill="#26090a" stroke="#120403" stroke-width="2"/>
+    <path d="M96 70 C110 57 140 55 158 61 C170 65 177 73 172 81 C160 91 120 93 102 85 C94 81 92 75 96 70Z" fill="url(#fx-dg)" stroke="#120403" stroke-width="2"/>
+    <path d="M104 82 C122 89 150 89 166 80" fill="none" stroke="url(#fx-db)" stroke-width="5" stroke-linecap="round"/>
+    <path d="M156 63 C168 53 178 43 188 39 C196 36 204 37 210 41 L227 45 C231 46 231 50 227 51 L212 53 C206 57 198 57 192 55 C184 59 176 69 170 75Z" fill="url(#fx-dg)" stroke="#120403" stroke-width="2"/>
+    <path d="M195 38 L186 24 L200 35 Z M203 38 L199 24 L209 37 Z" fill="#c9a26a" stroke="#120403" stroke-width="1.6"/>
+    <path d="M160 62 L164 52 L168 59 L174 48 L177 55 L183 44" fill="none" stroke="#120403" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="208" cy="43.5" r="2.4" fill="#ffd23a"/>
+    <path d="M213 51 L216 54 L219 51 L222 54 L225 51" fill="none" stroke="#fff3d0" stroke-width="1.2"/>
+    <g class="wn" style="transform-box:fill-box;transform-origin:90% 100%"><path d="M136 66 C130 38 114 16 88 4 C98 20 100 29 98 36 C88 31 77 31 68 36 C79 42 83 49 83 55 C96 53 112 57 126 70Z" fill="url(#fx-dw)" stroke="#120403" stroke-width="2"/>
+    <path d="M132 64 C118 46 104 28 90 8 M126 66 C112 55 96 45 82 38 M120 68 C110 63 98 58 86 55" fill="none" stroke="#120403" stroke-width="1.6" opacity=".85"/></g></svg>`;
+  // Les deux yeux du dragon dans le noir (défaite)
+  const DRAGON_EYES = `<svg viewBox="0 0 200 60"><defs><radialGradient id="fx-de" cx=".5" cy=".5" r=".55"><stop offset="0" stop-color="#fff6b0"/><stop offset=".5" stop-color="#ffb21e"/><stop offset="1" stop-color="#a8200a"/></radialGradient></defs>
+    ${[38, 162].map((cx) => `<g class="eye"><path d="M${cx - 30} 30 Q${cx} 8 ${cx + 30} 30 Q${cx} 46 ${cx - 30} 30Z" fill="url(#fx-de)" stroke="#2a0602" stroke-width="3"/><ellipse cx="${cx}" cy="29" rx="3.6" ry="13" fill="#140202"/></g>`).join('')}
+    <path d="M6 24 Q38 2 72 22 M128 22 Q162 2 194 24" fill="none" stroke="#2a0602" stroke-width="5" stroke-linecap="round"/></svg>`;
+
+  /** Boule de feu qui file d'un point à un autre en grossissant (le souffle). */
+  function fireBlob(parent, x0, y0, x1, y1, size, { delay = 0, duration = 520, grow = 1.6 } = {}) {
+    const d = el(parent, 'fx-fire', { left: `${x0}px`, top: `${y0}px`, width: `${size}px`, height: `${size}px` });
+    const wob = size * rand(-0.35, 0.35);
+    once(
+      d,
+      [
+        { transform: 'translate(-50%,-50%) scale(.3)', opacity: 0 },
+        { transform: `translate(calc(-50% + ${(x1 - x0) * 0.35}px), calc(-50% + ${(y1 - y0) * 0.35 + wob}px)) scale(.9)`, opacity: 1, offset: 0.25 },
+        { transform: `translate(calc(-50% + ${x1 - x0}px), calc(-50% + ${y1 - y0}px)) scale(${grow})`, opacity: 0.9, offset: 0.8 },
+        { transform: `translate(calc(-50% + ${x1 - x0 + rand(-0.3, 0.3) * size}px), calc(-50% + ${y1 - y0 - size * 0.6}px)) scale(${grow * 1.25})`, opacity: 0 },
+      ],
+      { duration, delay, easing: 'cubic-bezier(.2,.6,.4,1)', fill: 'backwards' },
+    );
+  }
+  /** Braises qui montent en vacillant. */
+  function embers(parent, x, y, s, count, { delay = 0, spread = 0.45, rise = 1.4, span = 400 } = {}) {
+    if (reduceMotion()) return;
+    for (let i = 0, n = lite(count); i < n; i++) {
+      const r = s * rand(0.03, 0.075);
+      const e = el(parent, 'fx-ember', { left: `${x + rand(-spread, spread) * s}px`, top: `${y + rand(-0.2, 0.2) * s}px`, width: `${r}px`, height: `${r}px` });
+      const dx = rand(-0.5, 0.5) * s;
+      const up = -s * rand(0.6, 1.2) * rise;
+      once(
+        e,
+        [
+          { transform: 'translate(-50%,-50%) scale(.4)', opacity: 0 },
+          { transform: `translate(calc(-50% + ${dx * 0.3}px), calc(-50% + ${up * 0.3}px)) scale(1.1)`, opacity: 1, offset: 0.2 },
+          { transform: `translate(calc(-50% + ${-dx * 0.4}px), calc(-50% + ${up * 0.65}px)) scale(.8)`, opacity: 0.7, offset: 0.6 },
+          { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${up}px)) scale(.3)`, opacity: 0 },
+        ],
+        { duration: rand(1000, 1700), delay: delay + rand(0, span), easing: 'ease-out', fill: 'backwards' },
+      );
+    }
+  }
+  /** Cendres qui tombent et s'éparpillent. */
+  function ashes(parent, x, y, s, count, { delay = 0, span = 300 } = {}) {
+    if (reduceMotion()) return;
+    for (let i = 0, n = lite(count); i < n; i++) {
+      const w = s * rand(0.035, 0.08);
+      const a = el(parent, 'fx-ash', { left: `${x + rand(-0.3, 0.3) * s}px`, top: `${y + rand(-0.35, 0.2) * s}px`, width: `${w}px`, height: `${w * rand(0.5, 1)}px` });
+      once(
+        a,
+        [
+          { transform: 'translate(-50%,-50%) rotate(0deg)', opacity: 0.95 },
+          { transform: `translate(calc(-50% + ${rand(-0.55, 0.55) * s}px), calc(-50% + ${s * rand(0.25, 0.5)}px)) rotate(${rand(-300, 300)}deg)`, opacity: 0 },
+        ],
+        { duration: rand(700, 1200), delay: delay + rand(0, span), easing: 'cubic-bezier(.3,.1,.6,1)', fill: 'backwards' },
+      );
+    }
+  }
+  /** La pièce s'embrase, noircit, puis tombe en cendres et en braises. */
+  function burnPiece(node, x, y, s, parent, { delay = 0, duration = 1000 } = {}) {
+    node.animate(
+      [
+        { filter: 'none', transform: 'none', opacity: 1 },
+        { filter: 'sepia(1) saturate(4) hue-rotate(-25deg) brightness(1.5)', transform: 'none', opacity: 1, offset: 0.3 },
+        { filter: 'sepia(1) saturate(2) brightness(.35)', transform: 'scale(.97)', opacity: 1, offset: 0.62 },
+        { filter: 'brightness(.1) blur(1px)', transform: 'translateY(8%) scale(.8)', opacity: 0 },
+      ],
+      { duration, delay, easing: 'ease-in', fill: 'forwards' },
+    );
+    embers(parent, x, y, s, 12, { delay: delay + duration * 0.45, span: duration * 0.5 });
+    ashes(parent, x, y, s, 10, { delay: delay + duration * 0.6, span: duration * 0.35 });
+  }
+
+  /** Prise « Souffle de feu » : un jet de flammes part de la pièce qui prend, la pièce prise brûle et tombe en cendres. */
+  function dragonCaptureFx(move) {
+    const sq = move.flags.includes('e') ? move.to[0] + move.from[1] : move.to;
+    const victim = move.color === 'w' ? 'b' : 'w';
+    const { x, y, s } = at(sq);
+    const from = at(move.from);
+    const ghost = el(over, 'cg-wrap fx-ghost', { left: `${x - s / 2}px`, top: `${y - s / 2}px`, width: `${s}px`, height: `${s}px` }, `<piece class="${ROLE[move.captured]} ${COLOR[victim]}"></piece>`);
+    if (reduceMotion()) {
+      once(ghost, [{ opacity: 1 }, { opacity: 0 }], { duration: 300 });
+      return;
+    }
+    // Le jet de flammes : une rafale de boules de feu, de la case de départ vers la pièce prise
+    const n = lite(16);
+    for (let i = 0; i < n; i++) fireBlob(over, from.x, from.y, x + rand(-0.15, 0.15) * s, y + rand(-0.15, 0.15) * s, s * rand(0.45, 0.7), { delay: i * 22, duration: rand(420, 560), grow: rand(1.3, 1.9) });
+    flashSquare(sq, 'rgba(255,160,60,.95)', 220, 420);
+    const scorch = el(under, 'fx-scorch', { left: `${x}px`, top: `${y}px`, width: `${s * 1.2}px`, height: `${s * 1.2}px` });
+    once(scorch, [{ transform: 'translate(-50%,-50%) scale(.4)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1)', opacity: 1, offset: 0.25 }, { transform: 'translate(-50%,-50%) scale(1.05)', opacity: 0 }], { duration: 1900, delay: 260, fill: 'backwards' });
+    burnPiece(ghost, x, y, s, over, { delay: 200, duration: 900 });
+    setTimeout(() => ghost.remove(), 1250);
+    shake(VALUE[move.captured] >= 5 ? 4 : 2, 320);
+  }
+
+  /** Échec « Dragon » : un anneau de feu tourne autour du roi menacé, étiquette « Échec ! ». */
+  function dragonCheckFx(kingSq) {
+    const { x, y, s } = at(kingSq);
+    const above = y - s * 0.75 > s * 0.3;
+    const tag = el(over, 'fx-check-tag dragon', { left: `${Math.min(Math.max(x, s * 0.9), frame.clientWidth - s * 0.9)}px`, top: `${above ? y - s * 0.95 : y + s * 0.95}px`, fontSize: `${Math.max(12, s * 0.26)}px` }, 'Échec !');
+    once(
+      tag,
+      [
+        { transform: 'translate(-50%,-50%) scale(.4)', opacity: 0 },
+        { transform: 'translate(-50%,-50%) scale(1.12)', opacity: 1, offset: 0.12 },
+        { transform: 'translate(-50%,-50%) scale(1)', opacity: 1, offset: 0.85 },
+        { transform: 'translate(-50%,-80%) scale(1)', opacity: 0 },
+      ],
+      { duration: 1800, delay: 80, fill: 'backwards' },
+    );
+    if (reduceMotion()) return;
+    ring(kingSq, { color: 'rgba(255,120,30,.95)', size: 1.6, duration: 700 });
+    // Des flammes font le tour du roi
+    const N = lite(10);
+    const R = s * 0.62;
+    for (let i = 0; i < N; i++) {
+      const f = el(over, 'fx-fire', { left: `${x}px`, top: `${y}px`, width: `${s * 0.42}px`, height: `${s * 0.42}px` });
+      const frames = [];
+      for (let k = 0; k <= 12; k++) {
+        const th = (i / N) * Math.PI * 2 + (k / 12) * Math.PI * 1.4;
+        const fade = k === 0 || k === 12 ? 0 : k < 3 || k > 9 ? 0.6 : 1;
+        frames.push({ transform: `translate(calc(-50% + ${(Math.cos(th) * R).toFixed(1)}px), calc(-50% + ${(Math.sin(th) * R * 0.8).toFixed(1)}px)) scale(${(0.7 + 0.4 * Math.sin(k)).toFixed(2)})`, opacity: fade });
+      }
+      once(f, frames, { duration: 1500, delay: i * 25, easing: 'linear', fill: 'backwards' });
+    }
+    embers(over, x, y + s * 0.2, s, 10, { delay: 200, span: 900 });
+  }
+
+  /**
+   * Mat « Le Souffle du Dragon ». Victoire : le ciel rougit, un dragon traverse le plateau, s'arrête au-dessus du
+   * roi vaincu et crache un torrent de feu : le roi tombe en cendres ; le roi vainqueur rayonne.
+   * Défaite : le plateau se fend sous ton roi, la lave monte et l'engloutit, deux yeux de dragon s'ouvrent dans le noir.
+   */
+  async function dragonMateFx(move, kingSq, loser, outcome, gen, winSq) {
+    const { x, y, s } = at(kingSq);
+    const calm = reduceMotion();
+    const lose = outcome === 'loss';
+    await wait(140);
+    if (gen !== generation) return;
+    frame.classList.add('mated-' + loser);
+    const { ox, oy, W } = boardBox();
+    const clip = el(over, 'fx-dragon-clip', { left: `${ox}px`, top: `${oy}px`, width: `${W}px`, height: `${W}px` });
+    const kx = x - ox;
+    const ky = y - oy;
+    const king = el(clip, 'cg-wrap fx-king', { left: `${kx - s / 2}px`, top: `${ky - s / 2}px`, width: `${s}px`, height: `${s}px`, zIndex: 6 }, `<piece class="king ${COLOR[loser]}"></piece>`);
+    const later = (fn, ms) => setTimeout(() => gen === generation && fn(), ms);
+    const fades = [];
+
+    if (calm) {
+      king.animate([{ filter: 'none' }, { filter: 'sepia(1) brightness(.4)' }], { duration: 500, fill: 'forwards' });
+    } else if (!lose) {
+      // Le ciel rougit
+      const sky = el(clip, 'fx-dragon-sky', {});
+      sky.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 900, fill: 'forwards' });
+      fades.push(sky);
+      // Le dragon arrive par la gauche, se pose en vol stationnaire au-dessus du roi vaincu, puis repart
+      const DW = W * 0.62;
+      const DH = DW * (140 / 240);
+      const mouth = { x: DW * (226 / 240), y: DH * (50 / 140) };
+      // Position du vol stationnaire : la gueule en haut à gauche du roi, sans sortir du plateau
+      const hx = Math.min(Math.max(kx - s * 1.3 - mouth.x, -DW * 0.25), W - DW * 0.8);
+      const hy = Math.max(ky - s * 2.4 - mouth.y, -DH * 0.15);
+      const T = 5600;
+      const dragon = el(clip, 'fx-dragon-fly', { left: '0px', top: '0px', width: `${DW}px`, height: `${DH}px` }, DRAGON);
+      const fly = [
+        { transform: `translate(${-DW * 1.1}px, ${hy - W * 0.18}px) rotate(-6deg)`, offset: 0 },
+        { transform: `translate(${hx}px, ${hy}px) rotate(4deg)`, offset: 0.3 },
+        { transform: `translate(${hx - s * 0.08}px, ${hy - s * 0.14}px) rotate(1deg)`, offset: 0.45 },
+        { transform: `translate(${hx + s * 0.05}px, ${hy + s * 0.08}px) rotate(5deg)`, offset: 0.58 },
+        { transform: `translate(${hx}px, ${hy - s * 0.05}px) rotate(2deg)`, offset: 0.68 },
+        { transform: `translate(${W + DW * 0.2}px, ${hy - W * 0.35}px) rotate(-14deg)`, offset: 1 },
+      ];
+      once(dragon, fly, { duration: T, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'both' });
+      // Les ailes battent (plus vite en arrivant et en repartant)
+      for (const [cls, a] of [['.wn', 1], ['.wf', 0.8]]) {
+        dragon.querySelector(cls)?.animate([{ transform: 'scaleY(1)' }, { transform: `scaleY(${-0.45 * a})` }, { transform: 'scaleY(1)' }], { duration: 620, iterations: Math.ceil(T / 620), easing: 'ease-in-out' });
+      }
+      // Son ombre glisse sur le plateau
+      const sh = el(clip, 'fx-dragon-shadow', { left: '0px', top: '0px', width: `${DW * 0.8}px`, height: `${DW * 0.22}px` });
+      once(sh, fly.map((f) => ({ ...f, transform: f.transform.replace(/translate\(([^,]+), ([^)]+)\)/, (m, a, b) => `translate(calc(${a} + ${DW * 0.15}px), calc(${b} + ${DH * 1.9}px))`).replace(/rotate\([^)]+\)/, '') , opacity: 0.8 })), { duration: T, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'both' });
+      shake(3, 600);
+      // Le souffle : un torrent de feu de la gueule vers le roi
+      const breathAt = T * 0.33;
+      later(() => {
+        shake(7, 1100);
+        const mx = hx + mouth.x;
+        const my = hy + mouth.y;
+        const n = lite(46);
+        for (let i = 0; i < n; i++) fireBlob(clip, mx, my, kx + rand(-0.35, 0.35) * s, ky + rand(-0.3, 0.35) * s, s * rand(0.55, 0.95), { delay: i * 26, duration: rand(480, 640), grow: rand(1.4, 2.2) });
+        const glow = el(clip, 'fx-dragon-glow', { left: `${kx}px`, top: `${ky}px`, width: `${s * 2.6}px`, height: `${s * 2.6}px`, zIndex: 5 });
+        once(glow, [{ transform: 'translate(-50%,-50%) scale(.3)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1)', opacity: 1, offset: 0.3 }, { transform: 'translate(-50%,-50%) scale(1.15)', opacity: 0 }], { duration: 1800, fill: 'backwards' });
+        burnPiece(king, kx, ky, s, clip, { delay: 350, duration: 1500 });
+        const scorch = el(clip, 'fx-scorch', { left: `${kx}px`, top: `${ky}px`, width: `${s * 1.6}px`, height: `${s * 1.6}px`, zIndex: 1 });
+        scorch.animate([{ transform: 'translate(-50%,-50%) scale(.3)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 }], { duration: 900, delay: 500, fill: 'forwards' });
+        fades.push(scorch);
+        for (let k = 0; k < 4; k++) later(() => embers(clip, kx, ky, s, 10, { spread: 0.6, rise: 2.2, span: 500 }), 900 + k * 450);
+      }, breathAt);
+      // Le roi vainqueur rayonne d'or
+      if (winSq) {
+        const w = at(winSq);
+        const halo = el(clip, 'fx-dragon-glow', { left: `${w.x - ox}px`, top: `${w.y - oy}px`, width: `${s * 2.2}px`, height: `${s * 2.2}px` });
+        halo.animate([{ transform: 'translate(-50%,-50%) scale(.3)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1)', opacity: 0.9, offset: 0.4 }, { transform: 'translate(-50%,-50%) scale(.85)', opacity: 0.7 }], { duration: 1600, delay: breathAt + 1600, fill: 'forwards' });
+        fades.push(halo);
+      }
+      // Des braises montent de tout le plateau
+      for (let i = 0; i < 5; i++) later(() => embers(clip, W * rand(0.1, 0.9), W * 1.02, s, 8, { spread: 0.8, rise: 5, span: 700 }), 400 + i * 600);
+    } else {
+      // Le noir se referme autour de ton roi
+      const dark = el(clip, 'fx-dragon-dark', { zIndex: 3 });
+      dark.style.setProperty('--x', `${(kx / W) * 100}%`);
+      dark.style.setProperty('--y', `${(ky / W) * 100}%`);
+      dark.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1400, fill: 'forwards' });
+      fades.push(dark);
+      shake(6, 900);
+      // Le plateau se fend : des fissures de lave partent du roi
+      const cr = el(clip, 'fx-dragon-crack', { left: `${kx - s * 2.5}px`, top: `${ky - s * 2.5}px`, width: `${s * 5}px`, height: `${s * 5}px`, zIndex: 4 });
+      let paths = '';
+      for (let i = 0; i < 7; i++) {
+        let px = 50;
+        let py = 50;
+        let ang = (i / 7) * Math.PI * 2 + rand(-0.3, 0.3);
+        let d = `M50 50`;
+        for (let k = 0; k < 5; k++) {
+          ang += rand(-0.5, 0.5);
+          px += Math.cos(ang) * rand(6, 10);
+          py += Math.sin(ang) * rand(6, 10);
+          d += ` L${px.toFixed(1)} ${py.toFixed(1)}`;
+        }
+        paths += `<path d="${d}" pathLength="1"/>`;
+      }
+      cr.innerHTML = `<svg viewBox="0 0 100 100"><g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1" stroke-dashoffset="1"><g stroke="#ff6a1a" stroke-width="2.6">${paths}</g><g stroke="#ffe08a" stroke-width=".9">${paths}</g></g></svg>`;
+      cr.querySelectorAll('path').forEach((p, i) => p.animate([{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { duration: 900, delay: 500 + (i % 7) * 70, easing: 'ease-out', fill: 'forwards' }));
+      fades.push(cr);
+      // La lave monte sous le roi
+      const lava = el(clip, 'fx-dragon-lava', { left: `${kx}px`, top: `${ky + s * 0.3}px`, width: `${s * 1.5}px`, height: `${s * 0.75}px`, zIndex: 5 });
+      lava.animate([{ transform: 'translate(-50%,-50%) scale(0)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1)', opacity: 1, offset: 0.6 }, { transform: 'translate(-50%,-50%) scale(1.1)', opacity: 1 }], { duration: 1600, delay: 1100, fill: 'forwards' });
+      fades.push(lava);
+      // Le roi tremble, puis s'enfonce dans la lave en rougeoyant
+      king.animate(
+        [
+          { transform: 'none', clipPath: 'inset(-30% -30% 0 -30%)', filter: 'none' },
+          { transform: 'translateX(-4%) rotate(-4deg)', clipPath: 'inset(-30% -30% 0 -30%)', filter: 'none', offset: 0.15 },
+          { transform: 'translateX(4%) rotate(4deg)', clipPath: 'inset(-30% -30% 0 -30%)', filter: 'sepia(.6) saturate(2) brightness(1.1)', offset: 0.3 },
+          { transform: 'translateY(0)', clipPath: 'inset(-30% -30% 0 -30%)', filter: 'sepia(1) saturate(4) hue-rotate(-25deg) brightness(1.3)', offset: 0.45 },
+          { transform: 'translateY(75%) rotate(-10deg)', clipPath: 'inset(-30% -30% 75% -30%)', filter: 'sepia(1) saturate(3) brightness(.5)' },
+        ],
+        { duration: 2600, delay: 1300, easing: 'cubic-bezier(.5,0,.7,1)', fill: 'forwards' },
+      );
+      for (let k = 0; k < 5; k++) later(() => embers(clip, kx, ky + s * 0.3, s, 8, { spread: 0.5, rise: 1.8, span: 400 }), 1800 + k * 420);
+      // Deux yeux de dragon s'ouvrent dans le noir, loin du roi, puis le fixent
+      const eyeY = ky > W / 2 ? W * 0.2 : W * 0.8;
+      const eyes = el(clip, 'fx-dragon-eyes', { left: `${W * 0.5}px`, top: `${eyeY}px`, width: `${W * 0.5}px`, height: `${W * 0.15}px` }, DRAGON_EYES);
+      eyes.animate(
+        [
+          { transform: 'translate(-50%,-50%) scaleY(0)', opacity: 0 },
+          { transform: 'translate(-50%,-50%) scaleY(0)', opacity: 1, offset: 0.25 },
+          { transform: 'translate(-50%,-50%) scaleY(1)', opacity: 1, offset: 0.4 },
+          { transform: 'translate(-50%,-50%) scaleY(1)', opacity: 1, offset: 0.6 },
+          { transform: 'translate(-50%,-50%) scaleY(.1)', opacity: 1, offset: 0.65 },
+          { transform: 'translate(-50%,-50%) scaleY(1)', opacity: 0.95 },
+        ],
+        { duration: 3400, delay: 600, easing: 'ease-in-out', fill: 'forwards' },
+      );
+      fades.push(eyes);
+      const look = (kx - W * 0.5) / W;
+      eyes.querySelectorAll('ellipse').forEach((p) => p.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(0)', offset: 0.6 }, { transform: `translate(${(look * 28).toFixed(1)}px, ${ky > eyeY ? 3 : -3}px)` }], { duration: 3400, delay: 600, fill: 'forwards' }));
+    }
+
+    // Le titre
+    later(() => {
+      const sub = outcome === 'win' ? 'Victoire' : lose ? 'Défaite' : `${loser === 'w' ? 'Les Noirs' : 'Les Blancs'} gagnent`;
+      const banner = el(over, 'fx-mate-banner dragon ' + outcome, { fontSize: `${Math.max(24, W * 0.1)}px` }, `<div class="t">Échec et mat</div><div class="s">${sub}</div>`);
+      banner.animate(
+        calm
+          ? [{ opacity: 0 }, { opacity: 1 }]
+          : [{ opacity: 0, transform: 'scale(1.25)', filter: 'blur(8px) brightness(2)' }, { opacity: 1, transform: 'none', filter: 'blur(0) brightness(1)' }],
+        { duration: calm ? 300 : 900, easing: 'cubic-bezier(.2,.8,.3,1.1)', fill: 'both' },
+      );
+      later(() => {
+        once(banner, [{ opacity: 1 }, { opacity: 0 }], { duration: 900, fill: 'forwards' });
+        for (const f of fades) once(f, [{ opacity: getComputedStyle(f).opacity }, { opacity: 0 }], { duration: 1100, fill: 'forwards' });
+      }, 5200);
+    }, calm ? 300 : lose ? 3300 : 3400);
+  }
+
+  // -------------------------------------------------------------------------
   // API
   // -------------------------------------------------------------------------
   function kingSquare(chess, color) {
@@ -1608,6 +1913,7 @@ export function createFx(frame, getOrientation) {
         else if (eq.capture === 'japon') japonCaptureFx(move);
         else if (eq.capture === 'western') westernCaptureFx(move);
         else if (eq.capture === 'ocean') oceanCaptureFx(move);
+        else if (eq.capture === 'dragon') dragonCaptureFx(move);
         else spaceCaptureFx(move);
       }
       const kSq = move.san.includes('+') || mated ? kingSquare(chess, loser) : null;
@@ -1617,9 +1923,10 @@ export function createFx(frame, getOrientation) {
         else if (eq.endAnim === 'japon') japonMateFx(move, kSq, loser, outcome, gen, kingSquare(chess, loser === 'w' ? 'b' : 'w'));
         else if (eq.endAnim === 'western') westernMateFx(move, kSq, loser, outcome, gen);
         else if (eq.endAnim === 'ocean') oceanMateFx(move, kSq, loser, outcome, gen, kingSquare(chess, loser === 'w' ? 'b' : 'w'));
+        else if (eq.endAnim === 'dragon') dragonMateFx(move, kSq, loser, outcome, gen, kingSquare(chess, loser === 'w' ? 'b' : 'w'));
         else spaceMateFx(move, kSq, loser, outcome, gen, kingSquare(chess, loser === 'w' ? 'b' : 'w'));
       }
-      else if (kSq) (classicEnd ? classicCheckFx : eq.endAnim === 'japon' ? japonCheckFx : eq.endAnim === 'western' ? westernCheckFx : eq.endAnim === 'ocean' ? oceanCheckFx : checkFx)(kSq);
+      else if (kSq) (classicEnd ? classicCheckFx : eq.endAnim === 'japon' ? japonCheckFx : eq.endAnim === 'western' ? westernCheckFx : eq.endAnim === 'ocean' ? oceanCheckFx : eq.endAnim === 'dragon' ? dragonCheckFx : checkFx)(kSq);
     },
     /** Efface tout (nouvelle partie). */
     reset() {

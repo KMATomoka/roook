@@ -2,6 +2,7 @@
 // (bannir / débannir, retirer une photo, réinitialiser un mot de passe, nommer ou retirer un admin).
 // Les vraies protections sont dans les règles de la base : seul un admin peut lire ces données et agir.
 import { $, escapeHtml } from './common.js';
+import { ico } from './icons.js'; // icônes dessinées (à la place des emojis)
 import { session, toast, picHtml, isBanActive, banEndText, profileUrl, roleBadge, isOnline, isPlaying } from './compte.js';
 import { db, ref, get, set, remove, onValue, serverTimestamp, serverNow, sendPasswordResetEmail, auth } from './fb.js';
 
@@ -147,7 +148,7 @@ function row(m) {
   const badges = [
     me ? '<span class="badge me">toi</span>' : '',
     roleBadge(m.role),
-    m.ban ? '<span class="badge banned">⛔ banni</span>' : '',
+    m.ban ? `<span class="badge banned">${ico('ban')} banni</span>` : '',
   ].join('');
   const statusTxt = m.playing ? '<span class="status-playing">en partie</span>' : m.online ? '<span class="status-online">en ligne</span>' : `<span class="muted">${ago(m.lastSeen)}</span>`;
   const open = openId === m.id;
@@ -170,17 +171,17 @@ function row(m) {
 function details(m, me) {
   const g = m.games;
   const banInfo = m.ban
-    ? `<div class="member-ban">⛔ Banni ${escapeHtml(banEndText(m.ban))}${m.ban.reason ? ` · motif : « ${escapeHtml(m.ban.reason)} »` : ''}${m.ban.byName ? ` · par ${escapeHtml(m.ban.byName)}` : ''} · le ${date(m.ban.at)}</div>`
+    ? `<div class="member-ban">${ico('ban')} Banni ${escapeHtml(banEndText(m.ban))}${m.ban.reason ? ` · motif : « ${escapeHtml(m.ban.reason)} »` : ''}${m.ban.byName ? ` · par ${escapeHtml(m.ban.byName)}` : ''} · le ${date(m.ban.at)}</div>`
     : '';
   const actions = [];
   if (m.ban) actions.push('<button class="btn btn-primary small" data-a="unban">✓ Débannir</button>');
-  else if (!me && !m.admin) actions.push('<button class="btn btn-danger small" data-a="ban">⛔ Bannir…</button>');
-  if (m.avatar) actions.push('<button class="btn btn-ghost small" data-a="photo">🖼 Retirer la photo</button>');
-  if (m.bio) actions.push('<button class="btn btn-ghost small" data-a="bio">🧹 Effacer la bio</button>');
-  if (m.email) actions.push('<button class="btn btn-ghost small" data-a="reset">✉ Envoyer un lien « nouveau mot de passe »</button>');
-  actions.unshift(`<a class="btn btn-ghost small" href="${profileUrl(m.id)}">👤 Voir le profil</a>`);
+  else if (!me && !m.admin) actions.push(`<button class="btn btn-danger small" data-a="ban">${ico('ban')} Bannir…</button>`);
+  if (m.avatar) actions.push(`<button class="btn btn-ghost small" data-a="photo">${ico('noPhoto')} Retirer la photo</button>`);
+  if (m.bio) actions.push(`<button class="btn btn-ghost small" data-a="bio">${ico('broom')} Effacer la bio</button>`);
+  if (m.email) actions.push(`<button class="btn btn-ghost small" data-a="reset">${ico('mail')} Envoyer un lien « nouveau mot de passe »</button>`);
+  actions.unshift(`<a class="btn btn-ghost small" href="${profileUrl(m.id)}">${ico('user')} Voir le profil</a>`);
   // Nommer admin : admins et fondateur. Retirer le rôle d'un admin : le fondateur seulement. Le fondateur est intouchable.
-  if (!me && m.role === 'member') actions.push('<button class="btn btn-ghost small" data-a="promote">🛡 Nommer admin</button>');
+  if (!me && m.role === 'member') actions.push(`<button class="btn btn-ghost small" data-a="promote">${ico('shield')} Nommer admin</button>`);
   if (!me && m.role === 'admin' && user.role === 'fondateur') actions.push('<button class="btn btn-ghost small" data-a="demote">Retirer le rôle admin</button>');
   return `<div class="member-details">
     ${banInfo}
@@ -271,7 +272,7 @@ async function onBan(e) {
       byName: user.username,
     });
     $('#ban-dialog').close();
-    toast(`⛔ <b>${escapeHtml(m.username)}</b> est banni ${escapeHtml(banEndText({ until: ms ? serverNow() + ms : 0 }))}.`, { cls: 'info' });
+    toast(`${ico('ban')} <b>${escapeHtml(m.username)}</b> est banni ${escapeHtml(banEndText({ until: ms ? serverNow() + ms : 0 }))}.`, { cls: 'info' });
   } catch (ex) {
     toast('Bannissement refusé : ' + escapeHtml(ex.message), { cls: 'error' });
   }

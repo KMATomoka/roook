@@ -70,7 +70,7 @@ function rollRarity() {
  */
 export function drawBox(owned) {
   const rarity = rollRarity();
-  const has = (p, s) => p.rarity === 'commun' || !!owned[p.id]?.[s] || (PIECE_TYPES.includes(s) && !!owned[p.id]?.pieces);
+  const has = (p, s) => !!p.free || !!owned[p.id]?.[s] || (PIECE_TYPES.includes(s) && !!owned[p.id]?.pieces);
   if (rarity === 'jeu') {
     const missing = PACKS.filter((p) => p.box && PIECE_TYPES.some((t) => !has(p, t)));
     if (!missing.length) {
@@ -81,7 +81,7 @@ export function drawBox(owned) {
     const p = pick(missing);
     return { rarity, pack: p.id, slots: [...PIECE_TYPES], fresh: PIECE_TYPES.filter((t) => !has(p, t)), dust: 0 };
   }
-  const pool = PACKS.filter((p) => p.rarity === rarity).flatMap((p) => PACK_ITEMS.filter((s) => packHas(p, s)).map((s) => [p, s]));
+  const pool = PACKS.filter((p) => p.box && p.rarity === rarity).flatMap((p) => PACK_ITEMS.filter((s) => packHas(p, s)).map((s) => [p, s]));
   const [p, s] = pick(pool);
   const fresh = has(p, s) ? [] : [s];
   return { rarity, pack: p.id, slots: [s], fresh, dust: fresh.length ? 0 : DUST[rarity] };
@@ -93,7 +93,7 @@ export function drawBox(owned) {
  */
 export async function openBox(uid, key, state) {
   const fromDust = !key;
-  if (fromDust && state.dust < DUST_PER_BOX) throw new Error(`Il te faut ${DUST_PER_BOX} ✨ pour ouvrir une box.`);
+  if (fromDust && state.dust < DUST_PER_BOX) throw new Error(`Il te faut ${DUST_PER_BOX} poussières d’étoile pour ouvrir une box.`);
   const boxKey = key || 'dust-' + push(ref(db, `loot/${uid}/opened`)).key;
   const res = drawBox(state.owned);
   const dust = state.dust - (fromDust ? DUST_PER_BOX : 0) + res.dust;

@@ -1,5 +1,6 @@
 // Page « Mes amis » : la liste d'amis (présence en direct, défier, retirer) et les demandes d'amis.
 import { $, escapeHtml } from './common.js';
+import { ico } from './icons.js'; // icônes dessinées (à la place des emojis)
 import { session, challenge, toast, watchFriends, acceptFriend, declineFriend, cancelRequest, removeFriend, picHtml, profileUrl } from './compte.js';
 
 const { user, banned } = await session;
@@ -57,7 +58,7 @@ function renderFriends() {
           return `<li class="person">${avatar(f.username, status, f.avatar)}
             <span class="person-name"><a class="person-link" href="${profileUrl(f.id)}">${escapeHtml(f.username)}</a> <small class="status-${status}">${label}</small></span>
             <span class="person-actions">
-              <button class="btn btn-primary small" data-challenge="${f.id}" ${status === 'online' ? '' : 'disabled'}>⚔ Défier</button>
+              <button class="btn btn-primary small" data-challenge="${f.id}" ${status === 'online' ? '' : 'disabled'}>${ico('swords')} Défier</button>
               <button class="icon-btn" data-remove="${f.id}" title="Retirer de mes amis" aria-label="Retirer ${escapeHtml(f.username)} de mes amis">✕</button>
             </span></li>`;
         })

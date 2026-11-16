@@ -6,7 +6,7 @@
 import { escapeHtml, getPref, setPref } from './common.js';
 import './theme.js'; // apparence choisie dans l'inventaire (plateau, pièces…)
 import { watchBoxes } from './box.js'; // box gagnées (compteur dans la barre du haut)
-import { ICONS } from './icons.js'; // icônes dessinées du menu (à la place des emojis)
+import { ICONS, ico, fillIcons } from './icons.js'; // icônes dessinées du menu (à la place des emojis)
 import { notifySound } from './sound.js'; // petit son des notifications (défi, demande d'ami, revanche)
 import {
   auth, db, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
@@ -15,6 +15,9 @@ import {
   query, orderByKey, startAt, endAt, limitToFirst,
   serverNow, pseudoEmail, USERNAME_RE, EMAIL_RE, isLegacyEmail,
 } from './fb.js';
+
+// Icônes dessinées des pages HTML (<span data-ico="…">), à la place des emojis
+fillIcons();
 
 // Menu du haut (même menu sur toutes les pages) : la page en cours est mise en avant
 {
@@ -118,6 +121,8 @@ if (new URLSearchParams(location.search).get('debug') === 'largeur') {
     btn.innerHTML = '<span></span><span></span><span></span>';
     bar.appendChild(btn);
     const setOpen = (open) => {
+      // chaque ligne du menu a son numéro : elles apparaissent l'une après l'autre en se déroulant
+      if (open) [...nav.querySelectorAll(':scope > a, :scope > .nav-extra > a')].forEach((a, i) => a.style.setProperty('--i', i));
       bar.classList.toggle('menu-open', open);
       btn.setAttribute('aria-expanded', String(open));
       btn.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
@@ -482,9 +487,20 @@ function syncEmail(u) {
 }
 
 const SETTINGS_HTML = `<a class="icon-btn settings-link" href="parametres.html" title="Paramètres" aria-label="Paramètres">${ICONS.gear}</a>`;
-function renderAccount(user) {
+// Le compte affiché à la dernière visite : la barre et le menu s'affichent en entier tout de suite (sans attendre
+// la base), puis sont remis à jour quand la connexion est confirmée.
+const NAV_CACHE = 'roque:barre';
+function renderAccount(user, early = false) {
   const bar = document.querySelector('.topbar');
   if (!bar || document.body.classList.contains('page-auth')) return;
+  bar.querySelector('.account')?.remove();
+  bar.querySelector('.topnav .nav-extra')?.remove();
+  if (!early) {
+    try {
+      if (user) localStorage.setItem(NAV_CACHE, JSON.stringify({ username: user.username, role: user.role, avatar: (user.avatar || '').length < 80000 ? user.avatar : null }));
+      else localStorage.removeItem(NAV_CACHE);
+    } catch {}
+  }
   const el = document.createElement('div');
   el.className = 'account';
   if (!user) {
@@ -503,11 +519,23 @@ function renderAccount(user) {
       ${SETTINGS_HTML}`;
   }
   bar.appendChild(el);
-  if (user) setupSearch(el.querySelector('.player-search'));
+  if (early) {
+    // Dernier nombre de box connu, en attendant le vrai
+    const n = Number(localStorage.getItem(NAV_CACHE + ':box')) || 0;
+    const c = el.querySelector('.box-chip');
+    if (c) {
+      c.querySelector('.box-chip-n').textContent = n;
+      c.classList.toggle('has', n > 0);
+    }
+  }
+  if (user && !early) setupSearch(el.querySelector('.player-search'));
   // Compteur de box (en direct : une victoire en ligne en ajoute une, l'ouverture en retire une)
-  if (user) {
+  if (user && !early) {
     watchBoxes(user.id, (st) => {
       const n = st.keys.length;
+      try {
+        localStorage.setItem(NAV_CACHE + ':box', String(n));
+      } catch {}
       for (const c of document.querySelectorAll('.box-chip')) {
         c.querySelector('.box-chip-n').textContent = n;
         c.classList.toggle('has', n > 0);
@@ -520,7 +548,7 @@ function renderAccount(user) {
 
   // Menu déroulant (téléphone, tablette) : profil, administration et déconnexion, cachés dans la barre sur petit écran
   const nav = bar.querySelector('.topnav');
-  if (user && nav && !nav.querySelector('.nav-extra')) {
+  if (user && nav) {
     const isStaff = user.role === 'admin' || user.role === 'fondateur';
     nav.insertAdjacentHTML(
       'beforeend',
@@ -598,7 +626,7 @@ function setupSearch(box) {
     if (p.relation === 'none') return '<button class="btn btn-primary small" data-s="add">+ Ajouter</button>';
     if (p.relation === 'sent') return '<span class="search-tag">Demande envoyée</span>';
     if (p.relation === 'received') return '<button class="btn btn-primary small" data-s="accept">Accepter</button>';
-    if (p.online && !p.playing) return '<button class="btn btn-primary small" data-s="challenge">⚔ Défier</button>';
+    if (p.online && !p.playing) return `<button class="btn btn-primary small" data-s="challenge">${ico('swords')} Défier</button>`;
     return `<span class="search-tag">${p.playing ? 'En partie' : 'Hors ligne'}</span>`;
   };
   const render = (msg) => {
@@ -1051,7 +1079,7 @@ function watchRematch() {
     const name = g.names?.[opp] || 'Ton adversaire';
     t = toast(
       `<div class="toast-invite">
-        <div class="toast-title">⚔ ${escapeHtml(name)} te propose une revanche !</div>
+        <div class="toast-title">${ico('swords')} ${escapeHtml(name)} te propose une revanche !</div>
         <div class="toast-sub">Les couleurs sont inversées.</div>
         <div class="toast-actions">
           <a class="btn btn-primary small" href="jeu.html?partie=${encodeURIComponent(last.id)}&revanche=1">Accepter</a>
@@ -1094,7 +1122,7 @@ function listenFriendRequests() {
   onChildAdded(ref(db, `friendRequests/${currentUser.id}`), (s) => {
     const v = s.val();
     if ((v.at || 0) > loadedAt) {
-      toast(`👋 <b>${escapeHtml(v.username)}</b> veut être ton ami. <a href="amis.html">Voir</a>`, { cls: 'info', duration: 8000 });
+      toast(`${ico('userPlus')} <b>${escapeHtml(v.username)}</b> veut être ton ami. <a href="amis.html">Voir</a>`, { cls: 'info', duration: 8000 });
       notifySound('request');
     }
   });
@@ -1456,4 +1484,13 @@ export async function setBio(text) {
 export async function setProfilePrivate(isPrivate) {
   if (!currentUser) return;
   await set(ref(db, `users/${currentUser.id}/private`), !!isPrivate);
+}
+
+// Barre et menu complets dès l'arrivée sur la page, avec le compte de la dernière visite (remplacés par les vrais
+// dès que la connexion est confirmée) : plus de menu qui s'affiche à moitié puis se complète.
+if (!started) {
+  try {
+    const cached = JSON.parse(localStorage.getItem(NAV_CACHE) || 'null');
+    if (cached?.username) renderAccount(cached, true);
+  } catch {}
 }

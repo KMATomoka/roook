@@ -1,5 +1,6 @@
 // Page de partie : contre un ami en ligne, contre l'IA, ou à deux sur le même écran.
 import { Chessground } from '../vendor/chessground/chessground.min.js';
+import { ico } from './icons.js'; // icônes dessinées (à la place des emojis)
 import { Engine, LEVELS } from './engine.js';
 import {
   $, $$, Chess, colorName, legalDests, castleDest, isPromotion, askPromotion, saveGame, getPref, setPref,
@@ -69,7 +70,7 @@ const fxOpts = () => ({ visual: viewPly === null, me: mode === 'local' ? null : 
 // Bouton pour couper / remettre le son
 const soundBtn = $('#sound-toggle');
 const showSound = () => {
-  soundBtn.textContent = isMuted() ? '🔇' : '🔊';
+  soundBtn.innerHTML = isMuted() ? ico('mute') : ico('sound');
   soundBtn.title = isMuted() ? 'Remettre le son' : 'Couper le son';
 };
 soundBtn.addEventListener('click', () => {
@@ -420,9 +421,9 @@ function renderStatus() {
   if (!over && chess.inCheck()) txt += ' <span class="tag-check">Échec !</span>';
   // Nulle par répétition : on prévient quand la position est déjà apparue 2 fois
   if (!over && !chess.isGameOver() && repetitions(chess) === 2)
-    txt += ' <span class="rep-tag">🔁 Cette position est déjà apparue 2 fois : si elle revient une 3<sup>e</sup> fois, partie nulle.</span>';
+    txt += ` <span class="rep-tag">${ico('repeat')} Cette position est déjà apparue 2 fois : si elle revient une 3<sup>e</sup> fois, partie nulle.</span>`;
   const away = awayInfo();
-  if (away) txt += ` <span class="away-tag">⏳ ${escapeHtml(names[away.color])} a quitté la partie : tu gagnes dans ${away.left} s s’il ne revient pas.</span>`;
+  if (away) txt += ` <span class="away-tag">${ico('hourglass')} ${escapeHtml(names[away.color])} a quitté la partie : tu gagnes dans ${away.left} s s’il ne revient pas.</span>`;
   if (viewPly !== null) txt += ` <a href="#" id="back-live">Revenir à la position actuelle</a>`;
   el.innerHTML = txt;
   $('#status-review')?.addEventListener('click', (e) => {
@@ -466,7 +467,7 @@ $('#btn-premove').addEventListener('click', () => {
   premoveOn = !premoveOn;
   setPref('premove', premoveOn ? '1' : '0');
   if (!premoveOn) premove = null;
-  toast(premoveOn ? '⚡ Prémove activé : la pièce lâchée pendant le tour adverse sera jouée dès que c’est ton tour.' : 'Prémove désactivé.', { cls: 'info', duration: 2600 });
+  toast(premoveOn ? `${ico('bolt')} Prémove activé : la pièce lâchée pendant le tour adverse sera jouée dès que c’est ton tour.` : 'Prémove désactivé.', { cls: 'info', duration: 2600 });
   render();
 });
 $('#btn-flip').addEventListener('click', () => {
@@ -524,14 +525,14 @@ function finish(end) {
   storeGame();
   const r = resultText(end.result, end.reason, names);
   let icon = '½';
-  if (end.result === '*') icon = '⚠';
+  if (end.result === '*') icon = ico('warning');
   else if (end.result !== '1/2-1/2') {
     const winner = end.result === '1-0' ? 'w' : 'b';
     const iWon = mode === 'local' || winner === myColor;
-    icon = iWon ? '🏆' : '♚';
+    icon = iWon ? ico('trophy') : '♚';
     if (mode !== 'local' && myColor) r.title = iWon ? 'Victoire !' : 'Défaite';
   }
-  $('#end-icon').textContent = icon;
+  $('#end-icon').innerHTML = icon;
   if (mode === 'ia') {
     // L'adversaire réagit au résultat
     const noaWon = end.result !== '1/2-1/2' && (end.result === '1-0' ? 'w' : 'b') !== myColor;
@@ -550,7 +551,9 @@ function finish(end) {
   $('#end-rematch').hidden = mode === 'ami' && !myColor;
   $('#end-rematch').disabled = false;
   showRematchOffer(false);
-  setTimeout(() => !$('#end-dialog').open && $('#end-dialog').showModal(), end.reason === 'mat' ? 2700 : 600);
+  // Mat : on laisse l'animation de fin se jouer (celle du Dragon est plus longue : le dragon passe et crache le feu)
+  const mateDelay = document.body.classList.contains('end-dragon') ? 5200 : 2700;
+  setTimeout(() => !$('#end-dialog').open && $('#end-dialog').showModal(), end.reason === 'mat' ? mateDelay : 600);
 }
 
 /** L'adversaire propose la revanche : un encart bien visible et un bouton « Accepter » mis en avant. */

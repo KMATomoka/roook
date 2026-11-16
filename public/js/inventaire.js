@@ -5,10 +5,11 @@
 //  - une grille d'éléments à gauche, et à droite un grand aperçu de l'élément choisi, avec « Équiper ».
 // L'équipement est géré par js/theme.js (compte Firebase, ou ce navigateur sans compte).
 import { Chessground } from '../vendor/chessground/chessground.min.js';
+import { ico } from './icons.js'; // icônes dessinées (à la place des emojis)
 import { $, $$, Chess, escapeHtml } from './common.js';
 import { toast } from './compte.js';
 import {
-  PACKS, SLOTS, SLOT_NAMES, RARITY, PIECE_TYPES, PIECE_NAMES, PIECE_ROLE, PACK_ITEMS, THEME_CLASS, packHas,
+  PACKS, PACK_COLOR, SLOTS, SLOT_NAMES, RARITY, PIECE_TYPES, PIECE_NAMES, PIECE_ROLE, PACK_ITEMS, THEME_CLASS, packHas,
   getEquip, setEquip, equipPack, equipOwnedPieces, onEquipChange, themeClasses, ready, isUnlocked, isItemUnlocked,
   unlockedCount, piecesCount, piecesPack, itemName, unlockProgress, loadPackFont,
 } from './theme.js';
@@ -28,7 +29,7 @@ const DEMOS = {
 const ICONS = { packs: '◆', board: '▦', pieces: '♞', endAnim: '♚', capture: '✦' };
 const TABS = [{ id: 'packs', name: 'Packs' }, ...SLOTS.map((s) => ({ id: s, name: SLOT_NAMES[s] }))];
 // Couleur de chaque pack (comme la rareté d'un objet)
-const TIER = { astrea: '#9b7bff', classic: '#c4c8d0', bois: '#c08a55', japon: '#e8553f', western: '#d27b4f', ocean: '#46e6d4', royal: '#e2b64e' };
+const TIER = PACK_COLOR;
 const packById = (id) => PACKS.find((p) => p.id === id);
 const allPieces = (id) => Object.fromEntries(PIECE_TYPES.map((t) => [t, id]));
 const whole = (id) => ({ ...Object.fromEntries(SLOTS.map((s) => [s, id])), piece: allPieces(id) });
@@ -48,11 +49,11 @@ const partialSet = (p) => tab === 'pieces' && !pieceType && !p.unlock && piecesC
 function lockLabel(p) {
   if (p.unlock) {
     const pr = unlockProgress(p.id);
-    return `🔒 ${pr.wins}/${pr.need}`;
+    return `${ico('lock')} ${pr.wins}/${pr.need}`;
   }
-  if (tab === 'packs') return `🔒 ${unlockedCount(p.id)}/${PACK_ITEMS.length}`;
-  if (tab === 'pieces' && !pieceType) return `🔒 0/${PIECE_TYPES.length}`;
-  return '🔒 Box';
+  if (tab === 'packs') return `${ico('lock')} ${unlockedCount(p.id)}/${PACK_ITEMS.length}`;
+  if (tab === 'pieces' && !pieceType) return `${ico('lock')} 0/${PIECE_TYPES.length}`;
+  return `${ico('lock')} Box`;
 }
 /** Équipé dans l'onglet courant ? */
 function isOn(id, eq = getEquip()) {
@@ -232,14 +233,14 @@ function renderDetail(autoplay = false) {
     const n = isPack ? unlockedCount(p.id) : piecesCount(p.id);
     const max = isPack ? PACK_ITEMS.length : PIECE_TYPES.length;
     extra += `<div class="inv-lock">
-      <div class="inv-lock-head">🔒 ${isPack ? 'Ses éléments se trouvent' : setView ? 'Ses pièces se trouvent une par une' : 'Se trouve'} dans les <a href="box.html">box</a> : une box à chaque victoire en ligne</div>
+      <div class="inv-lock-head">${ico('lock')} ${isPack ? 'Ses éléments se trouvent' : setView ? 'Ses pièces se trouvent une par une' : 'Se trouve'} dans les <a href="box.html">box</a> : une box à chaque victoire en ligne</div>
       ${isPack || setView ? `<div class="inv-progress" role="progressbar" aria-valuemin="0" aria-valuemax="${max}" aria-valuenow="${n}"><i style="width:${(n / max) * 100}%"></i></div>
       <div class="inv-lock-count">${n} / ${max} ${isPack ? 'éléments' : 'pièces'} trouvé${n > 1 ? 's' : ''}${isPack ? ' · pack entier bientôt en boutique' : ''}</div>` : ''}
     </div>`;
   } else if (locked) {
     const pr = unlockProgress(p.id);
     extra += `<div class="inv-lock">
-      <div class="inv-lock-head">🔒 Se débloque avec <b>${pr.need} victoires</b> en ligne contre tes amis</div>
+      <div class="inv-lock-head">${ico('lock')} Se débloque avec <b>${pr.need} victoires</b> en ligne contre tes amis</div>
       <div class="inv-progress" role="progressbar" aria-valuemin="0" aria-valuemax="${pr.need}" aria-valuenow="${pr.wins}"><i style="width:${Math.min(100, (pr.wins / pr.need) * 100)}%"></i></div>
       <div class="inv-lock-count">${pr.wins} / ${pr.need} victoires</div>
     </div>`;
@@ -248,7 +249,7 @@ function renderDetail(autoplay = false) {
     extra += `<ul class="inv-contents">${SLOTS.map((s) => {
       const ok = isItemUnlocked(p.id, s);
       const n = s === 'pieces' && !ok && piecesCount(p.id) ? ` <small>(${piecesCount(p.id)}/${PIECE_TYPES.length})</small>` : '';
-      return `<li class="${ok ? '' : 'off'}"><span aria-hidden="true">${ok ? ICONS[s] : '🔒'}</span><small>${SLOT_NAMES[s]}</small> ${escapeHtml(p.items[s].name)}${n}</li>`;
+      return `<li class="${ok ? '' : 'off'}"><span aria-hidden="true">${ok ? ICONS[s] : ico('lock')}</span><small>${SLOT_NAMES[s]}</small> ${escapeHtml(p.items[s].name)}${n}</li>`;
     }).join('')}</ul>`;
   }
   if (setView) {
@@ -256,7 +257,7 @@ function renderDetail(autoplay = false) {
     extra += `<ul class="inv-set">${PIECE_TYPES.map((t) => {
       const ok = isItemUnlocked(p.id, t);
       return `<li><button type="button" class="inv-set-piece ${ok ? '' : 'off'}" data-ptype="${t}" title="${escapeHtml(itemName(p.id, t))}${ok ? '' : ' (à trouver)'}">
-        <span class="cg-wrap pieces-${p.id}">${pieceEl(t, 'white')}</span><small>${ok ? PIECE_NAMES[t] : '🔒'}</small></button></li>`;
+        <span class="cg-wrap pieces-${p.id}">${pieceEl(t, 'white')}</span><small>${ok ? PIECE_NAMES[t] : ico('lock')}</small></button></li>`;
     }).join('')}</ul>`;
   }
   $('#inv-d-extra').innerHTML = extra;
@@ -268,8 +269,8 @@ function renderDetail(autoplay = false) {
       : `<button type="button" class="btn btn-ghost" data-demo="win">▶ Revoir ${DEMOS[tab].label}</button>`;
   const main = locked
     ? p.box
-      ? `<a class="btn inv-equip-btn" href="box.html">🎁 ${isPack ? 'Trouver ses éléments' : setView ? 'Trouver ses pièces' : 'Le trouver'} dans les box</a>`
-      : '<button type="button" class="btn inv-equip-btn" disabled>🔒 Verrouillé</button>'
+      ? `<a class="btn inv-equip-btn" href="box.html">${ico('gift')} ${isPack ? 'Trouver ses éléments' : setView ? 'Trouver ses pièces' : 'Le trouver'} dans les box</a>`
+      : `<button type="button" class="btn inv-equip-btn" disabled>${ico('lock')} Verrouillé</button>`
     : on
       ? `<button type="button" class="btn inv-equip-btn is-on" disabled>✓ ${isPack ? 'Pack équipé' : setView ? 'Jeu équipé' : 'Équipé'}</button>`
       : `<button type="button" class="btn inv-equip-btn" data-equip>${isPack ? 'Équiper le pack' : partial ? `Équiper mes ${piecesCount(p.id)} pièces` : setView ? 'Équiper tout le jeu' : 'Équiper'}</button>`;

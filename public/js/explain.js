@@ -2,6 +2,7 @@
 // Les explications viennent de l'analyse de la position (pièces attaquées, défendues,
 // fourchettes, mat, développement, centre…), pas d'une phrase toute faite.
 import { Chess } from '../vendor/chess.js/chess.js';
+import { ico } from './icons.js'; // icônes dessinées (à la place des emojis)
 import { frSan } from './common.js';
 
 const NAME = { p: 'pion', n: 'cavalier', b: 'fou', r: 'tour', q: 'dame', k: 'roi' };
@@ -242,7 +243,7 @@ export function explainMove(o) {
   const priorSame = prior.filter((m) => m.color === move.color);
   const lines = [];
 
-  if (move.san.includes('#')) return `<p>Échec et mat, la partie est terminée. Bien joué ! 🎉</p>`;
+  if (move.san.includes('#')) return `<p>Échec et mat, la partie est terminée. Bien joué ! ${ico('party')}</p>`;
 
   const ownTxt = featureText(own);
   const bestTxt = featureText(bestFeat);
@@ -281,7 +282,7 @@ export function explainMove(o) {
         if (bestTxt) lines.push(`Il fallait jouer ${bestSan} : il ${bestTxt}.`);
         else lines.push(`Il fallait jouer ${bestSan}, plus solide.`);
       }
-      if (pun && principle && cat !== 'inaccuracy') lines.push(`<span class="tip-inline">💡 ${principle}</span>`);
+      if (pun && principle && cat !== 'inaccuracy') lines.push(`<span class="tip-inline">${ico('bulb')} ${principle}</span>`);
     }
   }
   return lines.map((l) => `<p>${cap(l)}</p>`).join('');

@@ -1020,53 +1020,35 @@ function creak(at = 0, dur = 0.5, vol = 1) {
 }
 
 /**
- * Ambiance pendant qu'on attend de frapper : une nappe douce et basse (fondamentale et quinte en sinus,
- * qui respirent lentement), très discrète. Renvoie de quoi l'arrêter.
+ * Pendant qu'on attend de frapper : la gemme scintille de temps en temps, quelques notes cristallines et douces
+ * (gamme pentatonique, avec un léger écho), très discrètes. Plus la rareté monte, plus c'est aigu et fréquent.
+ * Renvoie de quoi l'arrêter.
  */
 function boxHum(level = 0) {
-  const a = audio();
-  if (!a) return () => {};
-  const t = a.currentTime;
-  const root = 98 * Math.pow(2, (level * 2) / 12); // un ton plus haut à chaque palier
-  const g = a.createGain();
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(0.022 + level * 0.006, t + 1.4);
-  const f = a.createBiquadFilter();
-  f.type = 'lowpass';
-  f.frequency.value = 600 + level * 200;
-  // Respiration lente du volume
-  const lfo = a.createOscillator();
-  const lfoGain = a.createGain();
-  lfo.frequency.value = 0.35;
-  lfoGain.gain.value = 0.008;
-  lfo.connect(lfoGain).connect(g.gain);
-  const oscs = [root, root * 1.5, root * 2.003].map((fr, i) => {
-    const o = a.createOscillator();
-    o.type = 'sine';
-    o.frequency.value = fr;
-    const og = a.createGain();
-    og.gain.value = [1, 0.55, 0.25][i];
-    o.connect(og).connect(f);
-    o.start(t);
-    return o;
-  });
-  f.connect(g).connect(master);
-  lfo.start(t);
+  if (!audio()) return () => {};
+  const scale = [0, 2, 4, 7, 9, 12, 14];
+  const base = 784 * Math.pow(2, (level * 2) / 12);
+  let timer = 0;
+  let stopped = false;
+  const twinkle = () => {
+    if (stopped) return;
+    const n = 1 + Math.floor(Math.random() * 2);
+    for (let k = 0; k < n; k++) {
+      const f = base * Math.pow(2, scale[Math.floor(Math.random() * scale.length)] / 12);
+      const at = k * 0.13;
+      tone({ freq: f, type: 'sine', at, dur: 1.1, vol: 0.012, attack: 0.03 });
+      tone({ freq: f * 2.01, type: 'sine', at, dur: 0.5, vol: 0.003, attack: 0.02 });
+      tone({ freq: f, type: 'sine', at: at + 0.22, dur: 0.9, vol: 0.004, attack: 0.03 }); // écho
+    }
+    timer = setTimeout(twinkle, (1500 + Math.random() * 1600) / (1 + level * 0.35));
+  };
+  timer = setTimeout(twinkle, 500);
   return () => {
-    const n = a.currentTime;
-    g.gain.cancelScheduledValues(n);
-    g.gain.setValueAtTime(Math.max(g.gain.value, 0.0001), n);
-    g.gain.exponentialRampToValueAtTime(0.0001, n + 0.4);
-    [...oscs, lfo].forEach((o) => o.stop(n + 0.45));
+    stopped = true;
+    clearTimeout(timer);
   };
 }
 export const boxSfx = {
-  /** Le coffre tombe sur la scène : un souffle léger, puis le bois qui se pose. */
-  land() {
-    noiseSweep({ at: 0, dur: 0.4, type: 'bandpass', f: [300, 1400, 500], q: 1.2, vol: 0.05, peak: 0.7 });
-    woodThud(0.42, 1.1, 0.9);
-    ironRattle(0.44, 0.8);
-  },
   hum: boxHum,
   /** Un coup sur le coffre (n : 0, 1, 2… un peu plus fort et plus aigu). */
   hit(n = 0) {

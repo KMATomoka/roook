@@ -41,14 +41,17 @@ const DEMOS = {
 const MIDDLE = 'r1bq1rk1/pp2bppp/2n1pn2/3p4/2PP4/2N1PN2/PP3PPP/R2QKB1R w KQ - 0 8';
 
 /**
- * Le coffre en 3D (CSS) : un corps de planches cerclé de fer (5 faces) et un couvercle bombé (lèvre, deux pans,
- * dessus, deux joues) monté sur charnière, avec la gemme verte du coffre commun ; de la lumière à l'intérieur.
+ * Le coffre en 3D (CSS), façon dark fantasy : planches de bois sombre veinées, gros cerclages de fer martelé
+ * cloutés aux quatre coins, couvercle bombé (8 planches en arc) sur charnière, serrure en losange et la gemme
+ * verte du coffre commun ; de la lumière à l'intérieur. La forme est dans style.css (« Le coffre commun »).
  */
+const LID_FACETS = 8;
+const bands = '<b class="band l"></b><b class="band r"></b>';
 const cubeHTML = (cls = '') => `<div class="cube chest ${cls}" aria-hidden="true">
   <div class="cube-shadow"></div>
   <div class="cube-rot">
-    <div class="cb-body"><i class="f inner"></i><i class="f bottom"></i><i class="f back"></i><i class="f left"></i><i class="f right"></i><i class="f front"><b class="lock"><b class="keyhole"></b></b></i></div>
-    <div class="cb-lid"><i class="f lbot"></i><i class="f lb"></i><i class="f lbb"></i><i class="f ll"></i><i class="f lr"></i><i class="f top"></i><i class="f lf"></i><i class="f lfb"><b class="gem-set"><b class="gem"></b></b></i></div>
+    <div class="cb-body"><i class="f inner"></i><i class="f bottom"></i>${['back', 'left', 'right'].map((f) => `<i class="f ${f}">${bands}<b class="rim"></b></i>`).join('')}<i class="f front">${bands}<b class="rim"></b><b class="lock"><b class="keyhole"></b></b></i></div>
+    <div class="cb-lid"><i class="f lbot"></i><i class="f lb">${bands}</i><i class="f lf">${bands}</i>${Array.from({ length: LID_FACETS }, (_, i) => `<i class="f lid lid${i}">${bands}</i>`).join('')}<i class="f ll"><b class="cap-wood"></b></i><i class="f lr"><b class="cap-wood"></b></i><b class="gem-set"><b class="gem"></b></b></div>
   </div>
 </div>`;
 
@@ -408,12 +411,12 @@ async function burstOpen(id) {
   cube.classList.add('open');
   cube.style.setProperty('--leak', '1');
   // Le couvercle bascule sur sa charnière (à l'arrière), rebondit un peu et reste ouvert
-  const hinge = (deg) => `translateZ(calc(var(--s) * -0.42)) rotateX(${deg}deg) translateZ(calc(var(--s) * 0.42))`;
+  const hinge = (deg) => `translateZ(calc(var(--s) * -0.45)) rotateX(${deg}deg) translateZ(calc(var(--s) * 0.45))`;
   cube.querySelector('.cb-lid').animate(
     [{ transform: hinge(16) }, { transform: hinge(128), offset: 0.55 }, { transform: hinge(104), offset: 0.8 }, { transform: hinge(112) }],
     { duration: 800, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' },
   );
-  $('#bx-beam').animate([{ transform: 'translateX(-50%) scaleY(0)', opacity: 0 }, { transform: 'translateX(-50%) scaleY(1)', opacity: 1, offset: 0.3 }, { transform: 'translateX(-50%) scaleY(1.05)', opacity: 0 }], { duration: 1500, easing: 'ease-out' });
+  $('#bx-beam').animate([{ transform: 'translateX(-50%) scaleY(0)', opacity: 0 }, { transform: 'translateX(-50%) scaleY(1)', opacity: 1, offset: 0.35 }, { transform: 'translateX(-50%) scaleY(1.08)', opacity: 0 }], { duration: 1700, delay: 150, easing: 'ease-out' });
   flash('#fff', 0.9, 700);
   shake(12 + lvl * 4, 500);
   ring(t.color, 6);
@@ -422,7 +425,8 @@ async function burstOpen(id) {
   emit({ x: c.x, y: c.y - 20, n: 30 + lvl * 20, speed: [2, 8], angle: [-Math.PI * 0.85, -Math.PI * 0.15], color: [t.color, '#fff'], kind: 'star', size: [2, 5], life: [60, 110], gravity: -0.02, drag: 0.96 });
   if (lvl >= 2) {
     const conf = ['#ff5fa2', '#ffd84a', '#3cf2a3', '#4fa8ff', '#b26bff'];
-    emit({ x: innerWidth / 2, y: -10, n: 90 + lvl * 30, speed: [1, 5], angle: [Math.PI * 0.2, Math.PI * 0.8], color: conf, kind: 'confetti', size: [3, 6], life: [120, 200], gravity: 0.08, drag: 0.99 });
+    // Pluie de confettis sur toute la largeur de l'écran
+    for (let i = 0; i < 24; i++) emit({ x: rnd(0, innerWidth), y: rnd(-60, -10), n: 4 + lvl, speed: [0.5, 3], angle: [Math.PI * 0.3, Math.PI * 0.7], color: conf, kind: 'confetti', size: [3, 6], life: [160, 240], gravity: 0.06, drag: 0.99 });
   }
   cube.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateY(60px) scale(.7)', opacity: 0 }], { duration: 650, delay: 700, easing: 'ease-in', fill: 'forwards' });
   await wait(900);
@@ -486,23 +490,16 @@ async function doOpen(key, fake = null) {
   opening = false;
 }
 
-/** La box arrive : elle tombe en tournant et rebondit. */
+/** Le coffre apparaît doucement, sans choc ni son de coup (seul le joueur le frappe). */
 async function landing() {
   const cube = scene.querySelector('.cube');
-  boxSfx.land();
   await cube.animate(
     [
-      { transform: 'translateY(-110vh) rotate(-25deg) scale(.6)', opacity: 0 },
-      { transform: 'translateY(0) rotate(4deg) scale(1.08, .86)', opacity: 1, offset: 0.62 },
-      { transform: 'translateY(-26px) rotate(-2deg) scale(.96, 1.06)', offset: 0.8 },
-      { transform: 'none' },
+      { transform: 'translateY(-40px) scale(.9)', opacity: 0, filter: 'blur(6px)' },
+      { transform: 'none', opacity: 1, filter: 'blur(0)' },
     ],
-    { duration: 720, easing: 'cubic-bezier(.5,0,.4,1)' },
+    { duration: 700, easing: 'cubic-bezier(.2,.8,.3,1)' },
   ).finished;
-  shake(6);
-  const c = center();
-  emit({ x: c.x, y: c.y + 60, n: 24, speed: [2, 6], angle: [Math.PI * 0.9, Math.PI * 1.1], color: '#b9a8ff', size: [1.5, 3], life: [20, 40], gravity: 0.1 });
-  emit({ x: c.x, y: c.y + 60, n: 24, speed: [2, 6], angle: [-Math.PI * 0.1, Math.PI * 0.1], color: '#b9a8ff', size: [1.5, 3], life: [20, 40], gravity: 0.1 });
 }
 
 /** La carte de l'objet gagné. */

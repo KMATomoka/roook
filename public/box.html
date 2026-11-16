@@ -40,7 +40,7 @@
 
     <section class="bx-section">
       <h2>Taux de drop · Box classique</h2>
-      <p class="muted">Chaque box donne un élément d’un pack : plateau, pièces, fin de partie ou prise et son.</p>
+      <p class="muted">Chaque box donne un élément d’un pack : un plateau, une pièce, une fin de partie ou une prise et son. Plus le drop est gros, plus il faut frapper la box avant qu’elle s’ouvre.</p>
       <ul class="bx-rates" id="bx-rates"></ul>
     </section>
 
@@ -51,13 +51,17 @@
     </section>
   </main>
 
-  <!-- Ouverture d'une box -->
+  <!-- Ouverture d'une box (js/box-page.js) -->
   <div class="bx-stage" id="bx-stage" hidden>
-    <div class="bx-stage-inner">
-      <div class="bx-burst" id="bx-burst" aria-hidden="true"></div>
-      <div class="bx-stage-box" id="bx-stage-box"></div>
-      <div class="bx-result" id="bx-result" hidden></div>
+    <div class="bx-rays" aria-hidden="true"></div>
+    <div class="bx-inner" id="bx-inner">
+      <div class="bx-scene" id="bx-scene"></div>
+      <p class="bx-tier" id="bx-tier" aria-hidden="true"></p>
+      <p class="bx-hint" id="bx-hint" hidden>Touche la box !</p>
+      <div class="bx-result" id="bx-result" hidden aria-live="polite"></div>
     </div>
+    <canvas class="bx-fx" id="bx-fx" aria-hidden="true"></canvas>
+    <div class="bx-flash" id="bx-flash" aria-hidden="true"></div>
   </div>
 
   <script type="module" src="js/box-page.js"></script>

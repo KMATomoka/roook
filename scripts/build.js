@@ -28,13 +28,21 @@ for (const [from, to] of copies) {
 {
   const src = fs.readFileSync(nm('@lichess-org/chessground/assets/chessground.cburnett.css'), 'utf8');
   const ROLE = { pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', king: 'K' };
+  // Les images sont rangées une fois dans --cl-wP… ; .pieces-classic (tout le jeu) et .pc-N-classic (une seule
+  // pièce, classe doublée pour passer devant le jeu de base) s'en servent
   const vars = [];
+  const use = [];
+  const one = {};
   for (const m of src.matchAll(/\.cg-wrap piece\.(\w+)\.(white|black)\s*\{\s*background-image:\s*(url\([^)]*\))/g)) {
-    vars.push(`  --p-${m[2][0]}${ROLE[m[1]]}: ${m[3]};`);
+    const k = `${m[2][0]}${ROLE[m[1]]}`;
+    vars.push(`  --cl-${k}: ${m[3]};`);
+    use.push(`  --p-${k}: var(--cl-${k});`);
+    (one[ROLE[m[1]]] ||= []).push(`--p-${k}: var(--cl-${k});`);
   }
   if (vars.length !== 12) throw new Error(`cburnett : ${vars.length} pièces trouvées au lieu de 12`);
+  const pc = Object.entries(one).map(([t, d]) => `.pc-${t}-classic.pc-${t}-classic { ${d.join(' ')} }`).join('\n');
   const dest = path.join(dist, 'vendor/chessground-assets/chessground.cburnett.css');
-  fs.writeFileSync(dest, `/* Pièces « cburnett » de Chessground (lichess, licence GPL), transformées pour ROOOK par scripts/build.js */\n.pieces-classic {\n${vars.join('\n')}\n}\n`);
+  fs.writeFileSync(dest, `/* Pièces « cburnett » de Chessground (lichess, licence GPL), transformées pour ROOOK par scripts/build.js */\n:root {\n${vars.join('\n')}\n}\n.pieces-classic {\n${use.join('\n')}\n}\n${pc}\n`);
 }
 // Licence du moteur (GPL) distribuée avec lui
 fs.copyFileSync(nm('stockfish/Copying.txt'), path.join(dist, 'vendor/stockfish/LICENCE.txt'));

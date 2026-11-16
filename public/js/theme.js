@@ -9,6 +9,18 @@ export const SLOTS = ['board', 'pieces', 'endAnim', 'capture'];
 export const SLOT_NAMES = { board: 'Plateau', pieces: 'Pièces', endAnim: 'Fin de partie', capture: 'Prise et son' };
 
 /**
+ * Chaque pièce (pion, tour…) a son propre skin : on peut prendre le cavalier d'un pack et la dame d'un autre.
+ * Dans les box, les pièces se trouvent une par une (owned/{pack}/N…) ; « pieces » = le jeu complet d'un coup.
+ */
+export const PIECE_TYPES = ['P', 'R', 'N', 'B', 'Q', 'K'];
+export const PIECE_NAMES = { P: 'Pion', R: 'Tour', N: 'Cavalier', B: 'Fou', Q: 'Dame', K: 'Roi' };
+export const PIECE_ROLE = { P: 'pawn', R: 'rook', N: 'knight', B: 'bishop', Q: 'queen', K: 'king' };
+export const PIECE_ICON = { P: '♟', R: '♜', N: '♞', B: '♝', Q: '♛', K: '♚' };
+/** Tous les éléments à trouver dans un pack : plateau, les 6 pièces, fin de partie, prise et son. */
+export const PACK_ITEMS = ['board', ...PIECE_TYPES, 'endAnim', 'capture'];
+const isPieceType = (s) => PIECE_TYPES.includes(s);
+
+/**
  * Raretés. Commun : à tout le monde dès le début. Rare et épique : chaque élément se trouve dans les box (js/box.js).
  * Légendaire : une mission spéciale (Royal chess, 100 victoires), jamais dans les box.
  */
@@ -23,6 +35,7 @@ export const RARITY = {
 export const PACKS = [
   {
     id: 'astrea',
+    pieceTag: 'Astrea', // « Cavalier Astrea »
     name: 'Astrea chess',
     rarity: 'commun',
     desc: 'L’apparence d’origine de ROOOK, version espace : damier violet, pièces de l’espace, trous de ver, supernova et sons de vaisseau.',
@@ -35,6 +48,7 @@ export const PACKS = [
   },
   {
     id: 'classic',
+    pieceTag: 'Staunton', // « Cavalier Staunton »
     name: 'Classic chess',
     rarity: 'commun',
     desc: 'Le noir et blanc de toujours : damier neutre, pièces Staunton, gestes sobres et sons de bois.',
@@ -47,6 +61,7 @@ export const PACKS = [
   },
   {
     id: 'japon',
+    pieceTag: 'Edo', // « Cavalier Edo »
     name: 'Sakura chess',
     rarity: 'rare',
     box: true,
@@ -60,6 +75,7 @@ export const PACKS = [
   },
   {
     id: 'western',
+    pieceTag: 'Frontier', // « Cavalier Frontier »
     name: 'Western chess',
     rarity: 'rare',
     box: true,
@@ -73,6 +89,7 @@ export const PACKS = [
   },
   {
     id: 'ocean',
+    pieceTag: 'des Abysses', // « Cavalier des Abysses »
     name: 'Océan',
     rarity: 'epique',
     box: true,
@@ -86,6 +103,7 @@ export const PACKS = [
   },
   {
     id: 'royal',
+    pieceTag: 'royal', // « Cavalier royal »
     name: 'Royal chess',
     rarity: 'legendaire',
     desc: 'Or et crème, esprit chevalier : plateau ivoire et brun liseré d’or, pièces couronnées et joyaux.',
@@ -119,28 +137,54 @@ let owned = readLocal(OWNED_CACHE) || {};
 /** Mission spéciale (Royal) accomplie ? */
 const missionDone = (p) => wins >= p.unlock.wins || (!!p.unlock.staff && staff);
 /** Un élément (plateau, pièces…) d'un pack est-il à ce joueur ? */
+// slot : board, endAnim, capture, une pièce (P, R, N…), ou « pieces » (les 6 pièces)
 export const isItemUnlocked = (id, slot) => {
   const p = packById(id);
   if (!p) return false;
   if (p.rarity === 'commun') return true;
   if (p.unlock) return missionDone(p);
+  if (slot === 'pieces') return PIECE_TYPES.every((t) => isItemUnlocked(id, t));
+  // owned[id].pieces : le jeu complet trouvé d'un coup
+  if (isPieceType(slot)) return !!(owned[id]?.[slot] || owned[id]?.pieces);
   return !!owned[id]?.[slot];
 };
-/** Le pack entier est-il débloqué (ses 4 éléments) ? */
-export const isUnlocked = (id) => SLOTS.every((s) => isItemUnlocked(id, s));
-/** Nombre d'éléments débloqués dans un pack (0 à 4). */
-export const unlockedCount = (id) => SLOTS.filter((s) => isItemUnlocked(id, s)).length;
+/** Le pack entier est-il débloqué (tous ses éléments) ? */
+export const isUnlocked = (id) => PACK_ITEMS.every((s) => isItemUnlocked(id, s));
+/** Nombre d'éléments débloqués dans un pack (0 à 9). */
+export const unlockedCount = (id) => PACK_ITEMS.filter((s) => isItemUnlocked(id, s)).length;
+/** Nombre de pièces débloquées dans un pack (0 à 6). */
+export const piecesCount = (id) => PIECE_TYPES.filter((t) => isItemUnlocked(id, t)).length;
+/** Nom d'un élément : « Cavalier des Abysses », « Damier Washi »… */
+export const itemName = (id, slot) => {
+  const p = packById(id);
+  return isPieceType(slot) ? `${PIECE_NAMES[slot]} ${p.pieceTag}` : p.items[slot].name;
+};
 /** Progression vers un pack verrouillé : { wins, need, unlocked }. */
 export const unlockProgress = (id) => {
   const need = packById(id)?.unlock?.wins || 0;
   return { wins, need, unlocked: isUnlocked(id) };
 };
 
+// equip = { board, pieces, endAnim, capture, piece: { P, R, N, B, Q, K } }
+// « pieces » est le jeu de base (classe pieces-… sur <body>) ; « piece » dit le skin de chaque pièce.
 function clean(e) {
   const out = {};
   for (const s of SLOTS) out[s] = e && IDS.has(e[s]) && isItemUnlocked(e[s], s) ? e[s] : DEFAULT;
+  // Anciens équipements (sans « piece ») : les 6 pièces viennent du jeu de base
+  const pc = (e && e.piece) || {};
+  const base = e && IDS.has(e.pieces) ? e.pieces : out.pieces;
+  out.piece = {};
+  for (const t of PIECE_TYPES) {
+    const id = IDS.has(pc[t]) ? pc[t] : base;
+    out.piece[t] = isItemUnlocked(id, t) ? id : out.pieces;
+  }
   return out;
 }
+/** Les 6 pièces viennent-elles du même pack ? Renvoie son id, sinon null. */
+export const piecesPack = (e) => {
+  const first = e?.piece?.[PIECE_TYPES[0]];
+  return first && PIECE_TYPES.every((t) => e.piece[t] === first) ? first : null;
+};
 
 /** Rôle du joueur : admin ou fondateur ? */
 async function loadStaff(u) {
@@ -192,8 +236,16 @@ export function themeClasses(e) {
   // (L'équipement réel, lui, est déjà filtré par clean() avant d'arriver ici.)
   const c = {};
   for (const s of SLOTS) c[s] = e && IDS.has(e[s]) ? e[s] : DEFAULT;
-  return [`board-${c.board}`, `pieces-${c.pieces}`, `end-${c.endAnim}`, `capture-${c.capture}`];
+  const out = [`board-${c.board}`, `pieces-${c.pieces}`, `end-${c.endAnim}`, `capture-${c.capture}`];
+  // Une pièce d'un autre pack que le jeu de base : classe pc-N-ocean (le CSS change seulement cette pièce)
+  for (const t of PIECE_TYPES) {
+    const id = e?.piece?.[t];
+    if (IDS.has(id) && id !== c.pieces) out.push(`pc-${t}-${id}`);
+  }
+  return out;
 }
+/** Retire les classes de thème d'un élément (avant d'en poser d'autres). */
+export const THEME_CLASS = /^(board|pieces|end|capture|pc-[PRNBQK])-[a-z]+$/;
 // Polices des animations de packs (bannières de fin, « échec ») : chargées seulement si le pack équipé en a
 // besoin. Elles pesaient 115 Ko de CSS bloquant sur chaque page (surtout la police japonaise).
 // Yuji Syuku : seulement les caractères utilisés (勝 負 王 手 et le français), grâce à « text= ».
@@ -220,7 +272,7 @@ function apply() {
   if (!b) return;
   loadPackFont(equip.endAnim);
   loadPackFont(equip.capture);
-  for (const cls of [...b.classList]) if (/^(board|pieces|end|capture)-[a-z]+$/.test(cls)) b.classList.remove(cls);
+  for (const cls of [...b.classList]) if (THEME_CLASS.test(cls)) b.classList.remove(cls);
   b.classList.add(...themeClasses(equip));
 }
 function changed() {
@@ -229,7 +281,7 @@ function changed() {
   for (const f of listeners) f(equip);
 }
 
-export const getEquip = () => ({ ...equip });
+export const getEquip = () => ({ ...equip, piece: { ...equip.piece } });
 export const onEquipChange = (f) => (listeners.add(f), () => listeners.delete(f));
 
 /** Éléments trouvés dans les box, suivis en direct (une box ouverte débloque tout de suite l'élément partout). */
@@ -284,12 +336,21 @@ export const ready = new Promise((resolve) => {
   });
 });
 
-/** Équipe un ou plusieurs éléments, par ex. { pieces: 'classic' } ou un pack entier. */
+/**
+ * Équipe un ou plusieurs éléments, par ex. { board: 'classic' }, une pièce { N: 'ocean' },
+ * toutes les pièces { pieces: 'japon' } ou un pack entier.
+ */
 export async function setEquip(partial) {
+  const piece = { ...equip.piece };
+  const rest = {};
   for (const [slot, id] of Object.entries(partial)) {
     if (!isItemUnlocked(id, slot)) throw new Error('Cet élément est encore verrouillé : trouve-le dans une box.');
+    if (isPieceType(slot)) piece[slot] = id;
+    else rest[slot] = id;
+    // Changer tout le jeu d'un coup : les 6 pièces suivent
+    if (slot === 'pieces') for (const t of PIECE_TYPES) piece[t] = id;
   }
-  const next = clean({ ...equip, ...partial });
+  const next = clean({ ...equip, ...rest, piece });
   equip = next;
   changed();
   if (uid) {
@@ -301,5 +362,11 @@ export async function setEquip(partial) {
 
 /** Équipe tout un pack d'un clic. */
 export const equipPack = (id) => setEquip(Object.fromEntries(SLOTS.map((s) => [s, id])));
+
+/** Équipe toutes les pièces d'un pack qu'on a déjà trouvées (les autres ne changent pas). */
+export const equipOwnedPieces = (id) => {
+  const ok = PIECE_TYPES.filter((t) => isItemUnlocked(id, t));
+  return setEquip(ok.length === PIECE_TYPES.length ? { pieces: id } : Object.fromEntries(ok.map((t) => [t, id])));
+};
 
 apply();

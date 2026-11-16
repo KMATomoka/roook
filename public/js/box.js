@@ -1,13 +1,15 @@
 // Box : on en gagne une à chaque victoire en ligne (contre un ami ou un adversaire au hasard).
-// Une box classique donne un élément de pack (plateau, pièces, fin de partie, prise et son), tiré au sort par rareté :
+// Une box classique donne un élément de pack, tiré au sort par rareté : un plateau, une pièce (pion, tour,
+// cavalier, fou, dame ou roi : chacune se trouve à part), une fin de partie, une prise et son.
 //  - Commun (Astrea, Classic) : déjà à tout le monde, il se change en poussière d'étoile ✨ ;
 //  - Rare (Sakura, Western), Épique (Océan) : l'élément est débloqué (déjà obtenu : il se change en ✨) ;
-//  - Pack entier : très rare, les 4 éléments d'un pack d'un coup.
-// Royal chess (légendaire) n'est jamais dans les box : c'est une mission spéciale (100 victoires).
+//  - Jeu complet : très rare, les 6 pièces d'un pack d'un coup.
+// Les packs entiers ne sont pas dans les box (boutique à venir). Royal chess (légendaire) non plus : c'est une
+// mission spéciale (100 victoires).
 // 10 ✨ ouvrent une box de plus. Les admins peuvent s'offrir des box de test.
 // Tout est dans la base : loot/{uid} (box ouvertes, éléments, ✨) et lootGrants/{uid} (box offertes).
 import { db, ref, update, push, set, onValue, serverTimestamp } from './fb.js';
-import { PACKS, SLOTS } from './theme.js';
+import { PACKS, PIECE_TYPES, PACK_ITEMS } from './theme.js';
 
 /** Types de box (d'autres viendront plus tard). */
 export const BOX_TYPES = {
@@ -15,13 +17,13 @@ export const BOX_TYPES = {
 };
 /** Taux de drop de la box classique, en pourcentage. */
 export const RATES = [
-  { id: 'pack', name: 'Pack entier', pct: 0.5 },
-  { id: 'epique', name: 'Épique', pct: 11.5 },
+  { id: 'jeu', name: 'Jeu complet', pct: 0.3 },
+  { id: 'epique', name: 'Épique', pct: 11.7 },
   { id: 'rare', name: 'Rare', pct: 33 },
   { id: 'commun', name: 'Commun', pct: 55 },
 ];
 /** Poussière d'étoile donnée par un doublon, selon sa rareté. */
-export const DUST = { commun: 1, rare: 3, epique: 6, pack: 20 };
+export const DUST = { commun: 1, rare: 3, epique: 6, jeu: 20 };
 export const DUST_PER_BOX = 10;
 
 const isWin = (g) => !!g && !!g.game && ((g.result === '1-0' && g.me === 'w') || (g.result === '0-1' && g.me === 'b'));
@@ -63,22 +65,23 @@ function rollRarity() {
 
 /**
  * Tire le contenu d'une box. owned : éléments déjà trouvés.
- * Renvoie { rarity, pack, slots: [slot…], fresh: [slot…] (nouveaux), dust (gagnée en doublons) }.
+ * Renvoie { rarity, pack, slots: [élément…], fresh: [élément…] (nouveaux), dust (gagnée en doublons) }.
+ * Un élément : board, endAnim, capture, ou une pièce (P, R, N, B, Q, K).
  */
 export function drawBox(owned) {
   const rarity = rollRarity();
-  const has = (p, s) => p.rarity === 'commun' || !!owned[p.id]?.[s];
-  if (rarity === 'pack') {
-    const missing = PACKS.filter((p) => p.box && SLOTS.some((s) => !has(p, s)));
+  const has = (p, s) => p.rarity === 'commun' || !!owned[p.id]?.[s] || (PIECE_TYPES.includes(s) && !!owned[p.id]?.pieces);
+  if (rarity === 'jeu') {
+    const missing = PACKS.filter((p) => p.box && PIECE_TYPES.some((t) => !has(p, t)));
     if (!missing.length) {
-      // Tout est déjà trouvé : on donne la poussière d'un pack
+      // Toutes les pièces sont déjà trouvées : on donne la poussière d'un jeu complet
       const p = pick(PACKS.filter((x) => x.box));
-      return { rarity, pack: p.id, slots: [...SLOTS], fresh: [], dust: DUST.pack };
+      return { rarity, pack: p.id, slots: [...PIECE_TYPES], fresh: [], dust: DUST.jeu };
     }
     const p = pick(missing);
-    return { rarity, pack: p.id, slots: [...SLOTS], fresh: SLOTS.filter((s) => !has(p, s)), dust: 0 };
+    return { rarity, pack: p.id, slots: [...PIECE_TYPES], fresh: PIECE_TYPES.filter((t) => !has(p, t)), dust: 0 };
   }
-  const pool = PACKS.filter((p) => p.rarity === rarity).flatMap((p) => SLOTS.map((s) => [p, s]));
+  const pool = PACKS.filter((p) => p.rarity === rarity).flatMap((p) => PACK_ITEMS.map((s) => [p, s]));
   const [p, s] = pick(pool);
   const fresh = has(p, s) ? [] : [s];
   return { rarity, pack: p.id, slots: [s], fresh, dust: fresh.length ? 0 : DUST[rarity] };
@@ -97,7 +100,7 @@ export async function openBox(uid, key, state) {
   const up = {
     [`loot/${uid}/opened/${boxKey}`]: {
       at: serverTimestamp(),
-      item: res.rarity === 'pack' ? `pack.${res.pack}` : `${res.pack}.${res.slots[0]}`,
+      item: res.rarity === 'jeu' ? `jeu.${res.pack}` : `${res.pack}.${res.slots[0]}`,
       rarity: res.rarity,
       ...(res.dust ? { dust: res.dust } : {}),
     },

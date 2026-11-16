@@ -318,15 +318,15 @@ const rules = {
         opened: {
           $box: {
             '.write': `${ME} && ${OWNER('$uid')} && ${OK} && !data.exists()`,
-            '.validate': `newData.hasChildren(['at', 'item', 'rarity']) && newData.child('at').val() === now && newData.child('item').isString() && newData.child('item').val().length <= 40 && newData.child('rarity').val().matches(/^(commun|rare|epique|pack)$/) && (${WIN('$box')} || root.child('lootGrants/' + $uid + '/' + $box).exists() || ($box.beginsWith('dust-') && root.child('loot/' + $uid + '/dust').val() >= 10))`,
+            '.validate': `newData.hasChildren(['at', 'item', 'rarity']) && newData.child('at').val() === now && newData.child('item').isString() && newData.child('item').val().length <= 40 && newData.child('rarity').val().matches(/^(commun|rare|epique|jeu)$/) && (${WIN('$box')} || root.child('lootGrants/' + $uid + '/' + $box).exists() || ($box.beginsWith('dust-') && root.child('loot/' + $uid + '/dust').val() >= 10))`,
           },
         },
-        // Éléments trouvés : seulement ceux des packs qu'on trouve dans les box
+        // Éléments trouvés : seulement ceux des packs qu'on trouve dans les box (une pièce : P, R, N, B, Q, K ; pieces : le jeu complet)
         owned: {
           $pack: {
             $slot: {
               '.write': `${ME} && ${OWNER('$uid')} && ${OK}`,
-              '.validate': "newData.val() === true && $pack.matches(/^(japon|western|ocean)$/) && $slot.matches(/^(board|pieces|endAnim|capture)$/)",
+              '.validate': "newData.val() === true && $pack.matches(/^(japon|western|ocean)$/) && $slot.matches(/^(board|pieces|endAnim|capture|P|R|N|B|Q|K)$/)",
             },
           },
         },

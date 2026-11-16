@@ -978,3 +978,95 @@ export function playSound(move, outcome = 'neutral', style = null) {
 export function lowTimeBeep() {
   tone({ freq: 1760, type: 'square', dur: 0.06, vol: 0.04 });
 }
+
+// --- Box (page « Mes box ») : arrivée, coups de suspense, ouverture, révélation -------------
+// Les raretés montent comme une gamme : chaque palier rejoue un accord plus haut et plus large.
+const TIER_ROOT = { commun: 392, rare: 466.16, epique: 554.37, jeu: 659.25 };
+const TIER_LEVEL = { commun: 0, rare: 1, epique: 2, jeu: 3 };
+/** Grondement grave qui monte pendant le suspense ; renvoie de quoi l'arrêter. */
+function boxHum(level = 0) {
+  const a = audio();
+  if (!a) return () => {};
+  const t = a.currentTime;
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.09 + level * 0.03, t + 0.6);
+  const f = a.createBiquadFilter();
+  f.type = 'lowpass';
+  f.frequency.setValueAtTime(220 + level * 120, t);
+  f.frequency.linearRampToValueAtTime(700 + level * 300, t + 4);
+  const oscs = [55, 55 * 1.5, 110.6].map((fr, i) => {
+    const o = a.createOscillator();
+    o.type = i === 2 ? 'sawtooth' : 'triangle';
+    o.frequency.setValueAtTime(fr * (1 + level * 0.06), t);
+    o.frequency.linearRampToValueAtTime(fr * (1.25 + level * 0.06), t + 5);
+    o.connect(f);
+    o.start(t);
+    return o;
+  });
+  f.connect(g).connect(master);
+  return () => {
+    const n = a.currentTime;
+    g.gain.cancelScheduledValues(n);
+    g.gain.setValueAtTime(Math.max(g.gain.value, 0.0001), n);
+    g.gain.exponentialRampToValueAtTime(0.0001, n + 0.25);
+    oscs.forEach((o) => o.stop(n + 0.3));
+  };
+}
+export const boxSfx = {
+  /** La box tombe sur la scène. */
+  land() {
+    noiseSweep({ at: 0, dur: 0.45, type: 'bandpass', f: [300, 2600, 600], q: 1.4, vol: 0.18, peak: 0.6 });
+    tone({ freq: 130, endFreq: 42, at: 0.42, dur: 0.38, vol: 0.55 });
+    burst({ at: 0.42, dur: 0.12, vol: 0.4, type: 'lowpass', freq: 900 });
+    burst({ at: 0.44, dur: 0.05, vol: 0.18, freq: 2600, q: 3 });
+  },
+  hum: boxHum,
+  /** Un coup sur la box (n : 0, 1, 2… de plus en plus fort et aigu). */
+  hit(n = 0) {
+    const p = 1 + n * 0.12;
+    tone({ freq: 160 * p, endFreq: 48, at: 0, dur: 0.3, vol: 0.5 });
+    burst({ at: 0, dur: 0.09, vol: 0.5, type: 'lowpass', freq: 1400 * p });
+    burst({ at: 0.005, dur: 0.04, vol: 0.25, freq: 3200 * p, q: 4 });
+    // Cliquetis du couvercle
+    burst({ at: 0.07, dur: 0.03, vol: 0.12, freq: 4200, q: 5 });
+    burst({ at: 0.12, dur: 0.025, vol: 0.08, freq: 4800, q: 5 });
+  },
+  /** La rareté monte d'un cran : montée de bruit, puis accord. */
+  tierUp(tier) {
+    const lvl = TIER_LEVEL[tier] || 0;
+    const r = TIER_ROOT[tier] || 392;
+    noiseSweep({ at: 0, dur: 0.5, type: 'bandpass', f: [400, 6000, 9000], q: 2, vol: 0.12 + lvl * 0.03, peak: 0.9 });
+    [1, 1.25, 1.5, 2].forEach((m, i) => tone({ freq: r * m, type: 'triangle', at: 0.42 + i * 0.035, dur: 0.9, vol: 0.06, attack: 0.01 }));
+    tone({ freq: r / 2, type: 'sawtooth', at: 0.42, dur: 0.7, vol: 0.05 });
+    if (lvl >= 2) tone({ freq: 70, endFreq: 30, at: 0.42, dur: 0.9, vol: 0.5 });
+    if (lvl >= 3) [2, 2.5, 3, 4].forEach((m, i) => bell(r * m, 0.5 + i * 0.07, 0.05));
+  },
+  /** Le couvercle saute : explosion, souffle, pluie d'étincelles. */
+  open(tier) {
+    const lvl = TIER_LEVEL[tier] || 0;
+    burst({ at: 0, dur: 0.6 + lvl * 0.2, vol: 0.7, type: 'lowpass', freq: 2200, endFreq: 120, q: 0.7 });
+    tone({ freq: 95, endFreq: 28, at: 0, dur: 0.8 + lvl * 0.25, vol: 0.7 });
+    noiseSweep({ at: 0.02, dur: 0.9, type: 'highpass', f: [2000, 7000, 3000], q: 0.8, vol: 0.12, peak: 0.25 });
+    const n = 6 + lvl * 5;
+    for (let i = 0; i < n; i++) tone({ freq: 1800 + Math.random() * 2600, type: 'sine', at: 0.08 + Math.random() * (0.6 + lvl * 0.25), dur: 0.18, vol: 0.025 + Math.random() * 0.02 });
+  },
+  /** Accord tenu quand l'objet apparaît (plus riche selon la rareté). */
+  reveal(tier, isNew = true) {
+    const lvl = TIER_LEVEL[tier] || 0;
+    const r = TIER_ROOT[tier] || 392;
+    const chord = lvl >= 2 ? [1, 1.25, 1.5, 1.875, 2, 2.5] : lvl === 1 ? [1, 1.25, 1.5, 2] : [1, 1.5, 2];
+    if (lvl >= 1) pad(chord.map((m) => r * m / 2), { at: 0, dur: 1.8 + lvl * 0.5, vol: 0.035 + lvl * 0.01, open: 2600 + lvl * 800 });
+    chord.forEach((m, i) => tone({ freq: r * m, type: 'triangle', at: i * 0.06, dur: 1.2 + lvl * 0.3, vol: 0.05, attack: 0.01 }));
+    if (isNew) [2, 2.5, 3, 4, 5].slice(0, 2 + lvl).forEach((m, i) => bell(r * m, 0.35 + i * 0.09, 0.045));
+  },
+  /** Doublon : la carte se change en poussière d'étoile. */
+  dust(n = 1) {
+    for (let i = 0; i < Math.min(12, 3 + n); i++) tone({ freq: 2200 + i * 180, type: 'sine', at: i * 0.05, dur: 0.12, vol: 0.03 });
+    noiseSweep({ at: 0, dur: 0.6, type: 'highpass', f: [5000, 9000, 6000], q: 0.7, vol: 0.06, peak: 0.4 });
+  },
+  /** Petit clic des boutons d'aperçu, pièce qui se pose sur son socle. */
+  thunk() {
+    tok(0, 0.8);
+  },
+};

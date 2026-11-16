@@ -1,12 +1,17 @@
 // Page Inventaire, façon « collection » de jeu vidéo :
 //  - en haut, ce qui est équipé (« Pack personnalisé » quand on mélange des éléments de packs différents) ;
 //  - des onglets : Packs, Plateau, Pièces, Fin de partie, Prise et son ;
+//  - onglet Pièces : on change tout le jeu d'un coup, ou une seule pièce (pion, tour, cavalier…) ;
 //  - une grille d'éléments à gauche, et à droite un grand aperçu de l'élément choisi, avec « Équiper ».
 // L'équipement est géré par js/theme.js (compte Firebase, ou ce navigateur sans compte).
 import { Chessground } from '../vendor/chessground/chessground.min.js';
 import { $, $$, Chess, escapeHtml } from './common.js';
 import { toast } from './compte.js';
-import { PACKS, SLOTS, SLOT_NAMES, RARITY, getEquip, setEquip, equipPack, onEquipChange, themeClasses, ready, isUnlocked, isItemUnlocked, unlockedCount, unlockProgress, loadPackFont } from './theme.js';
+import {
+  PACKS, SLOTS, SLOT_NAMES, RARITY, PIECE_TYPES, PIECE_NAMES, PIECE_ROLE, PACK_ITEMS, THEME_CLASS,
+  getEquip, setEquip, equipPack, equipOwnedPieces, onEquipChange, themeClasses, ready, isUnlocked, isItemUnlocked,
+  unlockedCount, piecesCount, piecesPack, itemName, unlockProgress, loadPackFont,
+} from './theme.js';
 import { createFx } from './fx.js';
 import { playSound, isMuted } from './sound.js';
 
@@ -25,21 +30,41 @@ const TABS = [{ id: 'packs', name: 'Packs' }, ...SLOTS.map((s) => ({ id: s, name
 // Couleur de chaque pack (comme la rareté d'un objet)
 const TIER = { astrea: '#9b7bff', classic: '#c4c8d0', japon: '#e8553f', western: '#d27b4f', ocean: '#46e6d4', royal: '#e2b64e' };
 const packById = (id) => PACKS.find((p) => p.id === id);
-const whole = (id) => Object.fromEntries(SLOTS.map((s) => [s, id]));
-/** Verrouillé dans l'onglet courant : le pack entier (onglet Packs) ou cet élément. */
-const lockedHere = (p) => (tab === 'packs' ? !isUnlocked(p.id) : !isItemUnlocked(p.id, tab));
+const allPieces = (id) => Object.fromEntries(PIECE_TYPES.map((t) => [t, id]));
+const whole = (id) => ({ ...Object.fromEntries(SLOTS.map((s) => [s, id])), piece: allPieces(id) });
+/** Onglet Pièces : null = tout le jeu, sinon la pièce à changer (P, R, N…). */
+let pieceType = null;
+/** L'élément regardé dans l'onglet courant : un slot, une pièce, ou « pieces » (tout le jeu). */
+const curSlot = () => (tab === 'pieces' && pieceType ? pieceType : tab);
+/** Verrouillé dans l'onglet courant : le pack entier (onglet Packs), cet élément, ou toutes ses pièces. */
+const lockedHere = (p) => {
+  if (tab === 'packs') return !isUnlocked(p.id);
+  if (tab === 'pieces' && !pieceType) return piecesCount(p.id) === 0;
+  return !isItemUnlocked(p.id, curSlot());
+};
+/** Jeu de pièces trouvé en partie seulement (quelques pièces sur 6). */
+const partialSet = (p) => tab === 'pieces' && !pieceType && !p.unlock && piecesCount(p.id) > 0 && piecesCount(p.id) < PIECE_TYPES.length;
 /** Petit texte du cadenas : mission (Royal) ou box. */
 function lockLabel(p) {
   if (p.unlock) {
     const pr = unlockProgress(p.id);
     return `🔒 ${pr.wins}/${pr.need}`;
   }
-  return tab === 'packs' ? `🔒 ${unlockedCount(p.id)}/${SLOTS.length}` : '🔒 Box';
+  if (tab === 'packs') return `🔒 ${unlockedCount(p.id)}/${PACK_ITEMS.length}`;
+  if (tab === 'pieces' && !pieceType) return `🔒 0/${PIECE_TYPES.length}`;
+  return '🔒 Box';
+}
+/** Équipé dans l'onglet courant ? */
+function isOn(id, eq = getEquip()) {
+  if (tab === 'packs') return SLOTS.every((s) => s === 'pieces' || eq[s] === id) && piecesPack(eq) === id;
+  if (tab === 'pieces') return pieceType ? eq.piece[pieceType] === id : piecesPack(eq) === id;
+  return eq[tab] === id;
 }
 const rarityTag = (p) => `<span class="inv-rarity" style="--r:${RARITY[p.rarity].color}">${RARITY[p.rarity].name}</span>`;
 
 let tab = 'packs';
 let selected = getEquip().board; // pack sélectionné dans l'onglet courant
+const pieceEl = (t, c) => `<piece class="${PIECE_ROLE[t]} ${c}"></piece>`;
 
 // ---------------------------------------------------------------------------
 // Petits échiquiers d'aperçu
@@ -51,19 +76,29 @@ function miniBoard(host, fen = MIDDLE) {
   return { host, frame, ground };
 }
 function dress(host, equip) {
-  for (const cls of [...host.classList]) if (/^(board|pieces|end|capture)-[a-z]+$/.test(cls)) host.classList.remove(cls);
+  for (const cls of [...host.classList]) if (THEME_CLASS.test(cls)) host.classList.remove(cls);
   host.classList.add(...themeClasses(equip));
 }
-/** Quelques pièces en grand, sur les couleurs du plateau (aperçu « Pièces »). */
-function piecesShow(host) {
-  host.innerHTML = `<div class="inv-pieces-show cg-wrap">
+/** Quelques pièces en grand, sur les couleurs du plateau (aperçu « Pièces ») ; ou une seule pièce, en blanc et noir. */
+function piecesShow(host, t = null) {
+  host.innerHTML = t
+    ? `<div class="inv-pieces-show one cg-wrap">${pieceEl(t, 'black')}${pieceEl(t, 'white')}</div>`
+    : `<div class="inv-pieces-show cg-wrap">
     <piece class="knight black"></piece><piece class="king black"></piece><piece class="queen black"></piece>
     <piece class="queen white"></piece><piece class="king white"></piece><piece class="knight white"></piece>
   </div>`;
 }
 
 /** Ce qu'un élément de l'onglet courant change par rapport à l'équipement actuel. */
-const overrideFor = (id) => (tab === 'packs' ? whole(id) : { ...getEquip(), [tab]: id });
+function overrideFor(id) {
+  const eq = getEquip();
+  if (tab === 'packs') return whole(id);
+  if (tab === 'pieces') {
+    if (pieceType) return { ...eq, piece: { ...eq.piece, [pieceType]: id } };
+    return { ...eq, pieces: id, piece: allPieces(id) };
+  }
+  return { ...eq, [tab]: id };
+}
 
 // ---------------------------------------------------------------------------
 // En haut : l'équipement actuel
@@ -73,17 +108,20 @@ function renderCurrent() {
   const eq = getEquip();
   dress($('#inv-current-board'), eq);
   const first = eq[SLOTS[0]];
-  const pack = SLOTS.every((s) => eq[s] === first) ? packById(first) : null;
+  const pack = SLOTS.every((s) => s === 'pieces' || eq[s] === first) && piecesPack(eq) === first ? packById(first) : null;
   const cur = $('#inv-current');
   cur.classList.toggle('custom', !pack);
   cur.style.setProperty('--tier', pack ? TIER[pack.id] : '#3cf2a3');
   $('#inv-current-name').innerHTML = pack ? escapeHtml(pack.name) : '✦ Pack personnalisé';
   $('#inv-current-desc').textContent = pack ? pack.desc : 'Ton mélange à toi : chaque élément vient d’un pack différent.';
   $('#inv-current-slots').innerHTML = SLOTS.map((s) => {
-    const p = packById(eq[s]);
-    return `<li><button type="button" class="inv-slot" data-goto="${s}" data-pick="${p.id}" style="--tier:${TIER[p.id]}" title="Changer : ${SLOT_NAMES[s]}">
+    // Pièces : le jeu du pack, ou « mélangées » si elles viennent de packs différents
+    const mixed = s === 'pieces' && !piecesPack(eq);
+    const p = packById(s === 'pieces' ? piecesPack(eq) || eq.piece.K : eq[s]);
+    const name = mixed ? 'Pièces mélangées' : p.items[s].name;
+    return `<li><button type="button" class="inv-slot" data-goto="${s}" data-pick="${p.id}" style="--tier:${mixed ? '#3cf2a3' : TIER[p.id]}" title="Changer : ${SLOT_NAMES[s]}">
       <span class="inv-slot-icon" aria-hidden="true">${ICONS[s]}</span>
-      <span class="inv-slot-text"><small>${SLOT_NAMES[s]}</small>${escapeHtml(p.items[s].name)}</span>
+      <span class="inv-slot-text"><small>${SLOT_NAMES[s]}</small>${escapeHtml(name)}</span>
     </button></li>`;
   }).join('');
 }
@@ -97,13 +135,29 @@ function renderTabs() {
       <span aria-hidden="true">${ICONS[t.id]}</span> ${escapeHtml(t.name)}</button>`,
   ).join('');
 }
-function goTo(newTab, pick = null) {
+function goTo(newTab, pick = null, type = null) {
   tab = newTab;
+  pieceType = tab === 'pieces' ? type : null;
   const eq = getEquip();
-  selected = pick || (tab === 'packs' ? eq.board : eq[tab]);
+  selected = pick || (tab === 'packs' ? eq.board : tab === 'pieces' ? (pieceType ? eq.piece[pieceType] : piecesPack(eq) || eq.pieces) : eq[tab]);
   renderTabs();
+  renderPiecePick();
   renderGrid();
   renderDetail(true);
+}
+
+/** Onglet Pièces : « Tout le jeu » ou une pièce ; chaque bouton montre la pièce équipée en ce moment. */
+function renderPiecePick() {
+  const box = $('#inv-piece-pick');
+  box.hidden = tab !== 'pieces';
+  if (box.hidden) return;
+  const eq = getEquip();
+  const btn = (t, label, inner, tier) => `<button type="button" role="radio" class="inv-pp ${pieceType === t ? 'active' : ''}" aria-checked="${pieceType === t}" data-ptype="${t || ''}" style="--tier:${tier}">
+      <span class="inv-pp-art cg-wrap">${inner}</span><span class="inv-pp-name">${label}</span></button>`;
+  const set = piecesPack(eq);
+  box.innerHTML = btn(null, 'Tout le jeu', `${pieceEl('K', 'white')}${pieceEl('Q', 'black')}`, set ? TIER[set] : '#3cf2a3')
+    + '<span class="inv-pp-sep" aria-hidden="true"></span>'
+    + PIECE_TYPES.map((t) => btn(t, PIECE_NAMES[t], pieceEl(t, 'white'), TIER[eq.piece[t]])).join('');
 }
 
 // ---------------------------------------------------------------------------
@@ -113,25 +167,26 @@ function renderGrid() {
   const eq = getEquip();
   const grid = $('#inv-items');
   grid.innerHTML = PACKS.map((p) => {
-    const name = tab === 'packs' ? p.name : p.items[tab].name;
-    const on = tab === 'packs' ? SLOTS.every((s) => eq[s] === p.id) : eq[tab] === p.id;
+    const name = tab === 'packs' ? p.name : itemName(p.id, curSlot());
+    const on = isOn(p.id, eq);
     const locked = lockedHere(p);
+    const part = partialSet(p) ? `<span class="inv-item-lock part">${piecesCount(p.id)}/${PIECE_TYPES.length}</span>` : '';
     return `<button type="button" role="option" class="inv-item ${on ? 'equipped' : ''} ${p.id === selected ? 'selected' : ''} ${locked ? 'locked' : ''}"
         aria-selected="${p.id === selected}" data-pick="${p.id}" style="--tier:${TIER[p.id]}">
       <span class="inv-item-preview" data-preview></span>
       <span class="inv-item-foot">
         <span class="inv-item-name">${escapeHtml(name)}</span>
-        <span class="inv-item-pack">${tab === 'packs' ? '4 éléments' : escapeHtml(p.name)}</span>
+        <span class="inv-item-pack">${tab === 'packs' ? `${PACK_ITEMS.length} éléments` : escapeHtml(p.name)}</span>
       </span>
       ${on ? '<span class="inv-item-tag">Équipé</span>' : ''}
-      ${locked ? `<span class="inv-item-lock">${lockLabel(p)}</span>` : ''}
+      ${locked ? `<span class="inv-item-lock">${lockLabel(p)}</span>` : part}
       ${rarityTag(p)}
     </button>`;
   }).join('');
   for (const item of $$('.inv-item', grid)) {
     const host = item.querySelector('[data-preview]');
     const id = item.dataset.pick;
-    if (tab === 'pieces') piecesShow(host);
+    if (tab === 'pieces') piecesShow(host, pieceType);
     else miniBoard(host, tab === 'packs' ? START : tab === 'board' ? MIDDLE : DEMOS[tab].fen);
     dress(host, overrideFor(id));
   }
@@ -150,23 +205,28 @@ function renderDetail(autoplay = false) {
   const eq = getEquip();
   const locked = lockedHere(p);
   const isPack = tab === 'packs';
-  const it = isPack ? null : p.items[tab];
-  const on = isPack ? SLOTS.every((s) => eq[s] === p.id) : eq[tab] === p.id;
+  const slot = curSlot();
+  const isPiece = PIECE_TYPES.includes(slot);
+  const it = isPack ? null : isPiece ? { name: itemName(p.id, slot), desc: `${PIECE_NAMES[slot]} du jeu « ${p.items.pieces.name} ». ${p.items.pieces.desc}` } : p.items[slot];
+  const on = isOn(p.id, eq);
+  const partial = partialSet(p);
 
   $('#inv-detail').style.setProperty('--tier', TIER[p.id]);
   $('#inv-detail').classList.toggle('locked', locked);
-  $('#inv-d-tier').innerHTML = `${escapeHtml(isPack ? `Pack · ${p.name}` : `${SLOT_NAMES[tab]} · ${p.name}`)} ${rarityTag(p)}`;
+  $('#inv-d-tier').innerHTML = `${escapeHtml(isPack ? `Pack · ${p.name}` : `${isPiece ? PIECE_NAMES[slot] : SLOT_NAMES[tab]} · ${p.name}`)} ${rarityTag(p)}`;
   $('#inv-d-name').textContent = isPack ? p.name : it.name;
   $('#inv-d-desc').textContent = isPack ? p.desc : it.desc;
 
   // Contenu du pack, ou encart « verrouillé »
   let extra = '';
-  if (locked && p.box) {
-    const n = unlockedCount(p.id);
+  const setView = tab === 'pieces' && !pieceType;
+  if ((locked || partial) && p.box) {
+    const n = isPack ? unlockedCount(p.id) : piecesCount(p.id);
+    const max = isPack ? PACK_ITEMS.length : PIECE_TYPES.length;
     extra += `<div class="inv-lock">
-      <div class="inv-lock-head">🔒 ${isPack ? 'Ses éléments se trouvent' : 'Se trouve'} dans les <a href="box.html">box</a> : une box à chaque victoire en ligne</div>
-      ${isPack ? `<div class="inv-progress" role="progressbar" aria-valuemin="0" aria-valuemax="${SLOTS.length}" aria-valuenow="${n}"><i style="width:${(n / SLOTS.length) * 100}%"></i></div>
-      <div class="inv-lock-count">${n} / ${SLOTS.length} éléments trouvés</div>` : ''}
+      <div class="inv-lock-head">🔒 ${isPack ? 'Ses éléments se trouvent' : setView ? 'Ses pièces se trouvent une par une' : 'Se trouve'} dans les <a href="box.html">box</a> : une box à chaque victoire en ligne</div>
+      ${isPack || setView ? `<div class="inv-progress" role="progressbar" aria-valuemin="0" aria-valuemax="${max}" aria-valuenow="${n}"><i style="width:${(n / max) * 100}%"></i></div>
+      <div class="inv-lock-count">${n} / ${max} ${isPack ? 'éléments' : 'pièces'} trouvé${n > 1 ? 's' : ''}${isPack ? ' · pack entier bientôt en boutique' : ''}</div>` : ''}
     </div>`;
   } else if (locked) {
     const pr = unlockProgress(p.id);
@@ -177,7 +237,19 @@ function renderDetail(autoplay = false) {
     </div>`;
   }
   if (isPack) {
-    extra += `<ul class="inv-contents">${SLOTS.map((s) => `<li class="${isItemUnlocked(p.id, s) ? '' : 'off'}"><span aria-hidden="true">${isItemUnlocked(p.id, s) ? ICONS[s] : '🔒'}</span><small>${SLOT_NAMES[s]}</small> ${escapeHtml(p.items[s].name)}</li>`).join('')}</ul>`;
+    extra += `<ul class="inv-contents">${SLOTS.map((s) => {
+      const ok = isItemUnlocked(p.id, s);
+      const n = s === 'pieces' && !ok && piecesCount(p.id) ? ` <small>(${piecesCount(p.id)}/${PIECE_TYPES.length})</small>` : '';
+      return `<li class="${ok ? '' : 'off'}"><span aria-hidden="true">${ok ? ICONS[s] : '🔒'}</span><small>${SLOT_NAMES[s]}</small> ${escapeHtml(p.items[s].name)}${n}</li>`;
+    }).join('')}</ul>`;
+  }
+  if (setView) {
+    // Les 6 pièces du jeu : trouvées ou non, et un clic pour n'en changer qu'une
+    extra += `<ul class="inv-set">${PIECE_TYPES.map((t) => {
+      const ok = isItemUnlocked(p.id, t);
+      return `<li><button type="button" class="inv-set-piece ${ok ? '' : 'off'}" data-ptype="${t}" title="${escapeHtml(itemName(p.id, t))}${ok ? '' : ' (à trouver)'}">
+        <span class="cg-wrap pieces-${p.id}">${pieceEl(t, 'white')}</span><small>${ok ? PIECE_NAMES[t] : '🔒'}</small></button></li>`;
+    }).join('')}</ul>`;
   }
   $('#inv-d-extra').innerHTML = extra;
 
@@ -188,11 +260,11 @@ function renderDetail(autoplay = false) {
       : `<button type="button" class="btn btn-ghost" data-demo="win">▶ Revoir ${DEMOS[tab].label}</button>`;
   const main = locked
     ? p.box
-      ? `<a class="btn inv-equip-btn" href="box.html">🎁 ${isPack ? 'Trouver ses éléments' : 'Le trouver'} dans les box</a>`
+      ? `<a class="btn inv-equip-btn" href="box.html">🎁 ${isPack ? 'Trouver ses éléments' : setView ? 'Trouver ses pièces' : 'Le trouver'} dans les box</a>`
       : '<button type="button" class="btn inv-equip-btn" disabled>🔒 Verrouillé</button>'
     : on
-      ? `<button type="button" class="btn inv-equip-btn is-on" disabled>✓ ${isPack ? 'Pack équipé' : 'Équipé'}</button>`
-      : `<button type="button" class="btn inv-equip-btn" data-equip>${isPack ? 'Équiper le pack' : 'Équiper'}</button>`;
+      ? `<button type="button" class="btn inv-equip-btn is-on" disabled>✓ ${isPack ? 'Pack équipé' : setView ? 'Jeu équipé' : 'Équipé'}</button>`
+      : `<button type="button" class="btn inv-equip-btn" data-equip>${isPack ? 'Équiper le pack' : partial ? `Équiper mes ${piecesCount(p.id)} pièces` : setView ? 'Équiper tout le jeu' : 'Équiper'}</button>`;
   $('#inv-d-actions').innerHTML = demo + main;
 
   // Grand aperçu : le pack entier, ou l'équipement actuel avec cet élément à la place
@@ -200,6 +272,8 @@ function renderDetail(autoplay = false) {
   dFx.reset();
   dress(dHost, overrideFor(p.id));
   const fen = isPack ? START : tab === 'board' ? MIDDLE : tab === 'pieces' ? START : DEMOS[tab].fen;
+  // Pièce choisie : elle est mise en avant sur le grand aperçu
+  dHost.dataset.ptype = isPiece ? PIECE_ROLE[slot] : '';
   detail.ground.set({ fen, lastMove: undefined, check: false });
   if (autoplay && DEMOS[tab]) playDemo(500);
 }
@@ -227,6 +301,12 @@ function playDemo(delay = 300, outcome = 'win') {
 $('main').addEventListener('click', async (e) => {
   const tabBtn = e.target.closest('[data-tab]');
   if (tabBtn) return goTo(tabBtn.dataset.tab);
+  const pt = e.target.closest('[data-ptype]');
+  if (pt) {
+    // Depuis le détail d'un jeu : on garde le pack regardé, on voit tout de suite sa pièce
+    goTo('pieces', pt.closest('#inv-d-extra') ? selected : null, pt.dataset.ptype || null);
+    return;
+  }
   const slot = e.target.closest('[data-goto]');
   if (slot) {
     goTo(slot.dataset.goto, slot.dataset.pick);
@@ -252,6 +332,13 @@ $('main').addEventListener('click', async (e) => {
       if (tab === 'packs') {
         await equipPack(selected);
         toast(`Pack <b>${escapeHtml(packById(selected).name)}</b> équipé.`, { cls: 'info', duration: 2500 });
+      } else if (tab === 'pieces' && pieceType) {
+        await setEquip({ [pieceType]: selected });
+        toast(`${PIECE_NAMES[pieceType]} : <b>${escapeHtml(itemName(selected, pieceType))}</b> équipé.`, { cls: 'info', duration: 2500 });
+      } else if (tab === 'pieces') {
+        const n = piecesCount(selected);
+        await equipOwnedPieces(selected);
+        toast(n === PIECE_TYPES.length ? `Pièces : <b>${escapeHtml(packById(selected).items.pieces.name)}</b> équipées.` : `<b>${n} pièce${n > 1 ? 's' : ''}</b> du jeu ${escapeHtml(packById(selected).name)} équipée${n > 1 ? 's' : ''}.`, { cls: 'info', duration: 2500 });
       } else {
         await setEquip({ [tab]: selected });
         toast(`${escapeHtml(SLOT_NAMES[tab])} : <b>${escapeHtml(packById(selected).items[tab].name)}</b> équipé.`, { cls: 'info', duration: 2500 });
@@ -266,6 +353,7 @@ $('main').addEventListener('click', async (e) => {
 // ---------------------------------------------------------------------------
 function refresh() {
   renderCurrent();
+  renderPiecePick();
   renderGrid();
   renderDetail();
 }

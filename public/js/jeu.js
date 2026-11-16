@@ -131,7 +131,7 @@ async function practiceDrop(from, to) {
   // Promotion : on demande la pièce tout de suite, comme pour un coup normal (annulé = pas de prémove)
   let promotion;
   if (isPromotion(chess, from, to)) {
-    promotion = getPref('autoDame', false) ? 'q' : await askPromotion(myColor);
+    promotion = await askPromotion(myColor);
     if (!promotion) return;
   }
   premove = { from, to, promotion };
@@ -490,7 +490,7 @@ async function onUserMove(from, to) {
   to = castleDest(chess, from, to); // roi posé sur sa tour = roque
   let promotion;
   if (isPromotion(chess, from, to)) {
-    promotion = getPref('autoDame', false) ? 'q' : await askPromotion(chess.turn());
+    promotion = await askPromotion(chess.turn());
     if (!promotion) return syncBoard();
   }
   let move;

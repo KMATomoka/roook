@@ -5,7 +5,7 @@ import './compte.js'; // barre du haut, menu
 import { isMuted, setMuted, isMusicOn, setMusicOn, getVolume, setVolume, playSound } from './sound.js';
 import { toast } from './compte.js';
 
-const DEFAULTS = { coups: true, coords: true, autoDame: false, premove: '0', effets: true };
+const DEFAULTS = { coups: true, coords: true, premove: '0', effets: true };
 
 function load() {
   $('#set-sound').checked = !isMuted();
@@ -14,7 +14,6 @@ function load() {
   $('#set-music').checked = isMusicOn();
   $('#set-dests').checked = getPref('coups', DEFAULTS.coups);
   $('#set-coords').checked = getPref('coords', DEFAULTS.coords);
-  $('#set-autoqueen').checked = getPref('autoDame', DEFAULTS.autoDame);
   $('#set-premove').checked = getPref('premove', DEFAULTS.premove) === '1';
   $('#set-fx').checked = getPref('effets', DEFAULTS.effets);
   // Sans son, le volume et la musique n'ont pas d'effet
@@ -39,7 +38,6 @@ $('#set-music').addEventListener('change', (e) => setMusicOn(e.target.checked));
 $('#set-test').addEventListener('click', () => playSound(capture(), 'neutral'));
 $('#set-dests').addEventListener('change', (e) => setPref('coups', e.target.checked));
 $('#set-coords').addEventListener('change', (e) => setPref('coords', e.target.checked));
-$('#set-autoqueen').addEventListener('change', (e) => setPref('autoDame', e.target.checked));
 $('#set-premove').addEventListener('change', (e) => setPref('premove', e.target.checked ? '1' : '0'));
 $('#set-fx').addEventListener('change', (e) => setPref('effets', e.target.checked));
 $('#set-reset').addEventListener('click', () => {

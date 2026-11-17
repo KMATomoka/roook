@@ -110,7 +110,9 @@ export function createFx(frame, getOrientation) {
     once(
       d,
       [
-        { transform: 'translate(-50%,-50%) scale(.4)', opacity: 0.9 },
+        // éteint tant qu'il attend son tour (sinon la case s'allume avant l'impact)
+        { transform: 'translate(-50%,-50%) scale(.4)', opacity: 0 },
+        { transform: 'translate(-50%,-50%) scale(.45)', opacity: 0.9, offset: 0.06 },
         { transform: 'translate(-50%,-50%) scale(1.1)', opacity: 0 },
       ],
       { duration, delay, easing: 'ease-out', fill: 'backwards' },
@@ -1647,7 +1649,9 @@ export function createFx(frame, getOrientation) {
       once(
         a,
         [
-          { transform: 'translate(-50%,-50%) rotate(0deg)', opacity: 0.95 },
+          // invisibles tant qu'elles attendent leur tour (sinon on les voit avant même le souffle de feu)
+          { transform: 'translate(-50%,-50%) rotate(0deg)', opacity: 0 },
+          { transform: 'translate(-50%,-50%) rotate(0deg)', opacity: 0.95, offset: 0.08 },
           { transform: `translate(calc(-50% + ${rand(-0.55, 0.55) * s}px), calc(-50% + ${s * rand(0.25, 0.5)}px)) rotate(${rand(-300, 300)}deg)`, opacity: 0 },
         ],
         { duration: rand(700, 1200), delay: delay + rand(0, span), easing: 'cubic-bezier(.3,.1,.6,1)', fill: 'backwards' },

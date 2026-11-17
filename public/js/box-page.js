@@ -720,12 +720,20 @@ function closeStage() {
 result.addEventListener('pointermove', (e) => {
   const card = e.target.closest('.bx-card3d');
   if (!card || reduce || e.pointerType === 'touch') return;
-  const r = card.getBoundingClientRect();
-  const x = (e.clientX - r.left) / r.width;
-  const y = (e.clientY - r.top) / r.height;
+  // position de la souris mesurée sur le cadre fixe (la carte, elle, bouge)
+  const r = result.getBoundingClientRect();
+  const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+  const y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
   // On écrit directement les transform (pas de variables CSS sur la carte : une variable changée sur la carte est
   // héritée par tout son contenu, et Chrome redessinait alors chaque pièce à chaque mouvement de souris)
   if (!NO_TILT) card.style.transform = `rotateX(${((0.5 - y) * 8).toFixed(2)}deg) rotateY(${((x - 0.5) * 10).toFixed(2)}deg)`;
+  else {
+    // Firefox, Zen : mouvement « à plat » (aucune bascule 3D, que ce moteur dessine mal) : la carte glisse un peu vers la
+    // souris, l'objet glisse dans l'autre sens (effet de profondeur)
+    card.style.transform = `translate(${Math.round((x - 0.5) * 12)}px, ${Math.round((y - 0.5) * 10)}px)`;
+    const art = card.querySelector('.bx-res-art');
+    if (art) art.style.transform = `translate(${Math.round((0.5 - x) * 14)}px, ${Math.round((0.5 - y) * 10)}px)`;
+  }
   // le reflet glisse jusque sous la souris (décalage en px depuis le centre : un déplacement, pas un redessin)
   const hl = card.querySelector('.bx-gloss .hl');
   if (hl) hl.style.transform = `translate(${Math.round((x - 0.5) * card.offsetWidth)}px, ${Math.round((y - 0.5) * card.offsetHeight)}px)`;
@@ -733,6 +741,8 @@ result.addEventListener('pointermove', (e) => {
 result.addEventListener('pointerleave', () => {
   const card = result.querySelector('.bx-card3d');
   if (card) card.style.transform = '';
+  const art = card?.querySelector('.bx-res-art');
+  if (art) art.style.transform = '';
 });
 
 // ---------------------------------------------------------------------------

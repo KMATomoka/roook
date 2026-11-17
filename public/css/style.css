@@ -1726,7 +1726,7 @@ a.person-link:hover { color: var(--accent-soft); }
 .badge-emoji.sakura { filter: drop-shadow(0 0 4px rgba(255, 170, 195, 0.7)); }
 .badge-emoji.western { filter: drop-shadow(0 0 4px rgba(255, 210, 110, 0.7)); }
 .badge-emoji.ocean { filter: drop-shadow(0 0 4px rgba(70, 230, 212, 0.75)); }
-.badge-emoji.dragon { filter: drop-shadow(0 0 4px rgba(255, 122, 31, 0.9)); }
+.badge-emoji.dragon { filter: drop-shadow(0 0 4px rgba(255, 122, 31, 0.7)); }
 .badge-emoji.admin { filter: drop-shadow(0 0 4px rgba(143, 107, 255, 0.65)); }
 .pf-badges { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; font-family: var(--font); }
 .pf-id h1 .badge { font-family: var(--font); font-size: 0.82rem; padding: 4px 11px; }
@@ -1747,7 +1747,6 @@ a.person-link:hover { color: var(--accent-soft); }
 .pf-badge-opt.western { --c: #e0895a; }
 .pf-badge-opt.ocean { --c: #46e6d4; }
 .pf-badge-opt.dragon { --c: #ff7a1f; }
-.pf-badge-opt.dragon .pf-badge-emoji { filter: drop-shadow(0 0 5px rgba(255, 122, 31, 0.8)); }
 .pf-badge-opt.none { --c: var(--muted); }
 .pf-badge-opt.on { border-color: var(--c); box-shadow: 0 0 0 1px var(--c), 0 0 18px color-mix(in srgb, var(--c) 30%, transparent); }
 .pf-badge-opt.locked { opacity: 0.6; cursor: default; }

@@ -1670,25 +1670,71 @@ export function createFx(frame, getOrientation) {
   }
 
   /** Prise « Souffle de feu » : un jet de flammes part de la pièce qui prend, la pièce prise brûle et tombe en cendres. */
+  /**
+   * Garde cachée la vraie pièce posée sur une case pendant « ms » millisecondes (une copie joue l'animation à sa
+   * place). On la recherche à chaque image : selon la page, l'échiquier la pose sur la case un peu après l'effet.
+   */
+  function holdPiece(sq, ms) {
+    const hidden = new Set();
+    const end = performance.now() + ms;
+    const tick = () => {
+      for (const p of frame.querySelectorAll('cg-board piece')) {
+        if (p.cgKey === sq && !hidden.has(p)) {
+          hidden.add(p);
+          p.style.visibility = 'hidden';
+        }
+      }
+      if (performance.now() < end) requestAnimationFrame(tick);
+      else for (const p of hidden) p.style.visibility = '';
+    };
+    tick();
+  }
+
+  /**
+   * Prise « Souffle de feu », en trois temps : la pièce qui prend se cabre sur sa case et crache un jet de flammes ;
+   * la pièce prise s'embrase, noircit et tombe en cendres ; puis seulement la pièce avance sur la case.
+   */
   function dragonCaptureFx(move) {
     const sq = move.flags.includes('e') ? move.to[0] + move.from[1] : move.to;
     const victim = move.color === 'w' ? 'b' : 'w';
     const { x, y, s } = at(sq);
     const from = at(move.from);
+    const dest = at(move.to);
     const ghost = el(over, 'cg-wrap fx-ghost', { left: `${x - s / 2}px`, top: `${y - s / 2}px`, width: `${s}px`, height: `${s}px` }, `<piece class="${ROLE[move.captured]} ${COLOR[victim]}"></piece>`);
     if (reduceMotion()) {
       once(ghost, [{ opacity: 1 }, { opacity: 0 }], { duration: 300 });
       return;
     }
-    // Le jet de flammes : une rafale de boules de feu, de la case de départ vers la pièce prise
-    const n = lite(16);
-    for (let i = 0; i < n; i++) fireBlob(over, from.x, from.y, x + rand(-0.15, 0.15) * s, y + rand(-0.15, 0.15) * s, s * rand(0.45, 0.7), { delay: i * 22, duration: rand(420, 560), grow: rand(1.3, 1.9) });
-    flashSquare(sq, 'rgba(255,160,60,.95)', 220, 420);
+    const FIRE = 140; // la pièce se cabre, puis crache
+    const MOVE = 1080; // la pièce prise est en cendres : la pièce avance
+    const SLIDE = 300;
+    // La vraie pièce reste cachée ; une copie reste sur la case de départ le temps du souffle, puis avance
+    holdPiece(move.to, MOVE + SLIDE + 30);
+    const mover = el(over, 'cg-wrap fx-ghost', { left: `${from.x - s / 2}px`, top: `${from.y - s / 2}px`, width: `${s}px`, height: `${s}px`, zIndex: 5 }, `<piece class="${ROLE[move.piece]} ${COLOR[move.color]}"></piece>`);
+    const dx = dest.x - from.x;
+    const dy = dest.y - from.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const back = { x: (-dx / len) * s * 0.08, y: (-dy / len) * s * 0.08 };
+    once(
+      mover,
+      [
+        { transform: 'translate(0,0) scale(1)', offset: 0 },
+        { transform: `translate(${back.x}px, ${back.y - s * 0.04}px) scale(1.08)`, offset: FIRE / (MOVE + SLIDE) },
+        { transform: `translate(${back.x * 0.6}px, ${back.y * 0.6}px) scale(1.06)`, offset: (MOVE - 300) / (MOVE + SLIDE) },
+        { transform: 'translate(0,0) scale(1)', offset: MOVE / (MOVE + SLIDE), easing: 'cubic-bezier(.4,0,.2,1)' },
+        { transform: `translate(${dx}px, ${dy}px) scale(1)`, offset: 1 },
+      ],
+      { duration: MOVE + SLIDE, easing: 'linear' },
+    );
+    // Le jet de flammes : une rafale de boules de feu, de la pièce qui prend vers la pièce prise
+    const n = lite(18);
+    for (let i = 0; i < n; i++) fireBlob(over, from.x, from.y, x + rand(-0.15, 0.15) * s, y + rand(-0.15, 0.15) * s, s * rand(0.45, 0.7), { delay: FIRE + i * 24, duration: rand(420, 560), grow: rand(1.3, 1.9) });
+    flashSquare(sq, 'rgba(255,160,60,.95)', FIRE + 240, 420);
     const scorch = el(under, 'fx-scorch', { left: `${x}px`, top: `${y}px`, width: `${s * 1.2}px`, height: `${s * 1.2}px` });
-    once(scorch, [{ transform: 'translate(-50%,-50%) scale(.4)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1)', opacity: 1, offset: 0.25 }, { transform: 'translate(-50%,-50%) scale(1.05)', opacity: 0 }], { duration: 1900, delay: 260, fill: 'backwards' });
-    burnPiece(ghost, x, y, s, over, { delay: 200, duration: 900 });
-    setTimeout(() => ghost.remove(), 1250);
-    shake(VALUE[move.captured] >= 5 ? 4 : 2, 320);
+    once(scorch, [{ transform: 'translate(-50%,-50%) scale(.4)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1)', opacity: 1, offset: 0.25 }, { transform: 'translate(-50%,-50%) scale(1.05)', opacity: 0 }], { duration: 2100, delay: FIRE + 260, fill: 'backwards' });
+    burnPiece(ghost, x, y, s, over, { delay: FIRE + 220, duration: 760 });
+    setTimeout(() => ghost.remove(), MOVE + 60);
+    setTimeout(() => shake(VALUE[move.captured] >= 5 ? 4 : 2, 320), FIRE + 200);
   }
 
   /** Échec « Dragon » : un anneau de feu tourne autour du roi menacé, étiquette « Échec ! ». */

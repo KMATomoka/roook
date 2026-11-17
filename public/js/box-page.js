@@ -623,8 +623,10 @@ function buildCard(res) {
     ? `<p class="bx-new">✦ ${isJeu ? `${res.fresh.length} pièce${res.fresh.length > 1 ? 's' : ''} débloquée${res.fresh.length > 1 ? 's' : ''} dans ton inventaire` : 'Débloqué dans ton inventaire'}</p>`
     : `<p class="bx-dup">${p.free ? 'Tu l’as depuis le début' : 'Déjà obtenu'} : <b class="bx-dust-gain">+<span>0</span> ${ico('dust')}</b></p>`;
   result.style.setProperty('--c', t.color);
-  result.className = `bx-result tier-${res.rarity}${ORDER.indexOf(res.rarity) >= 2 ? ' foil' : ''}${isNew ? ' is-new' : ' is-dup'}`;
+  // Arc-en-ciel holographique : Légendaire et Jeu complet. Rare (givre) et Épique (nébuleuse) ont leur propre fond (.bx-fx).
+  result.className = `bx-result tier-${res.rarity}${ORDER.indexOf(res.rarity) >= ORDER.indexOf('legendaire') ? ' foil' : ''}${isNew ? ' is-new' : ' is-dup'}`;
   result.innerHTML = `<div class="bx-card3d">
+      <div class="bx-fx" aria-hidden="true"><i></i></div>
       <div class="bx-res-head"><span class="bx-res-rarity">${escapeHtml(t.name)}</span>${isNew ? '<span class="bx-res-badge">Nouveau</span>' : ''}</div>
       <div class="bx-res-art"></div>
       <h2>${escapeHtml(title)}</h2>

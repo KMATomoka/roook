@@ -62,13 +62,14 @@ const PIECES = {
   // crocs, barbillons sous la mâchoire, collerette dentelée, arcade tranchante et œil de braise, plaques sous la
   // gorge, écailles sur le cou, ombres et reflets
   n: (c) => `${base(c)}
-  <clipPath id="nk"><path d="M 14.6 32.3 C 16.9 29.6 20.0 27.3 21.9 25.4 C 23.5 23.4 24.6 21.1 25.8 19.0 L 28.5 18.0 L 30.8 11.1 L 32.5 16.3 L 40.5 16.1 C 45.5 17.3 48.6 20.3 49.7 24.2 C 51.7 31.2 53.2 38.9 54.8 46.6 C 55.9 52.8 56.3 60.5 55.9 71.0 L 30.8 71.0 C 32.4 60.5 34.7 51.7 39.3 42.4 C 34.7 45.1 30.0 48.2 24.8 49.1 L 21.2 47.4 L 23.9 45.4 C 30.0 42.0 36.2 38.9 42.0 37.2 L 24.2 38.3 C 20.0 39.3 16.9 41.1 15.3 43.4 C 13.0 40.4 12.9 35.0 14.6 32.3Z"/></clipPath>
+  <clipPath id="nk"><path d="M 14.6 32.3 C 16.9 29.6 20.0 27.3 21.9 25.4 C 23.5 23.4 24.6 21.1 25.8 19.0 L 28.5 18.0 L 30.8 11.1 L 32.5 16.3 L 40.5 16.1 C 45.5 17.3 48.6 20.3 49.7 24.2 C 51.7 31.2 53.2 38.9 54.8 46.6 C 56.7 54.4 61.7 62.9 65.4 71.0 L 34.7 71.0 C 35.1 62.1 36.2 52.0 39.3 42.4 C 34.7 45.1 30.0 48.2 24.8 49.1 L 21.2 47.4 L 23.9 45.4 C 30.0 42.0 36.2 38.9 42.0 37.2 L 24.2 38.3 C 20.0 39.3 16.9 41.1 15.3 43.4 C 13.0 40.4 12.9 35.0 14.6 32.3Z"/></clipPath>
   <path d="M 41.6 16.6 Q 52.5 13.0 67.5 17.1 Q 59.4 20.5 52.5 23.3 Q 64.8 23.3 76.0 27.1 Q 65.2 31.0 53.6 33.3 Q 66.8 34.6 78.3 41.1 Q 66.8 44.5 55.5 45.2 Q 67.5 48.3 76.4 55.5 Q 65.2 56.5 55.9 57.4 Q 64.8 60.9 71.0 67.5 L 56.3 68.7 L 48.6 45.1 L 45.5 21.9Z" fill="url(#gm)" stroke-width="2"/>
   <path d="M 38.5 17.3 C 47.0 10.3 55.5 4.9 65.0 1.9 C 59.4 6.4 53.2 11.8 48.6 17.6Z" fill="url(#gh)" stroke-width="2"/>
   <path class="dt" d="M43.6 13.3 Q48.2 13.3 51.5 14.2 M47.2 10.7 Q51.2 10.9 53.8 11.9 M50.9 8.4 Q54.1 8.6 56.1 9.6 M54.6 6.3 Q57.2 6.5 58.5 7.4 M58.1 4.6 Q60.1 4.7 60.7 5.5 " fill="none" stroke-width="1" opacity=".6"/>
+  <path d="M29.5 80.5 Q31 75.5 34.5 70.5 H65.5 Q69 75.5 70.5 80.5Z" fill="url(#g)"/>
   <path d="M 47.4 21.3 Q 55.5 21.3 64.4 24.1 Q 56.9 26.5 51.7 29.0 Q 59.8 30.4 69.3 35.2 Q 59.8 37.2 53.4 38.9 Q 61.6 41.1 70.7 48.6 Q 59.9 49.1 54.8 50.0 Q 61.3 53.2 66.2 60.2 Q 58.9 59.9 55.1 60.7 L 53.7 52.8 L 50.6 33.6Z" fill="url(#gf)" stroke-width="1.8"/>
   <path d="M 24.2 38.3 L 42.0 37.2 C 36.2 38.9 30.0 42.0 23.9 45.4 L 21.7 46.0Z" fill="url(#mo)" stroke-width="1.6" stroke-linejoin="round"/>
-  <path d="M 14.6 32.3 C 16.9 29.6 20.0 27.3 21.9 25.4 C 23.5 23.4 24.6 21.1 25.8 19.0 L 28.5 18.0 L 30.8 11.1 L 32.5 16.3 L 40.5 16.1 C 45.5 17.3 48.6 20.3 49.7 24.2 C 51.7 31.2 53.2 38.9 54.8 46.6 C 55.9 52.8 56.3 60.5 55.9 71.0 L 30.8 71.0 C 32.4 60.5 34.7 51.7 39.3 42.4 C 34.7 45.1 30.0 48.2 24.8 49.1 L 21.2 47.4 L 23.9 45.4 C 30.0 42.0 36.2 38.9 42.0 37.2 L 24.2 38.3 C 20.0 39.3 16.9 41.1 15.3 43.4 C 13.0 40.4 12.9 35.0 14.6 32.3Z" fill="url(#g)" stroke-width="2.2"/>
+  <path d="M 14.6 32.3 C 16.9 29.6 20.0 27.3 21.9 25.4 C 23.5 23.4 24.6 21.1 25.8 19.0 L 28.5 18.0 L 30.8 11.1 L 32.5 16.3 L 40.5 16.1 C 45.5 17.3 48.6 20.3 49.7 24.2 C 51.7 31.2 53.2 38.9 54.8 46.6 C 56.7 54.4 61.7 62.9 65.4 71.0 L 34.7 71.0 C 35.1 62.1 36.2 52.0 39.3 42.4 C 34.7 45.1 30.0 48.2 24.8 49.1 L 21.2 47.4 L 23.9 45.4 C 30.0 42.0 36.2 38.9 42.0 37.2 L 24.2 38.3 C 20.0 39.3 16.9 41.1 15.3 43.4 C 13.0 40.4 12.9 35.0 14.6 32.3Z" fill="url(#g)" stroke-width="2.2"/>
   <g class="dt" clip-path="url(#nk)">
     <path d="M41.0 43.0a2.5 2.5 0 0 0 5.0 0 M46.0 43.0a2.5 2.5 0 0 0 5.0 0 M51.0 43.0a2.5 2.5 0 0 0 5.0 0 M43.1 46.1a2.5 2.5 0 0 0 5.0 0 M48.1 46.1a2.5 2.5 0 0 0 5.0 0 M53.1 46.1a2.5 2.5 0 0 0 5.0 0 M40.2 49.2a2.5 2.5 0 0 0 5.0 0 M45.2 49.2a2.5 2.5 0 0 0 5.0 0 M50.2 49.2a2.5 2.5 0 0 0 5.0 0 M42.4 52.4a2.5 2.5 0 0 0 5.0 0 M47.4 52.4a2.5 2.5 0 0 0 5.0 0 M52.4 52.4a2.5 2.5 0 0 0 5.0 0 M39.5 55.5a2.5 2.5 0 0 0 5.0 0 M44.5 55.5a2.5 2.5 0 0 0 5.0 0 M49.5 55.5a2.5 2.5 0 0 0 5.0 0 M54.5 55.5a2.5 2.5 0 0 0 5.0 0 M41.6 58.6a2.5 2.5 0 0 0 5.0 0 M46.6 58.6a2.5 2.5 0 0 0 5.0 0 M51.6 58.6a2.5 2.5 0 0 0 5.0 0 M38.8 61.8a2.5 2.5 0 0 0 5.0 0 M43.8 61.8a2.5 2.5 0 0 0 5.0 0 M48.8 61.8a2.5 2.5 0 0 0 5.0 0 M53.8 61.8a2.5 2.5 0 0 0 5.0 0 M40.9 64.9a2.5 2.5 0 0 0 5.0 0 M45.9 64.9a2.5 2.5 0 0 0 5.0 0 M50.9 64.9a2.5 2.5 0 0 0 5.0 0 M38.0 68.0a2.5 2.5 0 0 0 5.0 0 M43.0 68.0a2.5 2.5 0 0 0 5.0 0 M48.0 68.0a2.5 2.5 0 0 0 5.0 0 M53.0 68.0a2.5 2.5 0 0 0 5.0 0 " fill="none" stroke="${c.scale}" stroke-width=".9" opacity=".55"/>
     <path d="M 37.6 45.1 Q 41.5 46.8 45.2 45.5 M 36.4 49.7 Q 40.2 51.4 43.9 50.2 M 35.3 54.4 Q 39.2 56.1 42.9 54.8 M 34.2 59.0 Q 38.1 60.7 41.8 59.5 M 33.3 63.6 Q 37.1 65.3 40.9 64.1 M 32.5 68.3 Q 36.4 70.0 40.1 68.7" fill="none" stroke="${c.scale}" stroke-width="1.5"/>
@@ -84,7 +85,7 @@ const PIECES = {
   <circle class="dt" cx="26.6" cy="28.2" r=".6" fill="#fff" stroke="none"/>
   <path class="dt" d="M 16.6 33.2 Q 18.1 31.5 20.5 31.9" fill="none" stroke-width="1.5" stroke-linecap="round"/>
   <path class="dt" d="M 18.3 32.1 C 20.5 29.6 22.8 27.5 24.8 25.1" fill="none" stroke="#fff" stroke-width="1.3" opacity=".55" stroke-linecap="round"/>
-  <path d="M29.5 80.5 Q31.5 74 34.5 69.5 H65.5 Q68.5 74 70.5 80.5Z" fill="url(#g)"/>`,
+`,
 
   // Fou : mitre classique (on la reconnaît tout de suite), couverte d'écailles, griffée de trois entailles de
   // braise ; au sommet, une perle de feu
@@ -140,6 +141,10 @@ function svg(col, t) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs>
     <linearGradient id="g" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="${c.top}"/><stop offset="0.3" stop-color="${c.sheen}"/><stop offset="0.6" stop-color="${c.mid}"/><stop offset="1" stop-color="${c.bot}"/></linearGradient>
     <linearGradient id="gu" gradientUnits="userSpaceOnUse" x1="35" y1="4" x2="62" y2="60"><stop offset="0" stop-color="${c.top}"/><stop offset="0.4" stop-color="${c.sheen}"/><stop offset="1" stop-color="${c.mid}"/></linearGradient>
+    <linearGradient id="gh" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="${c.hornBot}"/><stop offset="1" stop-color="${c.hornTop}"/></linearGradient>
+    <linearGradient id="gm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c.maneTop}"/><stop offset="1" stop-color="${c.maneBot}"/></linearGradient>
+    <linearGradient id="gf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c.sheen}"/><stop offset=".6" stop-color="${c.mid}"/><stop offset="1" stop-color="${c.bot}"/></linearGradient>
+    <radialGradient id="mo" cx=".7" cy=".4" r=".8"><stop offset="0" stop-color="#ffb347"/><stop offset=".45" stop-color="#d8380c"/><stop offset="1" stop-color="#3a0804"/></radialGradient>
     <linearGradient id="gh" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="${c.hornBot}"/><stop offset="1" stop-color="${c.hornTop}"/></linearGradient>
     <linearGradient id="gm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c.maneTop}"/><stop offset="1" stop-color="${c.maneBot}"/></linearGradient>
     <linearGradient id="gf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c.sheen}"/><stop offset=".6" stop-color="${c.mid}"/><stop offset="1" stop-color="${c.bot}"/></linearGradient>

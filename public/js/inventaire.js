@@ -53,7 +53,7 @@ function lockLabel(p) {
   }
   if (tab === 'packs') return `${ico('lock')} ${unlockedCount(p.id)}/${PACK_ITEMS.length}`;
   if (tab === 'pieces' && !pieceType) return `${ico('lock')} 0/${PIECE_TYPES.length}`;
-  return `${ico('lock')} Box`;
+  return `${ico('lock')} Coffre`;
 }
 /** Équipé dans l'onglet courant ? */
 function isOn(id, eq = getEquip()) {
@@ -233,7 +233,7 @@ function renderDetail(autoplay = false) {
     const n = isPack ? unlockedCount(p.id) : piecesCount(p.id);
     const max = isPack ? PACK_ITEMS.length : PIECE_TYPES.length;
     extra += `<div class="inv-lock">
-      <div class="inv-lock-head">${ico('lock')} ${isPack ? 'Ses éléments se trouvent' : setView ? 'Ses pièces se trouvent une par une' : 'Se trouve'} dans les <a href="box.html">box</a> : une box à chaque victoire en ligne</div>
+      <div class="inv-lock-head">${ico('lock')} ${isPack ? 'Ses éléments se trouvent' : setView ? 'Ses pièces se trouvent une par une' : 'Se trouve'} dans les <a href="box.html">coffres</a> : un coffre à chaque victoire en ligne</div>
       ${isPack || setView ? `<div class="inv-progress" role="progressbar" aria-valuemin="0" aria-valuemax="${max}" aria-valuenow="${n}"><i style="width:${(n / max) * 100}%"></i></div>
       <div class="inv-lock-count">${n} / ${max} ${isPack ? 'éléments' : 'pièces'} trouvé${n > 1 ? 's' : ''}${isPack ? ' · pack entier bientôt en boutique' : ''}</div>` : ''}
     </div>`;
@@ -269,7 +269,7 @@ function renderDetail(autoplay = false) {
       : `<button type="button" class="btn btn-ghost" data-demo="win">▶ Revoir ${DEMOS[tab].label}</button>`;
   const main = locked
     ? p.box
-      ? `<a class="btn inv-equip-btn" href="box.html">${ico('gift')} ${isPack ? 'Trouver ses éléments' : setView ? 'Trouver ses pièces' : 'Le trouver'} dans les box</a>`
+      ? `<a class="btn inv-equip-btn" href="box.html">${ico('gift')} ${isPack ? 'Trouver ses éléments' : setView ? 'Trouver ses pièces' : 'Le trouver'} dans les coffres</a>`
       : `<button type="button" class="btn inv-equip-btn" disabled>${ico('lock')} Verrouillé</button>`
     : on
       ? `<button type="button" class="btn inv-equip-btn is-on" disabled>✓ ${isPack ? 'Pack équipé' : setView ? 'Jeu équipé' : 'Équipé'}</button>`

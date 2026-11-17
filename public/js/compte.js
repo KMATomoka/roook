@@ -348,7 +348,11 @@ export const BADGES = {
   sakura: { name: 'Sakura', emoji: '🌸', cls: 'sakura', free: true, how: 'Le badge du pack Sakura chess, ouvert à tous.' },
   western: { name: 'Western', emoji: '⭐', cls: 'western', free: true, how: 'Le badge du pack Western chess (l’étoile du shérif), ouvert à tous.' },
   ocean: { name: 'Océan', emoji: '🌊', cls: 'ocean', free: true, how: 'Le badge du pack Océan (la vague), ouvert à tous.' },
+  // Badge du pack Dragon : un logo dessiné (tête de dragon orange) au lieu d'un emoji (🐉 est vert)
+  dragon: { name: 'Dragon', emoji: '🐉', icon: `<svg class="badge-svg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs><linearGradient id="dg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd27a"/><stop offset=".45" stop-color="#ff8a2a"/><stop offset="1" stop-color="#d9400c"/></linearGradient></defs><path d="M1.6 11.6C3.6 10.2 5.6 9 8 8.3c1.8-.5 3.3-1 4.6-1.9.9-1.8 1.8-3.4 3.4-4.8-.3 1.6-.4 2.9-.2 4.1 1.4-1.5 3.2-2.6 5.4-3.1-1.2 1.4-2 2.7-2.4 4.2 1.6.7 2.8 1.9 3.6 3.6-1 .1-1.8.4-2.4.9.9.8 1.5 1.8 1.8 3.1-1-.4-2-.5-2.9-.3-.3 1.6-1.2 3-2.8 4.2.1-1.2-.1-2.3-.6-3.2-1.6.4-3.4.3-5.3-.1-1.4.9-3 1.2-4.6 1 .9-.6 1.5-1.3 1.8-2.1-1.7.3-3.2.1-4.6-.6 1.2-.2 2.2-.6 3-1.2-1.4-.2-2.6-.6-3.6-1.4z" fill="url(#dg)" stroke="#5a1a00" stroke-width=".9" stroke-linejoin="round"/><path d="M5.2 12.9c1.3.2 2.5.1 3.6-.3" fill="none" stroke="#5a1a00" stroke-width=".8" stroke-linecap="round"/><ellipse cx="12.6" cy="9.6" rx="1.25" ry=".85" fill="#fff4b0" stroke="#5a1a00" stroke-width=".6" transform="rotate(-18 12.6 9.6)"/><circle cx="12.9" cy="9.5" r=".4" fill="#5a1a00"/><circle cx="3.9" cy="11.2" r=".45" fill="#5a1a00"/></svg>`, cls: 'dragon', free: true, how: 'Le badge du pack Dragon (la tête de dragon), ouvert à tous.' },
 };
+/** L'emblème d'un badge : son logo dessiné s'il en a un, sinon son emoji. */
+export const badgeIcon = (b) => b.icon || b.emoji;
 export const ROYAL_WINS = 100;
 
 /** Pastille d'un badge : emoji + nom (profil), ou seulement l'emoji (en partie). */
@@ -356,8 +360,8 @@ export function badgeHtml(id, { name = true } = {}) {
   const b = BADGES[id];
   if (!b) return '';
   return name
-    ? `<span class="badge ${b.cls}">${b.emoji} ${b.name}</span>`
-    : `<span class="badge-emoji ${b.cls}" data-tip="${b.emoji} Badge ${b.name}" tabindex="0" role="img" aria-label="Badge ${b.name}">${b.emoji}</span>`;
+    ? `<span class="badge ${b.cls}">${badgeIcon(b)} ${b.name}</span>`
+    : `<span class="badge-emoji ${b.cls}" data-tip="${b.icon ? '' : b.emoji + ' '}Badge ${b.name}" tabindex="0" role="img" aria-label="Badge ${b.name}">${badgeIcon(b)}</span>`;
 }
 
 // Infobulle des badges (en partie, seul l'emoji est affiché) : le nom du badge au survol, au clavier ou au toucher.
@@ -510,7 +514,7 @@ function renderAccount(user, early = false) {
     el.innerHTML = `
       ${SEARCH_HTML}
       ${user.role === 'admin' || user.role === 'fondateur' ? `<a class="icon-btn admin-link" href="admin.html" title="Administration" aria-label="Administration">${ICONS.shield}</a>` : ''}
-      <a class="box-chip" href="box.html" title="Mes box" aria-label="Mes box"><span class="box-chip-ico" aria-hidden="true">${ICONS.chest}</span><b class="box-chip-n">0</b></a>
+      <a class="box-chip" href="box.html" title="Mes coffres" aria-label="Mes coffres"><span class="box-chip-ico" aria-hidden="true">${ICONS.chest}</span><b class="box-chip-n">0</b></a>
       <a class="account-chip" href="profil.html" title="Mon profil">
         ${picHtml(user.username, user.avatar, 'account-initial')}
         <span class="account-name">${escapeHtml(user.username)}</span>
@@ -539,7 +543,7 @@ function renderAccount(user, early = false) {
       for (const c of document.querySelectorAll('.box-chip')) {
         c.querySelector('.box-chip-n').textContent = n;
         c.classList.toggle('has', n > 0);
-        c.title = n ? `${n} box à ouvrir` : 'Mes box';
+        c.title = n ? `${n} coffre${n > 1 ? 's' : ''} à ouvrir` : 'Mes coffres';
       }
       const navN = document.querySelector('.nav-box-n');
       if (navN) navN.textContent = n ? ` (${n})` : '';
@@ -553,7 +557,7 @@ function renderAccount(user, early = false) {
     nav.insertAdjacentHTML(
       'beforeend',
       `<div class="nav-extra">
-        <a href="box.html"${location.pathname.endsWith('/box.html') ? ' aria-current="page"' : ''}><span class="nav-ico" aria-hidden="true">${ICONS.chestOpen}</span>Mes box<span class="nav-box-n"></span></a>
+        <a href="box.html"${location.pathname.endsWith('/box.html') ? ' aria-current="page"' : ''}><span class="nav-ico" aria-hidden="true">${ICONS.chestOpen}</span>Mes coffres<span class="nav-box-n"></span></a>
         <a href="profil.html"${location.pathname.endsWith('/profil.html') && !location.search ? ' aria-current="page"' : ''}><span class="nav-ico" aria-hidden="true">${ICONS.user}</span>Mon profil</a>
         ${isStaff ? `<a href="admin.html"${location.pathname.endsWith('/admin.html') ? ' aria-current="page"' : ''}><span class="nav-ico" aria-hidden="true">${ICONS.shield}</span>Administration</a>` : ''}
       </div>`,

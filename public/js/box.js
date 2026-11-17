@@ -13,7 +13,7 @@ import { PACKS, PIECE_TYPES, PACK_ITEMS, packHas } from './theme.js';
 
 /** Types de box (d'autres viendront plus tard). */
 export const BOX_TYPES = {
-  classique: { name: 'Box classique', desc: 'Un élément de pack au hasard : plateau, pièces, fin de partie ou prise et son.' },
+  classique: { name: 'Coffre classique', desc: 'Un élément de pack au hasard : plateau, pièces, fin de partie ou prise et son.' },
 };
 /** Taux de drop de la box classique, en pourcentage. */
 export const RATES = [
@@ -97,7 +97,7 @@ export function drawBox(owned, forced = null) {
  */
 export async function openBox(uid, key, state) {
   const fromDust = !key;
-  if (fromDust && state.dust < DUST_PER_BOX) throw new Error(`Il te faut ${DUST_PER_BOX} poussières d’étoile pour ouvrir une box.`);
+  if (fromDust && state.dust < DUST_PER_BOX) throw new Error(`Il te faut ${DUST_PER_BOX} poussières d’étoile pour ouvrir un coffre.`);
   const boxKey = key || 'dust-' + push(ref(db, `loot/${uid}/opened`)).key;
   const res = drawBox(state.owned, isSpecial(key) ? (Math.random() < 0.5 ? 'epique' : 'legendaire') : null);
   const dust = state.dust - (fromDust ? DUST_PER_BOX : 0) + res.dust;

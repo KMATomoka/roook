@@ -5,7 +5,7 @@ import { ICONS, ico } from './icons.js'; // icônes dessinées (à la place des 
 import {
   session, toast, picHtml, loadProfile, setProfilePrivate, profileUrl, addFriend, acceptFriend, challenge, cadenceLabel, logout,
   setAvatar, removeAvatar, myEmail, changeEmail, setBio, BIO_MAX,
-  BADGES, ROYAL_WINS, badgeHtml, ownedBadges, winKeys, chooseBadge,
+  BADGES, ROYAL_WINS, badgeHtml, badgeIcon, ownedBadges, winKeys, chooseBadge,
 } from './compte.js';
 
 const page = $('#profile-page');
@@ -216,7 +216,7 @@ function badgeCard(p) {
     const on = p.badge === id;
     const lock = !has ? `<span class="pf-badge-lock">${ico('lock')} ${Math.min(wins, ROYAL_WINS)} / ${ROYAL_WINS} victoires</span>` : '';
     return `<button type="button" class="pf-badge-opt ${b.cls} ${on ? 'on' : ''} ${has ? '' : 'locked'}" data-badge="${id}" ${has ? '' : 'disabled'} aria-pressed="${on}">
-      <span class="pf-badge-emoji">${b.emoji}</span><span class="pf-badge-name">${b.name}</span>${lock || `<span class="pf-badge-state">${on ? '✓ Affiché' : 'Afficher'}</span>`}
+      <span class="pf-badge-emoji">${badgeIcon(b)}</span><span class="pf-badge-name">${b.name}</span>${lock || `<span class="pf-badge-state">${on ? '✓ Affiché' : 'Afficher'}</span>`}
     </button>`;
   };
   const all = Object.entries(BADGES);
@@ -398,7 +398,7 @@ function wire(p) {
     const id = b.dataset.badge || null;
     try {
       await chooseBadge(id);
-      toast(id ? `Badge ${BADGES[id].emoji} <b>${BADGES[id].name}</b> affiché en partie.` : 'Plus aucun badge affiché en partie.', { cls: 'info' });
+      toast(id ? `Badge ${badgeIcon(BADGES[id])} <b>${BADGES[id].name}</b> affiché en partie.` : 'Plus aucun badge affiché en partie.', { cls: 'info' });
       load(p.id);
     } catch (ex) {
       toast(escapeHtml(ex.message), { cls: 'error' });

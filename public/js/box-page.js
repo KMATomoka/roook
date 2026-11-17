@@ -163,7 +163,7 @@ function renderMain() {
   const main = $('#bx-main');
   if (!uid) {
     main.innerHTML = `<div class="bx-card"><div class="bx-card-art" id="bx-card-art"></div><div class="bx-card-body">
-      ${chestTitle()}<p class="muted">Connecte-toi pour gagner des box : une à chaque victoire en ligne.</p>
+      ${chestTitle()}<p class="muted">Connecte-toi pour gagner des coffres : un à chaque victoire en ligne.</p>
       <a class="btn btn-primary" href="connexion.html?retour=box.html">Se connecter</a></div></div>`;
     renderRates();
     placeCardChest(0);
@@ -186,10 +186,10 @@ function renderMain() {
         <div class="bx-dust">
           <span>${ico('dust')} Poussière d’étoile : <b>${state.dust}</b> / ${DUST_PER_BOX}</span>
           <div class="bx-dust-bar"><i style="width:${Math.min(100, (state.dust / DUST_PER_BOX) * 100)}%"></i></div>
-          <button class="btn btn-ghost small" type="button" data-dust ${dustOk && !banned ? '' : 'disabled'}>Ouvrir une box avec ${DUST_PER_BOX} ${ico('dust')}</button>
+          <button class="btn btn-ghost small" type="button" data-dust ${dustOk && !banned ? '' : 'disabled'}>Ouvrir un coffre avec ${DUST_PER_BOX} ${ico('dust')}</button>
         </div>
         ${specials ? `<p class="bx-staff"><button class="btn btn-primary small" type="button" data-open-special ${banned ? 'disabled' : ''}>${ico('key')} Ouvrir un coffre spécial ×${specials}</button> <span class="muted">50 % épique, 50 % légendaire</span></p>` : ''}
-        ${staff ? `<p class="bx-staff"><button class="btn btn-ghost small" type="button" data-grant>${ico('tools')} +1 box de test</button> <button class="btn btn-ghost small" type="button" data-grant-special>${ico('tools')} +1 coffre spécial (épique ou légendaire)</button> <span class="muted">(admins et fondateur)</span></p>` : ''}
+        ${staff ? `<p class="bx-staff"><button class="btn btn-ghost small" type="button" data-grant>${ico('tools')} +1 coffre de test</button> <button class="btn btn-ghost small" type="button" data-grant-special>${ico('tools')} +1 coffre spécial (épique ou légendaire)</button> <span class="muted">(admins et fondateur)</span></p>` : ''}
       </div>
     </div>`;
   renderRates();
@@ -553,7 +553,7 @@ async function doOpen(key, fake = null) {
   } catch (e) {
     closeStage();
     opening = false;
-    toast(escapeHtml(e.message || 'Impossible d’ouvrir la box pour l’instant.'), { cls: 'error' });
+    toast(escapeHtml(e.message || 'Impossible d’ouvrir le coffre pour l’instant.'), { cls: 'error' });
     return;
   }
   const target = ORDER.indexOf(res.rarity);
@@ -765,7 +765,7 @@ document.addEventListener('click', async (e) => {
   if (e.target.closest('[data-grant]')) {
     try {
       await grantTestBox(uid);
-      toast(`${ico('tools')} Box de test ajoutée.`, { cls: 'info', duration: 2000 });
+      toast(`${ico('tools')} Coffre de test ajouté.`, { cls: 'info', duration: 2000 });
     } catch {
       toast('Réservé aux admins et au fondateur.', { cls: 'error' });
     }

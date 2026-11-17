@@ -2658,7 +2658,9 @@ html:has(body.bx-opening), body.bx-opening { overflow: hidden; overscroll-behavi
 .bx-result[hidden] { display: none; }
 .bx-result.preparing { opacity: 0.001; pointer-events: none; }
 .bx-card3d {
-  position: relative; padding: 16px 18px 18px; border-radius: 22px; text-align: center; overflow: hidden;
+  /* pas d'overflow: hidden ici : sous une bascule 3D, Chrome découpe les coins arrondis par morceaux et on voyait des
+     traits et des angles aux coins. Les effets ont leurs propres cadres arrondis (.bx-fx, .bx-gloss). */
+  position: relative; padding: 16px 18px 18px; border-radius: 22px; text-align: center;
   transform: rotateX(0deg) rotateY(0deg); transition: transform 0.15s ease-out; /* penchée vers la souris par js/box-page.js */
   will-change: transform; /* dessinée une fois, puis seulement penchée : jamais redessinée pendant qu'elle bouge */
   background:

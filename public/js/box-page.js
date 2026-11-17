@@ -4,7 +4,7 @@
 // L'ouverture, comme un jeu vidéo : le coffre (bois sombre cerclé de fer, gemme verte du coffre commun) tombe sur
 // la scène, et c'est le joueur qui le frappe (rien ne se fait tout seul). Chaque coup le fait trembler, le couvercle
 // se soulève et laisse fuir de la lumière ; tant qu'il ne s'ouvre pas, la rareté peut monter
-// (Commun → Rare → Légendaire → Jeu complet). Plus le drop est gros, plus il faut de coups : c'est le suspense.
+// (Commun → Rare → Épique → Légendaire → Jeu complet). Plus le drop est gros, plus il faut de coups : c'est le suspense.
 // Puis le couvercle saute, un rayon de lumière sort, et la carte de l'objet apparaît avec un vrai aperçu
 // (plateau en 3D, pièce sur son socle, fin de partie ou prise jouée sur un petit échiquier).
 import { Chessground } from '../vendor/chessground/chessground.min.js';
@@ -15,7 +15,7 @@ import {
   PACKS, PACK_COLOR, SLOT_NAMES, RARITY, PIECE_TYPES, PIECE_NAMES, PIECE_ROLE, PACK_ITEMS,
   themeClasses, setEquip, equipOwnedPieces, getEquip, itemName, loadPackFont, packHas,
 } from './theme.js';
-import { RATES, DUST_PER_BOX, watchBoxes, openBox, grantTestBox } from './box.js';
+import { RATES, DUST_PER_BOX, watchBoxes, openBox, grantTestBox, isSpecial } from './box.js';
 import { createFx } from './fx.js';
 import { boxMusic, unlockAudio, warmAudio, stopAllSounds } from './sound.js';
 // Téléphones et petites tablettes : effets allégés (même règle que js/coffre3d.js)
@@ -27,10 +27,11 @@ import { boxSfx } from './sound.js';
 
 const ICONS = { board: '▦', pieces: '♞', endAnim: '♚', capture: '✦', P: '♟', R: '♜', N: '♞', B: '♝', Q: '♛', K: '♚' };
 /** Paliers de suspense, dans l'ordre (le Jeu complet est le plus rare). */
-const ORDER = ['commun', 'rare', 'legendaire', 'jeu'];
+const ORDER = ['commun', 'rare', 'epique', 'legendaire', 'jeu'];
 const TIERS = {
   commun: { name: 'Commun', color: RARITY.commun.color },
   rare: { name: 'Rare', color: RARITY.rare.color },
+  epique: { name: 'Épique', color: RARITY.epique.color },
   legendaire: { name: 'Légendaire', color: RARITY.legendaire.color },
   jeu: { name: 'Jeu complet', color: '#3cf2a3' },
 };
@@ -170,6 +171,7 @@ function renderMain() {
   }
   if (!state.ready) return;
   const n = state.keys.length;
+  const specials = state.keys.filter(isSpecial).length;
   const dustOk = state.dust >= DUST_PER_BOX;
   main.innerHTML = `<div class="bx-card${n ? ' has' : ''}">
       <div class="bx-card-art" id="bx-card-art">${n ? `<span class="bx-count">×${n}</span>` : ''}</div>
@@ -186,7 +188,8 @@ function renderMain() {
           <div class="bx-dust-bar"><i style="width:${Math.min(100, (state.dust / DUST_PER_BOX) * 100)}%"></i></div>
           <button class="btn btn-ghost small" type="button" data-dust ${dustOk && !banned ? '' : 'disabled'}>Ouvrir une box avec ${DUST_PER_BOX} ${ico('dust')}</button>
         </div>
-        ${staff ? `<p class="bx-staff"><button class="btn btn-ghost small" type="button" data-grant>${ico('tools')} +1 box de test</button> <span class="muted">(admins et fondateur)</span></p>` : ''}
+        ${specials ? `<p class="bx-staff"><button class="btn btn-primary small" type="button" data-open-special ${banned ? 'disabled' : ''}>${ico('key')} Ouvrir un coffre spécial ×${specials}</button> <span class="muted">50 % épique, 50 % légendaire</span></p>` : ''}
+        ${staff ? `<p class="bx-staff"><button class="btn btn-ghost small" type="button" data-grant>${ico('tools')} +1 box de test</button> <button class="btn btn-ghost small" type="button" data-grant-special>${ico('tools')} +1 coffre spécial (épique ou légendaire)</button> <span class="muted">(admins et fondateur)</span></p>` : ''}
       </div>
     </div>`;
   renderRates();
@@ -741,8 +744,19 @@ document.addEventListener('click', async (e) => {
     info.setAttribute('aria-expanded', String(w.classList.toggle('open')));
     return;
   }
-  if (e.target.closest('[data-open]')) return state.keys.length && doOpen(state.keys[0]);
+  // le bouton principal ouvre d'abord les coffres normaux ; les coffres spéciaux ont leur bouton
+  if (e.target.closest('[data-open]')) return state.keys.length && doOpen(state.keys.find((k) => !isSpecial(k)) || state.keys[0]);
+  if (e.target.closest('[data-open-special]')) { const k = state.keys.find(isSpecial); return k && doOpen(k); }
   if (e.target.closest('[data-dust]')) return doOpen(null);
+  if (e.target.closest('[data-grant-special]')) {
+    try {
+      await grantTestBox(uid, true);
+      toast(`${ico('tools')} Coffre spécial ajouté (épique ou légendaire).`, { cls: 'info', duration: 2000 });
+    } catch {
+      toast('Réservé aux admins et au fondateur.', { cls: 'error' });
+    }
+    return;
+  }
   if (e.target.closest('[data-grant]')) {
     try {
       await grantTestBox(uid);
@@ -793,7 +807,7 @@ addEventListener('keydown', (e) => {
 if (location.hostname === 'localhost') {
   window.bxDemo = (rarity = 'rare', pack = 'japon', slot = 'N', isNew = true) => {
     const slots = rarity === 'jeu' ? [...PIECE_TYPES] : [slot];
-    return doOpen(null, { rarity, pack, slots, fresh: isNew ? slots : [], dust: isNew ? 0 : { commun: 1, rare: 3, legendaire: 6, jeu: 20 }[rarity] });
+    return doOpen(null, { rarity, pack, slots, fresh: isNew ? slots : [], dust: isNew ? 0 : { commun: 1, rare: 3, epique: 6, legendaire: 10, jeu: 20 }[rarity] });
   };
 }
 // box.html?demo=legendaire,ocean,N : la lance au chargement

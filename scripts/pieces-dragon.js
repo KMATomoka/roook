@@ -1,4 +1,4 @@
-// Génère les pièces du pack « Epic Dragon » (public/img/pieces-dragon/*.svg).
+// Génère les pièces du pack « Dragon » (public/img/pieces-dragon/*.svg).
 // Blancs en or et ivoire écaillés, Noirs en obsidienne aux contours de braise (halo flou orange).
 // Pion œuf de dragon serré dans des griffes, tour forteresse volcanique (porte de feu, fissures de lave),
 // fou mitre de flammes, cavalier tête de dragon cornue, dame couronne aux ailes de dragon, roi couronne à cornes

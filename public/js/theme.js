@@ -21,7 +21,7 @@ export const PACK_ITEMS = ['board', ...PIECE_TYPES, 'endAnim', 'capture'];
 const isPieceType = (s) => PIECE_TYPES.includes(s);
 
 /**
- * Raretés. Seuls Astrea et Classic (free: true) sont à tout le monde dès le début ; les autres communs (Bois) se trouvent dans les box. Rare et légendaire (Océan, Dragon) : chaque élément se trouve dans les box (js/box.js) ; Royal (légendaire) est une mission spéciale.
+ * Raretés. Seuls Astrea et Classic (free: true) sont à tout le monde dès le début ; les autres communs (Bois) se trouvent dans les box. Rare (Western), épique (Sakura) et légendaire (Océan, Dragon) : chaque élément se trouve dans les box (js/box.js) ; Royal (légendaire) est une mission spéciale.
  * Légendaire : une mission spéciale (Royal chess, 100 victoires), jamais dans les box.
  */
 export const RARITY = {
@@ -79,7 +79,7 @@ export const PACKS = [
     id: 'japon',
     pieceTag: 'Edo', // « Cavalier Edo »
     name: 'Sakura chess',
-    rarity: 'rare',
+    rarity: 'epique',
     box: true,
     desc: 'Le Japon : papier washi rose sakura et indigo, pièces de laque, coups de sabre, cerisiers en fleur et sons de taiko et de koto.',
     items: {
@@ -120,7 +120,7 @@ export const PACKS = [
   {
     id: 'dragon',
     pieceTag: 'du Dragon', // « Cavalier du Dragon »
-    name: 'Epic Dragon',
+    name: 'Dragon',
     rarity: 'legendaire',
     box: true,
     desc: 'L’antre du dragon : peau d’écailles rouge sang et ivoire, braises qui passent, pièces d’or et d’obsidienne, souffle de feu et dragon qui survole le plateau.',

@@ -1580,7 +1580,7 @@ export function createFx(frame, getOrientation) {
   }
 
   // -------------------------------------------------------------------------
-  // Pack Epic Dragon : souffle de feu, braises, cendres, ombre du dragon et ligne de feu, coups de griffe
+  // Pack Dragon : souffle de feu, braises, cendres, ombre du dragon et ligne de feu, coups de griffe
   // -------------------------------------------------------------------------
   // L'ombre du dragon vu d'en dessous, qui file vers le bas du plateau (la tête en bas) : corps, cou, tête à
   // cornes, queue en pointe de lance, et deux ailes à part (elles battent). Le flou est dessiné dans le SVG : il

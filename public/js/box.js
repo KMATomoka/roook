@@ -2,7 +2,7 @@
 // Une box classique donne un élément de pack, tiré au sort par rareté : un plateau, une pièce (pion, tour,
 // cavalier, fou, dame ou roi : chacune se trouve à part), une fin de partie, une prise et son.
 //  - Commun (Astrea, Classic) : déjà à tout le monde, il se change en poussière d'étoile ✨ ;
-//  - Rare (Sakura, Western), Légendaire (Océan, Epic Dragon) : l'élément est débloqué (déjà obtenu : il se change en ✨) ;
+//  - Rare (Western), Épique (Sakura), Légendaire (Océan, Dragon) : l'élément est débloqué (déjà obtenu : il se change en ✨) ;
 //  - Jeu complet : très rare, les 6 pièces d'un pack d'un coup.
 // Les packs entiers ne sont pas dans les box (boutique à venir). Royal chess (légendaire aussi) non plus : c'est une
 // mission spéciale (100 victoires).
@@ -18,13 +18,17 @@ export const BOX_TYPES = {
 /** Taux de drop de la box classique, en pourcentage. */
 export const RATES = [
   { id: 'jeu', name: 'Jeu complet', pct: 0.3 },
-  { id: 'legendaire', name: 'Légendaire', pct: 11.7 },
-  { id: 'rare', name: 'Rare', pct: 33 },
+  { id: 'legendaire', name: 'Légendaire', pct: 7 },
+  { id: 'epique', name: 'Épique', pct: 12.7 },
+  { id: 'rare', name: 'Rare', pct: 25 },
   { id: 'commun', name: 'Commun', pct: 55 },
 ];
 /** Poussière d'étoile donnée par un doublon, selon sa rareté. */
-export const DUST = { commun: 1, rare: 3, legendaire: 6, jeu: 20 };
+export const DUST = { commun: 1, rare: 3, epique: 6, legendaire: 10, jeu: 20 };
 export const DUST_PER_BOX = 10;
+/** Coffre spécial de test : une box offerte dont la clé commence par ça donne 50 % épique, 50 % légendaire. */
+export const SPECIAL = 'special-';
+export const isSpecial = (key) => typeof key === 'string' && key.startsWith(SPECIAL);
 
 const isWin = (g) => !!g && !!g.game && ((g.result === '1-0' && g.me === 'w') || (g.result === '0-1' && g.me === 'b'));
 
@@ -68,8 +72,8 @@ function rollRarity() {
  * Renvoie { rarity, pack, slots: [élément…], fresh: [élément…] (nouveaux), dust (gagnée en doublons) }.
  * Un élément : board, endAnim, capture, ou une pièce (P, R, N, B, Q, K).
  */
-export function drawBox(owned) {
-  const rarity = rollRarity();
+export function drawBox(owned, forced = null) {
+  const rarity = forced || rollRarity();
   const has = (p, s) => !!p.free || !!owned[p.id]?.[s] || (PIECE_TYPES.includes(s) && !!owned[p.id]?.pieces);
   if (rarity === 'jeu') {
     const missing = PACKS.filter((p) => p.box && PIECE_TYPES.some((t) => !has(p, t)));
@@ -95,7 +99,7 @@ export async function openBox(uid, key, state) {
   const fromDust = !key;
   if (fromDust && state.dust < DUST_PER_BOX) throw new Error(`Il te faut ${DUST_PER_BOX} poussières d’étoile pour ouvrir une box.`);
   const boxKey = key || 'dust-' + push(ref(db, `loot/${uid}/opened`)).key;
-  const res = drawBox(state.owned);
+  const res = drawBox(state.owned, isSpecial(key) ? (Math.random() < 0.5 ? 'epique' : 'legendaire') : null);
   const dust = state.dust - (fromDust ? DUST_PER_BOX : 0) + res.dust;
   const up = {
     [`loot/${uid}/opened/${boxKey}`]: {
@@ -111,7 +115,9 @@ export async function openBox(uid, key, state) {
   return res;
 }
 
-/** Box de test (admins et fondateur). */
-export async function grantTestBox(uid) {
-  await set(push(ref(db, `lootGrants/${uid}`)), true);
+/** Box de test (admins et fondateur). special : le coffre spécial (50 % épique, 50 % légendaire). */
+export async function grantTestBox(uid, special = false) {
+  if (!special) return set(push(ref(db, `lootGrants/${uid}`)), true);
+  const key = SPECIAL + push(ref(db, `lootGrants/${uid}`)).key;
+  await set(ref(db, `lootGrants/${uid}/${key}`), true);
 }

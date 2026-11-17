@@ -1,4 +1,4 @@
-// Génère le motif du damier « Epic Dragon » (public/img/damier-dragon.svg) : une tuile de 2 × 2 cases,
+// Génère le motif du damier « Dragon » (public/img/damier-dragon.svg) : une tuile de 2 × 2 cases,
 // posée par-dessus le damier (CSS .board-dragon cg-board).
 // - Cases foncées (en haut à droite, en bas à gauche) : peau de dragon, écailles rouge sang qui se chevauchent
 //   comme des tuiles, en relief doux (peu de contraste, pour ne pas gêner la lecture des pièces).

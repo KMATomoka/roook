@@ -45,7 +45,7 @@ const tail = (c, segs, front, w0, w1, spikeSegs) => {
       const dx = 3 * u * u * (b[0] - a[0]) + 6 * u * t * (d[0] - b[0]) + 3 * t * t * (e[0] - d[0]);
       const dy = 3 * u * u * (b[1] - a[1]) + 6 * u * t * (d[1] - b[1]) + 3 * t * t * (e[1] - d[1]);
       const l = Math.hypot(dx, dy) || 1;
-      pts.push({ x, y, nx: -dy / l, ny: dx / l, tx: dx / l, ty: dy / l, seg: si });
+      pts.push({ x, y, nx: -dy / l, ny: dx / l, tx: dx / l, ty: dy / l, seg: si, k: i });
     }
   });
   pts.forEach((q, i) => (q.w = w0 + (w1 - w0) * (i / (pts.length - 1))));
@@ -64,7 +64,7 @@ const tail = (c, segs, front, w0, w1, spikeSegs) => {
     <path class="dt" d="M${P(0.8, 0)} L${P(L - 1.6, 0)}" fill="none" stroke="${c.scale}" stroke-width="1"/>`;
   })();
   // Piquants dorsaux (côté +n), un tous les 4 points
-  const spikesOf = (segsOk) => pts.filter((q, i) => segsOk.includes(q.seg) && i % 4 === 2).map((q) => {
+  const spikesOf = (segsOk) => pts.filter((q, i) => segsOk.includes(q.seg) && i % 4 === 2 && !(q.seg === front[1] && q.k > N - 5)).map((q) => {
     const h = 1.2 + q.w * 0.38, b = 1.3 + q.w * 0.12;
     const bx = q.x + q.nx * q.w / 2, by = q.y + q.ny * q.w / 2;
     return `M${f(bx - q.tx * b)} ${f(by - q.ty * b)} L${f(bx + q.nx * h + q.tx * b * 0.6)} ${f(by + q.ny * h + q.ty * b * 0.6)} L${f(bx + q.tx * b)} ${f(by + q.ty * b)}Z`;
@@ -117,10 +117,10 @@ const PIECES = {
       [[57, 77], [63, 77.5], [70.5, 76], [72.5, 70]],
       [[72.5, 70], [74.3, 64.6], [71.45, 55.65], [65.9, 57]],
       [[65.9, 57], [58.5, 58.8], [42, 62.4], [34.4, 55.6]],
-      [[34.4, 55.6], [29.3, 51.2], [27, 50], [29.6, 47.6]],
-      [[29.6, 47.6], [38, 40], [62, 40], [71, 43.5]],
+      [[34.4, 55.6], [30.6, 52.2], [30.4, 49.4], [35.5, 48.6]],
+      [[35.5, 48.6], [44, 46.5], [60, 41], [71, 43.5]],
       [[71, 43.5], [74.5, 45], [77.5, 42.5], [77.6, 37.5]],
-    ], [1, 3], 8.6, 3.6, [1, 2, 5]);
+    ], [1, 2], 8.6, 3.6, [1, 2, 5]);
     return `${base(c)}
   ${T.back}
   <path d="M32 80.5 L35 46 H65 L68 80.5Z" fill="url(#g)"/>

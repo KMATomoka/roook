@@ -21,7 +21,7 @@ export const PACK_ITEMS = ['board', ...PIECE_TYPES, 'endAnim', 'capture'];
 const isPieceType = (s) => PIECE_TYPES.includes(s);
 
 /**
- * Raretés. Seuls Astrea et Classic (free: true) sont à tout le monde dès le début ; les autres communs (Bois) se trouvent dans les box. Rare et épique : chaque élément se trouve dans les box (js/box.js).
+ * Raretés. Seuls Astrea et Classic (free: true) sont à tout le monde dès le début ; les autres communs (Bois) se trouvent dans les box. Rare et légendaire (Océan, Dragon) : chaque élément se trouve dans les box (js/box.js) ; Royal (légendaire) est une mission spéciale.
  * Légendaire : une mission spéciale (Royal chess, 100 victoires), jamais dans les box.
  */
 export const RARITY = {
@@ -107,7 +107,7 @@ export const PACKS = [
     id: 'ocean',
     pieceTag: 'des Abysses', // « Cavalier des Abysses »
     name: 'Océan',
-    rarity: 'epique',
+    rarity: 'legendaire',
     box: true,
     desc: 'Une partie au fond de la mer : eau claire et eau profonde, pièces de nacre et des abysses, siphon, aileron de requin, baleine et kraken.',
     items: {
@@ -121,7 +121,7 @@ export const PACKS = [
     id: 'dragon',
     pieceTag: 'du Dragon', // « Cavalier du Dragon »
     name: 'Epic Dragon',
-    rarity: 'epique',
+    rarity: 'legendaire',
     box: true,
     desc: 'L’antre du dragon : peau d’écailles rouge sang et ivoire, braises qui passent, pièces d’or et d’obsidienne, souffle de feu et dragon qui survole le plateau.',
     items: {

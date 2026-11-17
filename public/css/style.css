@@ -2671,7 +2671,7 @@ html:has(body.bx-opening), body.bx-opening { overflow: hidden; overscroll-behavi
   content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
   background: radial-gradient(circle at var(--mx) var(--my), rgba(255, 255, 255, 0.09), transparent 42%);
 }
-.bx-result.foil .bx-card3d::before { /* reflets d'arc-en-ciel (Épique, Jeu complet) */
+.bx-result.foil .bx-card3d::before { /* reflets d'arc-en-ciel (Légendaire, Jeu complet) */
   content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0.35;
   background: linear-gradient(115deg, transparent 22%, rgba(255, 90, 200, 0.35) 34%, rgba(90, 200, 255, 0.35) 46%, rgba(120, 255, 170, 0.35) 58%, rgba(255, 220, 90, 0.3) 68%, transparent 80%) 0 0 / 300% 300%;
   animation: bx-foil 5s linear infinite;

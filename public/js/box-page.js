@@ -4,7 +4,7 @@
 // L'ouverture, comme un jeu vidéo : le coffre (bois sombre cerclé de fer, gemme verte du coffre commun) tombe sur
 // la scène, et c'est le joueur qui le frappe (rien ne se fait tout seul). Chaque coup le fait trembler, le couvercle
 // se soulève et laisse fuir de la lumière ; tant qu'il ne s'ouvre pas, la rareté peut monter
-// (Commun → Rare → Épique → Jeu complet). Plus le drop est gros, plus il faut de coups : c'est le suspense.
+// (Commun → Rare → Légendaire → Jeu complet). Plus le drop est gros, plus il faut de coups : c'est le suspense.
 // Puis le couvercle saute, un rayon de lumière sort, et la carte de l'objet apparaît avec un vrai aperçu
 // (plateau en 3D, pièce sur son socle, fin de partie ou prise jouée sur un petit échiquier).
 import { Chessground } from '../vendor/chessground/chessground.min.js';
@@ -27,11 +27,11 @@ import { boxSfx } from './sound.js';
 
 const ICONS = { board: '▦', pieces: '♞', endAnim: '♚', capture: '✦', P: '♟', R: '♜', N: '♞', B: '♝', Q: '♛', K: '♚' };
 /** Paliers de suspense, dans l'ordre (le Jeu complet est le plus rare). */
-const ORDER = ['commun', 'rare', 'epique', 'jeu'];
+const ORDER = ['commun', 'rare', 'legendaire', 'jeu'];
 const TIERS = {
   commun: { name: 'Commun', color: RARITY.commun.color },
   rare: { name: 'Rare', color: RARITY.rare.color },
-  epique: { name: 'Épique', color: RARITY.epique.color },
+  legendaire: { name: 'Légendaire', color: RARITY.legendaire.color },
   jeu: { name: 'Jeu complet', color: '#3cf2a3' },
 };
 const packById = (id) => PACKS.find((p) => p.id === id);
@@ -789,14 +789,14 @@ addEventListener('keydown', (e) => {
 });
 
 // En local seulement (localhost) : rejouer l'ouverture sans rien enregistrer, pour régler l'animation.
-// bxDemo('epique', 'ocean', 'N') ; bxDemo('jeu', 'japon') ; bxDemo('rare', 'western', 'endAnim', false)
+// bxDemo('legendaire', 'ocean', 'N') ; bxDemo('jeu', 'japon') ; bxDemo('rare', 'western', 'endAnim', false)
 if (location.hostname === 'localhost') {
   window.bxDemo = (rarity = 'rare', pack = 'japon', slot = 'N', isNew = true) => {
     const slots = rarity === 'jeu' ? [...PIECE_TYPES] : [slot];
-    return doOpen(null, { rarity, pack, slots, fresh: isNew ? slots : [], dust: isNew ? 0 : { commun: 1, rare: 3, epique: 6, jeu: 20 }[rarity] });
+    return doOpen(null, { rarity, pack, slots, fresh: isNew ? slots : [], dust: isNew ? 0 : { commun: 1, rare: 3, legendaire: 6, jeu: 20 }[rarity] });
   };
 }
-// box.html?demo=epique,ocean,N : la lance au chargement
+// box.html?demo=legendaire,ocean,N : la lance au chargement
 const demoArg = location.hostname === 'localhost' && new URLSearchParams(location.search).get('demo');
 if (demoArg) {
   const [r, p, sl, n] = demoArg.split(',');

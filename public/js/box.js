@@ -2,9 +2,9 @@
 // Une box classique donne un élément de pack, tiré au sort par rareté : un plateau, une pièce (pion, tour,
 // cavalier, fou, dame ou roi : chacune se trouve à part), une fin de partie, une prise et son.
 //  - Commun (Astrea, Classic) : déjà à tout le monde, il se change en poussière d'étoile ✨ ;
-//  - Rare (Sakura, Western), Épique (Océan) : l'élément est débloqué (déjà obtenu : il se change en ✨) ;
+//  - Rare (Sakura, Western), Légendaire (Océan, Epic Dragon) : l'élément est débloqué (déjà obtenu : il se change en ✨) ;
 //  - Jeu complet : très rare, les 6 pièces d'un pack d'un coup.
-// Les packs entiers ne sont pas dans les box (boutique à venir). Royal chess (légendaire) non plus : c'est une
+// Les packs entiers ne sont pas dans les box (boutique à venir). Royal chess (légendaire aussi) non plus : c'est une
 // mission spéciale (100 victoires).
 // 10 ✨ ouvrent une box de plus. Les admins peuvent s'offrir des box de test.
 // Tout est dans la base : loot/{uid} (box ouvertes, éléments, ✨) et lootGrants/{uid} (box offertes).
@@ -18,12 +18,12 @@ export const BOX_TYPES = {
 /** Taux de drop de la box classique, en pourcentage. */
 export const RATES = [
   { id: 'jeu', name: 'Jeu complet', pct: 0.3 },
-  { id: 'epique', name: 'Épique', pct: 11.7 },
+  { id: 'legendaire', name: 'Légendaire', pct: 11.7 },
   { id: 'rare', name: 'Rare', pct: 33 },
   { id: 'commun', name: 'Commun', pct: 55 },
 ];
 /** Poussière d'étoile donnée par un doublon, selon sa rareté. */
-export const DUST = { commun: 1, rare: 3, epique: 6, jeu: 20 };
+export const DUST = { commun: 1, rare: 3, legendaire: 6, jeu: 20 };
 export const DUST_PER_BOX = 10;
 
 const isWin = (g) => !!g && !!g.game && ((g.result === '1-0' && g.me === 'w') || (g.result === '0-1' && g.me === 'b'));

@@ -1325,8 +1325,8 @@ export function lowTimeBeep() {
 // Un coffre de bois cerclé de fer : sons de bois sourds, ferrures qui tintent, grincement des charnières.
 // Les raretés montent comme une gamme : chaque palier rejoue un accord plus haut et plus large.
 // Accords des raretés, dans la tonalité de la musique (ré mineur) : Fa, La, Si♭, puis Ré majeur (triomphe)
-const TIER_ROOT = { commun: 349.23, rare: 440, epique: 466.16, jeu: 587.33 };
-const TIER_LEVEL = { commun: 0, rare: 1, epique: 2, jeu: 3 };
+const TIER_ROOT = { commun: 349.23, rare: 440, legendaire: 466.16, jeu: 587.33 };
+const TIER_LEVEL = { commun: 0, rare: 1, legendaire: 2, jeu: 3 };
 
 /** Choc de bois sourd (le coffre qu'on pose, qu'on frappe). */
 function woodThud(at = 0, vol = 1, pitch = 1) {

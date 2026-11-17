@@ -289,7 +289,7 @@ const PACK_FONTS = {
   japon: `family=Yuji+Syuku&text=${encodeURIComponent('勝負王手' + FR)}`,
   western: 'family=Rye',
   ocean: 'family=Cinzel:wght@700;900',
-  dragon: 'family=Cinzel+Decorative:wght@700;900',
+  dragon: 'family=Pirata+One',
 };
 const fontsLoaded = new Set();
 /** Charge la police d'un pack (une seule fois). */

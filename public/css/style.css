@@ -626,18 +626,18 @@ cg-board::before {
 /* Le motif fait la moitié du plateau : avancer de 100 % décale d'exactement une tuile, la boucle ne se voit pas */
 @keyframes ocean-caustic { to { background-position: 100% 100%; } }
 @media (max-width: 900px), (pointer: coarse), (prefers-reduced-motion: reduce) { .board-ocean { --caustics-anim: none; } }
-/* Pack Epic Dragon : pierre de cendre gravée d'écailles et obsidienne fendue de lave (scripts/damier-dragon.js),
-   cadre de fer rougi ; des braises montent sur tout le plateau en vacillant (pas sur téléphone, ni si on réduit les animations) */
+/* Pack Epic Dragon : peau de dragon (écailles rouge sang qui se chevauchent) et ivoire (scripts/damier-dragon.js),
+   cadre d'or et de fer noirci ; des braises montent sur tout le plateau en vacillant (pas sur téléphone, ni si on réduit les animations) */
 .board-dragon {
-  --sq-light: #e6c99c;
-  --sq-dark: #2a1418;
-  --sq-last: rgba(255, 140, 40, 0.45);
-  --sq-selected: rgba(255, 196, 90, 0.6);
-  --coord-on-dark: #ffd9a8;
-  --coord-on-dark-shadow: 0 0 4px rgba(255, 90, 20, 0.8);
-  --coord-on-light: #6b2a0a;
-  --coord-on-light-shadow: 0 1px 0 rgba(255, 240, 210, 0.6);
-  --board-shadow: 0 0 0 3px #ff7a1f, 0 0 0 7px #1a0806, 0 0 0 8px rgba(255, 200, 90, 0.55), 0 18px 45px rgba(0, 0, 0, 0.6), 0 0 60px rgba(255, 90, 20, 0.3);
+  --sq-light: #f0dfc0;
+  --sq-dark: #6e140e;
+  --sq-last: rgba(255, 170, 60, 0.5);
+  --sq-selected: rgba(255, 210, 110, 0.62);
+  --coord-on-dark: #ffe1b8;
+  --coord-on-dark-shadow: 0 1px 2px rgba(30, 2, 0, 0.8);
+  --coord-on-light: #7a1c10;
+  --coord-on-light-shadow: 0 1px 0 rgba(255, 245, 225, 0.6);
+  --board-shadow: 0 0 0 3px #d4a24a, 0 0 0 7px #1c0606, 0 0 0 8px rgba(255, 120, 40, 0.6), 0 18px 45px rgba(0, 0, 0, 0.6), 0 0 60px rgba(255, 70, 20, 0.28);
 }
 .board-dragon { --board-img: url('../img/damier-dragon.svg'), conic-gradient(var(--sq-dark) 0 25%, transparent 0 50%, var(--sq-dark) 0 75%, transparent 0); --board-img-size: 25% 25%, 25% 25%; }
 .board-dragon {

@@ -123,9 +123,9 @@ export const PACKS = [
     name: 'Epic Dragon',
     rarity: 'epique',
     box: true,
-    desc: 'L’antre du dragon : obsidienne fendue de lave et pierre de cendre, braises qui montent, pièces d’or et d’obsidienne, souffle de feu et dragon qui survole le plateau.',
+    desc: 'L’antre du dragon : peau d’écailles rouge sang et ivoire, braises qui montent, pièces d’or et d’obsidienne, souffle de feu et dragon qui survole le plateau.',
     items: {
-      board: { name: 'Antre du Dragon', desc: 'Pierre de cendre gravée d’écailles et obsidienne fendue de veines de lave ; des braises montent sur tout le plateau. Cadre de fer rougi.' },
+      board: { name: 'Peau de Dragon', desc: 'Écailles rouge sang qui se chevauchent et ivoire à peine gravé ; des braises montent sur tout le plateau. Cadre d’or et de fer noirci.' },
       pieces: { name: 'Or et Obsidienne', desc: 'Or et ivoire pour les Blancs, obsidienne aux contours de braise pour les Noirs : œuf de dragon, forteresse volcanique, mitre de flammes, tête de dragon, reine ailée, roi à cornes.' },
       endAnim: { name: 'Le Souffle du Dragon', desc: 'Victoire : le ciel rougit, un dragon traverse le plateau et crache un torrent de feu, le roi vaincu tombe en cendres. Défaite : le plateau se fend, la lave engloutit ton roi sous le regard du dragon.' },
       capture: { name: 'Souffle de feu', desc: 'Un jet de flammes s’abat sur la pièce prise, qui s’embrase et part en cendres et en braises ; un anneau de feu entoure le roi à l’échec.' },

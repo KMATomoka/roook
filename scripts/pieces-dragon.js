@@ -57,37 +57,44 @@ const PIECES = {
   ${flame(50, 79.5, 13, c.acc)}${flame(50, 79.5, 7.5, '#ffd36b')}
   ${flame(33.2, 27.5, 7, c.acc)}${flame(66.8, 27.5, 7, c.acc)}`,
 
-  // Cavalier : tête de dragon de profil, gueule ouverte (crocs, langue de feu), deux longues cornes
-  // rejetées en arrière, arcade sourcilière menaçante, crête d'épines le long du cou, écailles
+  // Cavalier : tête de dragon de profil, gueule fermée et crocs qui dépassent, museau long et plat,
+  // arcade sourcilière lourde et œil de braise, deux grandes cornes rejetées en arrière, crête d'épines
+  // le long de la nuque, plaques sous la gorge, écailles sur le cou
   n: (c) => `${base(c)}
-  <path d="M34 80.5 Q37 69 43 63 H61 Q66 69 68 80.5Z" fill="url(#g)"/>
-  <path d="M71 29 L80.5 31.5 L72.5 36 L81 40.5 L72 44 L79 49.5 L70.5 52.5 L76 58 L68 60Z" fill="${c.acc}" stroke-width="1.6"/>
-  <path d="M51 18 C58 9 70 4.5 85 5.5 C74 9 65 14 59.5 22Z" fill="${c.acc2}" stroke-width="1.6"/>
-  <path d="M60 23.5 C67.5 18.5 77.5 18 87.5 22 C77.5 22.5 70 25.5 64.5 30Z" fill="${c.acc2}" stroke-width="1.6"/>
-  <path d="M16.5 36.5 C25 38.5 35 40.5 45 45 L43 51 C35.5 51 27.5 51.5 20 53Z" fill="${c.dark}"/>
-  ${flame(19, 46.5, 9, c.acc)}
-  <path d="M45 45 C38.5 46 31.5 47.5 25 50.5 L19.5 53 C17.5 54 18 57 20.5 57 C28 56.5 36 54 43 51.5Z" fill="url(#g)"/>
-  <path d="M42 63 C42 56 43 50.5 46 46 C41 41 34.5 38.5 28 38.5 L17.5 37.5 C14.5 37.3 13.5 34.5 15.5 32.8 L24 26.8 C29 23.4 34 21.8 39 21 C45 15 53 12.8 60.5 15 C68.5 17.8 72.5 26 72.5 35 C72.5 46 70.5 54.5 67 63Z" fill="url(#g)"/>
-  <path d="M19 37.6 L20.2 41 L21.6 37.8 L23 41.3 L24.4 38.1 L25.9 41.5 L27.4 38.4" fill="#fff" stroke-width=".9" stroke-linejoin="round"/>
-  <path d="M22.5 52.4 L23.8 49.4 L25.3 52 L26.8 48.9 L28.3 51.4" fill="#fff" stroke-width=".9" stroke-linejoin="round"/>
-  <path d="M47 45 L54.5 49.5 L46.5 50.5Z" fill="${c.acc2}" stroke-width="1.3"/>
-  ${scales(c, [[48, 1], [53.5, 0], [59, 1]], 47, 68, 2.6)}
-  <path d="M32 25.5 L47 21" fill="none" stroke-width="2.8" stroke-linecap="round"/>
-  <path d="M35 28.6 Q40 24.4 45.5 26.4 Q41.5 30.8 35 28.6Z" fill="${c.eye}" stroke-width="1.2"/>
-  <ellipse cx="41" cy="27.5" rx=".9" ry="2.1" fill="${c.dark}" stroke="none" transform="rotate(15 41 27.5)"/>
-  <circle cx="19" cy="32.5" r="1.2" fill="${c.dark}" stroke="none"/>
-  <path d="M56 31 C59 36 60 41 59 46" fill="none" stroke-width="1.2" opacity=".55"/>
-  <ellipse cx="57" cy="21" rx="2" ry="5" fill="#fff" opacity=".4" stroke="none" transform="rotate(60 57 21)"/>`,
+  <path d="M34 80.5 Q37 69 43 63 H62 Q67 69 68.5 80.5Z" fill="url(#g)"/>
+  <path d="M67.5 22 L78 22.5 L70.5 29 L80.5 32.5 L72 37.5 L81 42.5 L72 46.5 L79.5 52.5 L70.5 55 L75.5 61 L67.5 62Z" fill="${c.acc}" stroke-width="1.6"/>
+  <path d="M55 21.5 C61 14.5 70 11.5 81 13 C72.5 15.5 66.5 19.5 62.5 25.5Z" fill="${c.acc2}" stroke-width="1.6"/>
+  <path d="M43.5 19.5 C47.5 9 56.5 3 70 2.5 C61 6.5 55 11.5 52.5 18.5Z" fill="${c.acc2}" stroke-width="1.6"/>
+  <path d="M41.5 63 C39.5 57 38.5 53 36.5 50.5 C30 50 23.5 49.4 18.5 48.4 C14.8 47.6 12.8 45 12.8 41.6 C12.8 38.5 14.4 36 17.6 34.6 C22 32.6 27 30.6 31 28.6 C34 24.6 37.5 21 41.5 19 C47 16 54 15 59.5 17.2 C66.5 20.2 71.5 28.5 72 38.5 C72.5 47.5 70.5 55.5 68 63Z" fill="url(#g)"/>
+  <path d="M15 42 C21 43 27.5 44 35.5 45.5" fill="none" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M21 42.6 L22.6 47 L24.2 43.2Z M27.5 43.6 L28.8 47.4 L30.2 44Z" fill="#fff" stroke-width=".9" stroke-linejoin="round"/>
+  <path d="M17.2 43.4 L18.4 40.4 L19.8 43.6Z" fill="#fff" stroke-width=".8" stroke-linejoin="round"/>
+  <path d="M38.5 53.5 Q42 52.4 45.5 53.6 M39.6 57.6 Q43 56.6 46.5 57.8 M40.4 61.4 Q44 60.6 47.4 61.6" fill="none" stroke="${c.scale}" stroke-width="1.3"/>
+  ${scales(c, [[34, 1], [40, 0], [46, 1], [52, 0], [58, 1]], 49, 69, 2.5)}
+  <path d="M21.5 33.5 L24.5 32 M26 31.3 L29 29.8" fill="none" stroke-width="1.4" stroke-linecap="round" opacity=".7"/>
+  <path d="M15.8 37.6 Q17.6 36.2 19.4 36.8" fill="none" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M31.5 27.2 L45.5 22.6" fill="none" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M34 29.6 L44.8 25.8 Q43.6 30.6 37.6 31.4Z" fill="${c.eye}" stroke-width="1.2" stroke-linejoin="round"/>
+  <ellipse cx="40.4" cy="28.6" rx=".95" ry="2.2" fill="${c.dark}" stroke="none" transform="rotate(20 40.4 28.6)"/>
+  <path d="M38 48.5 L47.5 44.5 L44 51Z" fill="${c.acc2}" stroke-width="1.3" stroke-linejoin="round"/>
+  <path d="M14.5 35.5 C11 33.5 10.5 29.5 13.5 27 C12.8 24 15 21.8 17.5 21.5" fill="none" stroke="${c.acc}" stroke-width="1.4" stroke-linecap="round" opacity=".8"/>
+  <ellipse cx="55" cy="22.5" rx="2" ry="5.5" fill="#fff" opacity=".4" stroke="none" transform="rotate(62 55 22.5)"/>`,
 
-  // Fou : mitre en forme de flamme, couverte d'écailles, entaille de braise
+  // Fou : mitre classique (on la reconnaît tout de suite), couverte d'écailles, griffée de trois entailles de
+  // braise ; au sommet, une perle de feu
   b: (c) => `${base(c)}
   <path d="M38 80.5 Q41 69 45 63.5 H55 Q59 69 62 80.5Z" fill="url(#g)"/>
-  <rect x="39" y="58.5" width="22" height="5.5" rx="2.75" fill="url(#g)"/>
-  <path d="M50 8 C55.5 17 64 23.5 63.5 40 C63 51 57.5 58.5 50 59 C42.5 58.5 37 51 36.5 40 C36 30 41.5 25.5 43.5 17.5 C45.5 21.5 46.8 24.5 48 27 C49 21 49.2 14.5 50 8Z" fill="url(#g)"/>
-  ${scales(c, [[44, 0], [50, 1]], 39.5, 60.5, 2.6)}
-  <path d="M50 28 C53.5 34.5 57.5 38 56.5 45 C56 50.5 53.5 54 50 54 C46.5 54 43.8 50.8 43.8 46.5 C43.8 41 48 37 50 28Z" fill="${c.acc}" stroke-width="1.6"/>
-  <path d="M50 39 C51.5 42.5 53.5 44.5 53 48 C52.6 50.6 51.5 52 50 52 C48.5 52 47.2 50.6 47.2 48.6 C47.2 45.5 49 43 50 39Z" fill="#ffd36b" stroke="none"/>
-  <ellipse cx="44" cy="35" rx="2.2" ry="6" fill="#fff" opacity=".45" stroke="none" transform="rotate(14 44 35)"/>`,
+  <rect x="38.5" y="58" width="23" height="6" rx="3" fill="url(#g)"/>
+  <path d="M50 15 C59.5 22.5 64 32.5 63 43 C62 51.5 56.5 57.5 50 58.5 C43.5 57.5 38 51.5 37 43 C36 32.5 40.5 22.5 50 15Z" fill="url(#g)"/>
+  ${scales(c, [[40, 1], [45.5, 0], [51, 1]], 39, 61, 2.4)}
+  <g stroke-linecap="round">
+    <path d="M43.5 37 L53.5 25 M46.5 41 L56.5 29 M49.5 45 L59 33.5" stroke="${c.dark}" stroke-width="3.6"/>
+    <path d="M43.5 37 L53.5 25 M46.5 41 L56.5 29 M49.5 45 L59 33.5" stroke="${c.acc}" stroke-width="1.9"/>
+    <path d="M44.5 35.8 L52.5 26.2 M47.5 39.8 L55.5 30.2 M50.5 43.8 L58 34.7" stroke="#ffe08a" stroke-width=".7"/>
+  </g>
+  <circle cx="50" cy="12" r="4.4" fill="url(#ey)" stroke-width="1.6"/>
+  ${flame(50, 7.8, 6, c.acc)}
+  <ellipse cx="44" cy="36" rx="2.2" ry="6" fill="#fff" opacity=".42" stroke="none" transform="rotate(14 44 36)"/>`,
 
   // Dame : couronne flanquée de deux ailes de dragon, joyaux de feu, larme de feu au centre
   q: (c) => {

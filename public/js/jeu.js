@@ -551,9 +551,37 @@ function finish(end) {
   $('#end-rematch').hidden = mode === 'ami' && !myColor;
   $('#end-rematch').disabled = false;
   showRematchOffer(false);
-  // Mat : on laisse l'animation de fin se jouer (celle du Dragon est plus longue : le dragon passe et crache le feu)
-  const mateDelay = document.body.classList.contains('end-dragon') ? 5200 : 2700;
-  setTimeout(() => !$('#end-dialog').open && $('#end-dialog').showModal(), end.reason === 'mat' ? mateDelay : 600);
+  const openEnd = () => !$('#end-dialog').open && $('#end-dialog').showModal();
+  if (end.reason === 'mat') openAfterMateBanner(openEnd);
+  else setTimeout(openEnd, 600);
+}
+
+/**
+ * Mat : la fenêtre de fin attend que l'animation du pack ait montré son bandeau « Échec et mat », puis laisse
+ * 2 s pour le lire. Chaque pack a son rythme (le bandeau arrive entre 0,3 s et 3,6 s), donc on guette le bandeau
+ * plutôt qu'un délai fixe. Sans animation (on revoit un coup de l'historique), la fenêtre s'ouvre tout de suite.
+ */
+function openAfterMateBanner(open) {
+  const READ = 2000;
+  const frame = $('.board-frame');
+  const hasBanner = () => !!frame.querySelector('.fx-mate-banner');
+  const hasFx = () => !!frame.querySelector('.fx-layer > *');
+  let done = false;
+  const go = (ms) => {
+    if (done) return;
+    done = true;
+    obs.disconnect();
+    clearTimeout(noFx);
+    clearTimeout(fallback);
+    setTimeout(open, ms);
+  };
+  const obs = new MutationObserver(() => hasBanner() && go(READ));
+  obs.observe(frame, { childList: true, subtree: true });
+  // aucune animation en cours : rien à attendre
+  const noFx = setTimeout(() => !hasFx() && go(0), 500);
+  // filet de sécurité si le bandeau n'arrive jamais
+  const fallback = setTimeout(() => go(0), 5000);
+  if (hasBanner()) go(READ);
 }
 
 /** L'adversaire propose la revanche : un encart bien visible et un bouton « Accepter » mis en avant. */

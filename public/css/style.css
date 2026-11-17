@@ -2701,7 +2701,7 @@ html:has(body.bx-opening), body.bx-opening { overflow: hidden; overscroll-behavi
     repeating-linear-gradient(-60deg, transparent 0 21px, rgba(150, 210, 255, 0.075) 21px 22px),
     radial-gradient(90% 55% at 50% 100%, rgba(79, 168, 255, 0.16), transparent 70%);
 }
-.tier-rare .bx-fx i {
+.tier-rare .bx-fx .tfx {
   inset: -20% -60%; width: auto;
   background: linear-gradient(105deg, transparent 42%, rgba(200, 235, 255, 0.05) 46%, rgba(225, 245, 255, 0.32) 50%, rgba(200, 235, 255, 0.05) 54%, transparent 58%);
   animation: bx-glint 3.6s ease-in-out infinite;
@@ -2728,7 +2728,7 @@ html:has(body.bx-opening), body.bx-opening { overflow: hidden; overscroll-behavi
     radial-gradient(55% 38% at 50% 96%, rgba(96, 64, 255, 0.3), transparent 70%);
   animation: bx-twinkle 2.6s ease-in-out infinite alternate;
 }
-.tier-epique .bx-fx i {
+.tier-epique .bx-fx .tfx {
   left: 50%; top: 36%; width: 118%; aspect-ratio: 1; border-radius: 50%; translate: -50% -50%;
   background: conic-gradient(from 0deg, transparent 0 6%, rgba(200, 140, 255, 0.6) 13%, transparent 21% 31%, rgba(255, 110, 220, 0.5) 39%, transparent 47% 56%, rgba(140, 110, 255, 0.55) 65%, transparent 73% 81%, rgba(200, 140, 255, 0.5) 89%, transparent 96%);
   -webkit-mask: radial-gradient(closest-side, transparent 58%, #000 64%, #000 70%, transparent 76%);
@@ -2737,7 +2737,7 @@ html:has(body.bx-opening), body.bx-opening { overflow: hidden; overscroll-behavi
 }
 @keyframes bx-twinkle { from { opacity: 0.78; } to { opacity: 1; } }
 @keyframes bx-arcane { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .bx-fx, .bx-fx i, .bx-gloss .hl { animation: none !important; transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { .bx-fx, .bx-fx *, .bx-gloss *, .bx-rim *, .bx-card-halo { animation: none !important; transition: none !important; } }
 .bx-result.foil .bx-gloss .foil {
   display: block; inset: -100%; opacity: 0.35;
   background: linear-gradient(115deg, transparent 40%, rgba(255, 90, 200, 0.35) 44%, rgba(90, 200, 255, 0.35) 48%, rgba(120, 255, 170, 0.35) 52%, rgba(255, 220, 90, 0.3) 55.5%, transparent 60%);
@@ -2756,6 +2756,34 @@ html:has(body.bx-opening), body.bx-opening { overflow: hidden; overscroll-behavi
 }
 .bx-res-art { display: grid; place-items: center; min-height: 250px; margin: 6px 0 4px; }
 .bx-card3d h2 { margin: 6px 0 2px; font: 800 clamp(1.4rem, 5vw, 1.75rem) / 1.1 var(--serif); text-transform: uppercase; letter-spacing: 0.03em; text-shadow: 0 0 20px color-mix(in srgb, var(--c) 60%, transparent); }
+/* --- Bloom (Rare et au-dessus) : tout ce qui bouge glisse, tourne ou s'estompe (la carte n'est jamais redessinée) --- */
+/* halo de la couleur du palier, derrière la carte (il ne penche pas), qui respire */
+.bx-card-halo { position: absolute; inset: -90px; border-radius: 50%; pointer-events: none; opacity: 0.6; filter: blur(26px);
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--c) 80%, transparent), transparent 75%); animation: bx-breathe 3.2s ease-in-out infinite; }
+.bx-result.tier-commun .bx-card-halo { opacity: 0.18; animation: none; }
+@keyframes bx-breathe { 0%, 100% { transform: scale(0.92); opacity: 0.65; } 50% { transform: scale(1.05); opacity: 1; } }
+/* liseré de lumière qui fait le tour du bord : un dégradé qui tourne, visible seulement sur la bordure */
+.bx-card3d > .bx-rim { position: absolute; inset: -2px; z-index: 3; border-radius: 22px; padding: 2px; overflow: hidden; pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+.bx-rim i { position: absolute; display: block; left: 50%; top: 50%; width: 160%; aspect-ratio: 1; translate: -50% -50%;
+  background: conic-gradient(from 0deg, #fff 0deg, var(--c) 28deg, transparent 70deg, transparent 180deg, #fff 182deg, var(--c) 210deg, transparent 250deg); animation: bx-arcane 3.6s linear infinite; }
+/* rayons qui tournent derrière l'objet, et son cœur lumineux qui respire */
+.bx-fx .ray { left: 50%; top: 36%; width: 115%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--c) 30%, transparent) 0deg 6deg, transparent 6deg 22deg);
+  -webkit-mask: radial-gradient(closest-side, #000 16%, transparent 72%); mask: radial-gradient(closest-side, #000 16%, transparent 72%); animation: bx-arcane 20s linear infinite; }
+.bx-fx .core { left: 50%; top: 36%; width: 46%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; filter: blur(14px);
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--c) 60%, #fff), transparent); animation: bx-breathe 2.4s ease-in-out infinite; }
+/* étincelles qui montent */
+.bx-gloss .spk { width: 3px; height: 3px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px 1px var(--c); opacity: 0; animation: bx-rise 5s linear infinite; }
+.bx-gloss .spk.big { width: 4px; height: 4px; box-shadow: 0 0 9px 2px var(--c); }
+@keyframes bx-rise { 0% { transform: translateY(0) scale(0.6); opacity: 0; } 15% { opacity: 1; } 80% { opacity: 0.9; } 100% { transform: translateY(-190px) scale(1.1); opacity: 0; } }
+/* l'objet rayonne, le titre brille */
+.bx-result:not(.tier-commun) .bx-show piece, .bx-result:not(.tier-commun) .bx-set piece { filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 12px var(--c)); }
+.bx-result:not(.tier-commun) .bx-card3d h2 { text-shadow: 0 0 6px rgba(255, 255, 255, 0.55), 0 0 18px var(--c), 0 0 40px color-mix(in srgb, var(--c) 60%, transparent); }
+.bx-result:not(.tier-commun) .bx-res-rarity { box-shadow: 0 0 14px var(--c), 0 0 30px color-mix(in srgb, var(--c) 55%, transparent); }
+/* Commun : la carte reste sobre */
+.bx-result.tier-commun .bx-rim, .bx-result.tier-commun .bx-fx .ray, .bx-result.tier-commun .bx-fx .core, .bx-result.tier-commun .bx-gloss .spk { display: none; }
 .bx-res-sub { margin: 0; color: var(--muted); font-weight: 600; }
 .bx-res-demo { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .bx-new { margin: 12px 0 0; color: #3cf2a3; font-weight: 800; }
@@ -2863,6 +2891,8 @@ html:has(body.bx-opening), body.bx-opening { overflow: hidden; overscroll-behavi
   .bx-ped { animation: none; }
   .bx-rays { width: 115vmax; height: 115vmax; }
   .bx-result.foil .bx-gloss .foil { display: none; }
+  .bx-fx .ray, .bx-gloss .spk { display: none; }
+  .bx-card-halo { filter: blur(18px); }
   .bx-ring { box-shadow: none; }
 }
 

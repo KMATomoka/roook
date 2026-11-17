@@ -20,6 +20,9 @@ import { createFx } from './fx.js';
 import { boxMusic, unlockAudio, warmAudio, stopAllSounds } from './sound.js';
 // Téléphones et petites tablettes : effets allégés (même règle que js/coffre3d.js)
 const LOW_POWER = matchMedia('(pointer: coarse)').matches || innerWidth < 760;
+// Firefox et ses dérivés (Zen…) : sous une bascule 3D, le moteur découpe les coins arrondis de la carte en morceaux et
+// on voit des traits et des angles aux coins. Là, la carte ne penche pas (le reflet suit quand même la souris).
+const NO_TILT = /firefox/i.test(navigator.userAgent) && !/chrome|chromium|safari/i.test(navigator.userAgent);
 // La 3D (Three.js, 700 Ko) se charge après la page, pour qu'elle s'affiche tout de suite
 let chestModule = null;
 const loadChest3d = () => (chestModule ||= import('./coffre3d.js').catch(() => null));
@@ -722,7 +725,7 @@ result.addEventListener('pointermove', (e) => {
   const y = (e.clientY - r.top) / r.height;
   // On écrit directement les transform (pas de variables CSS sur la carte : une variable changée sur la carte est
   // héritée par tout son contenu, et Chrome redessinait alors chaque pièce à chaque mouvement de souris)
-  card.style.transform = `rotateX(${((0.5 - y) * 8).toFixed(2)}deg) rotateY(${((x - 0.5) * 10).toFixed(2)}deg)`;
+  if (!NO_TILT) card.style.transform = `rotateX(${((0.5 - y) * 8).toFixed(2)}deg) rotateY(${((x - 0.5) * 10).toFixed(2)}deg)`;
   // le reflet glisse jusque sous la souris (décalage en px depuis le centre : un déplacement, pas un redessin)
   const hl = card.querySelector('.bx-gloss .hl');
   if (hl) hl.style.transform = `translate(${Math.round((x - 0.5) * card.offsetWidth)}px, ${Math.round((y - 0.5) * card.offsetHeight)}px)`;

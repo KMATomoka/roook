@@ -1952,12 +1952,12 @@ a.person-link:hover { color: var(--accent-soft); }
   .fx-ember { box-shadow: none; background: radial-gradient(circle, #fff1b0 0 30%, #ffb02e 55%, rgba(255, 110, 20, 0) 72%); }
 }
 .fx-check-tag.dragon {
-  font: 400 1.12em/1 'Pirata One', 'Cinzel', serif; letter-spacing: 0.03em; text-transform: none; color: #fff7e0;
+  font: 400 1em/1 'MedievalSharp', 'Cinzel', serif; letter-spacing: 0.02em; text-transform: none; color: #fff7e0;
   background: linear-gradient(180deg, #ff7a1f, #9c1c06);
   box-shadow: 0 0 0 2px rgba(255, 220, 140, 0.6), 0 0 22px rgba(255, 100, 20, 0.7), 0 6px 18px rgba(0, 0, 0, 0.45);
 }
 .fx-mate-banner.dragon .t {
-  font: 400 1.08em/1.05 'Pirata One', 'Cinzel', serif; letter-spacing: 0.02em; text-transform: none; color: #fff2c8;
+  font: 400 1em/1.1 'MedievalSharp', 'Cinzel', serif; letter-spacing: 0.01em; text-transform: none; color: #fff2c8;
   background: none; -webkit-background-clip: border-box; background-clip: border-box; animation: none;
   text-shadow: 0 0 14px rgba(255, 150, 40, 0.95), 0 0 40px rgba(255, 70, 10, 0.75), 0 3px 0 rgba(60, 10, 0, 0.75);
   filter: none;
@@ -1968,7 +1968,7 @@ a.person-link:hover { color: var(--accent-soft); }
   background: none; padding: 0.3em 0; backdrop-filter: none; margin-top: 0.3em;
 }
 .fx-mate-banner.dragon.loss .s { color: #ff8a6a; }
-/* Écriture gothique (Pirata One) : lettres séparées, sans ligatures décoratives */
+/* Écriture médiévale (MedievalSharp) : lettres séparées, sans ligatures décoratives */
 .fx-mate-banner.dragon, .fx-check-tag.dragon { font-variant-ligatures: none; font-feature-settings: 'liga' 0, 'dlig' 0, 'clig' 0, 'calt' 0, 'hlig' 0; }
 
 

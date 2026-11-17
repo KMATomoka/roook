@@ -1,7 +1,7 @@
 // Génère le motif du damier « Epic Dragon » (public/img/damier-dragon.svg) : une tuile de 2 × 2 cases,
 // posée par-dessus le damier (CSS .board-dragon cg-board).
 // - Cases foncées (en haut à droite, en bas à gauche) : peau de dragon, écailles rouge sang qui se chevauchent
-//   comme des tuiles, chacune avec son reflet.
+//   comme des tuiles, en relief doux (peu de contraste, pour ne pas gêner la lecture des pièces).
 // - Cases claires (en haut à gauche, en bas à droite) : os et ivoire, les mêmes écailles à peine gravées.
 // Des braises montent par-dessus tout le plateau (CSS, cg-board::before).
 // Utilisation : node scripts/damier-dragon.js
@@ -20,9 +20,9 @@ function scaleRows(draw) {
 }
 
 function dark() {
-  return `<rect width="100" height="100" fill="#4a0d0a"/>`
-    + scaleRows((x, y) => `<path d="M${x - R} ${y} Q${x - R} ${y + R * 1.25} ${x} ${y + R * 1.7} Q${x + R} ${y + R * 1.25} ${x + R} ${y} Z" fill="url(#sd)" stroke="#260404" stroke-width="1.1"/>`
-      + `<path d="M${x - R * 0.55} ${y + R * 0.45} Q${x - R * 0.5} ${y + R * 1.05} ${x} ${y + R * 1.32}" fill="none" stroke="#ff8a5a" stroke-opacity=".35" stroke-width="1.1" stroke-linecap="round"/>`)
+  return `<rect width="100" height="100" fill="#5e110c"/>`
+    + scaleRows((x, y) => `<path d="M${x - R} ${y} Q${x - R} ${y + R * 1.25} ${x} ${y + R * 1.7} Q${x + R} ${y + R * 1.25} ${x + R} ${y} Z" fill="url(#sd)" stroke="#3a0806" stroke-opacity=".55" stroke-width=".9"/>`
+      + `<path d="M${x - R * 0.55} ${y + R * 0.45} Q${x - R * 0.5} ${y + R * 1.05} ${x} ${y + R * 1.32}" fill="none" stroke="#ff8a5a" stroke-opacity=".14" stroke-width="1.1" stroke-linecap="round"/>`)
     + `<rect width="100" height="100" fill="url(#gv)"/>`;
 }
 
@@ -34,7 +34,7 @@ function light() {
 
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs>`
   + `<radialGradient id="gl" cx=".3" cy=".2" r="1"><stop offset="0" stop-color="#fbf0dc"/><stop offset=".6" stop-color="#eedbb8"/><stop offset="1" stop-color="#dcc196"/></radialGradient>`
-  + `<radialGradient id="sd" cx=".35" cy=".25" r=".9"><stop offset="0" stop-color="#c8321c"/><stop offset=".55" stop-color="#8c1a10"/><stop offset="1" stop-color="#4a0806"/></radialGradient>`
+  + `<radialGradient id="sd" cx=".35" cy=".25" r=".9"><stop offset="0" stop-color="#9a2516"/><stop offset=".55" stop-color="#7e1810"/><stop offset="1" stop-color="#5e110b"/></radialGradient>`
   + `<radialGradient id="gv" cx=".5" cy=".5" r=".75"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#2a0602" stop-opacity=".25"/></radialGradient>`
   + `<clipPath id="c"><rect width="100" height="100"/></clipPath>`
   + `<g id="d" clip-path="url(#c)">${dark()}</g>`

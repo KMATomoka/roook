@@ -625,7 +625,7 @@ function buildCard(res) {
   result.style.setProperty('--c', t.color);
   // Arc-en-ciel holographique : Légendaire et Jeu complet. Rare (givre) et Épique (nébuleuse) ont leur propre fond (.bx-fx).
   result.className = `bx-result tier-${res.rarity}${ORDER.indexOf(res.rarity) >= ORDER.indexOf('legendaire') ? ' foil' : ''}${isNew ? ' is-new' : ' is-dup'}`;
-  result.innerHTML = `<div class="bx-card3d">
+  result.innerHTML = `<div class="bx-card-shadow" aria-hidden="true"></div><div class="bx-card3d">
       <div class="bx-fx" aria-hidden="true"><i></i></div>
       <div class="bx-gloss" aria-hidden="true"><b class="foil"></b><s class="hl"></s></div>
       <div class="bx-res-head"><span class="bx-res-rarity">${escapeHtml(t.name)}</span>${isNew ? '<span class="bx-res-badge">Nouveau</span>' : ''}</div>
@@ -658,7 +658,8 @@ async function reveal(res) {
   result.classList.remove('preparing');
   boxSfx.reveal(res.rarity, isNew);
   if (!reduce) {
-    // La carte sort de la box en tournant (dos de la carte, puis face)
+    // La carte sort de la box en tournant (dos de la carte, puis face) ; son ombre, qui ne tourne pas, apparaît à la fin
+    result.querySelector('.bx-card-shadow')?.animate([{ opacity: 0 }, { opacity: 0, offset: 0.55 }, { opacity: 1 }], { duration: LOW_POWER ? 450 : 900, easing: 'ease-out' });
     await result.querySelector('.bx-card3d').animate(
       LOW_POWER ? [{ transform: 'translateY(40px) scale(.8)', opacity: 0 }, { transform: 'none', opacity: 1 }] : [
         { transform: 'translateY(90px) scale(.3) rotateY(540deg)', opacity: 0 },

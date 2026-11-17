@@ -2665,10 +2665,15 @@ html:has(body.bx-opening), body.bx-opening { overflow: hidden; overscroll-behavi
   will-change: transform; /* dessinée une fois, puis seulement penchée : jamais redessinée pendant qu'elle bouge */
   background:
     radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--c) 34%, transparent), transparent 70%),
+    radial-gradient(120% 55% at 50% 100%, color-mix(in srgb, var(--c) 10%, transparent), transparent 70%),
     linear-gradient(180deg, #1b1630, #0f0c1d 70%);
   border: 2px solid var(--c);
-  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.4), 0 30px 80px rgba(0, 0, 0, 0.65), 0 0 80px color-mix(in srgb, var(--c) 50%, transparent), inset 0 0 30px color-mix(in srgb, var(--c) 18%, transparent);
+  /* aucune ombre sur la carte qui penche : Chrome dessine une ombre floue en neuf morceaux, et sous une bascule 3D les
+     raccords entre coins et bords se voyaient (traits et angles aux coins). L'ombre est sur .bx-card-shadow, qui ne penche pas. */
 }
+/* un peu plus petite que la carte : quand la carte penche (quelques px de décalage), le bord de l'ombre reste caché dessous */
+.bx-card-shadow { position: absolute; inset: 14px; border-radius: 22px; pointer-events: none;
+  box-shadow: 0 34px 90px rgba(0, 0, 0, 0.6), 0 0 95px 6px color-mix(in srgb, var(--c) 50%, transparent); }
 .bx-card3d > * { position: relative; z-index: 1; }
 /* Les effets de la carte vivent dans deux cadres fixes, découpés à sa forme arrondie (rayon 22 px moins la bordure) :
    .bx-fx derrière le contenu (le fond du palier), .bx-gloss devant (reflet de la souris, arc-en-ciel). Tout ce qui y
@@ -2847,7 +2852,8 @@ html:has(body.bx-opening), body.bx-opening { overflow: hidden; overscroll-behavi
 /* Coffres sur téléphone : le spectacle, sans les effets les plus lourds à dessiner (en fin de fichier pour passer
    devant les règles de base) */
 @media (pointer: coarse), (max-width: 760px) {
-  .bx-card3d { transition: none; box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.4), 0 0 34px color-mix(in srgb, var(--c) 45%, transparent); }
+  .bx-card3d { transition: none; }
+  .bx-card-shadow { box-shadow: 0 0 44px 6px color-mix(in srgb, var(--c) 45%, transparent); }
   .bx-tier { text-shadow: 0 0 12px var(--tc), 0 3px 0 color-mix(in srgb, var(--tc) 50%, #000); }
   .bx-ped { animation: none; }
   .bx-rays { width: 115vmax; height: 115vmax; }

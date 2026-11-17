@@ -123,9 +123,9 @@ export const PACKS = [
     name: 'Epic Dragon',
     rarity: 'epique',
     box: true,
-    desc: 'L’antre du dragon : marbre d’or et d’obsidienne, braises qui montent, pièces d’or et d’obsidienne, souffle de feu et dragon qui survole le plateau.',
+    desc: 'L’antre du dragon : marbre d’or et d’obsidienne parcouru de veines de magma, pièces d’or et d’obsidienne, souffle de feu et dragon qui survole le plateau.',
     items: {
-      board: { name: 'Trésor du Dragon', desc: 'Marbre d’or et marbre d’obsidienne veiné de braise, chaque case sertie d’un filet d’or ; des braises montent sur tout le plateau.' },
+      board: { name: 'Trésor du Dragon', desc: 'Marbre d’or et marbre d’obsidienne veiné de braise, chaque case sertie d’un filet d’or ; des veines de magma glissent sur tout le plateau en rougeoyant.' },
       pieces: { name: 'Or et Obsidienne', desc: 'Or et ivoire pour les Blancs, obsidienne aux contours de braise pour les Noirs : œuf de dragon, forteresse volcanique, mitre de flammes, tête de dragon, reine ailée, roi à cornes.' },
       endAnim: { name: 'Le Souffle du Dragon', desc: 'Victoire : le ciel rougit, un dragon traverse le plateau et crache un torrent de feu, le roi vaincu tombe en cendres. Défaite : le plateau se fend, la lave engloutit ton roi sous le regard du dragon.' },
       capture: { name: 'Souffle de feu', desc: 'Un jet de flammes s’abat sur la pièce prise, qui s’embrase et part en cendres et en braises ; un anneau de feu entoure le roi à l’échec.' },

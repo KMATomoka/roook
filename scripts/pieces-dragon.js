@@ -32,6 +32,58 @@ const base = (c) => `<path d="M22 88.5 Q22 81 30 80.5 H70 Q78 81 78 88.5 Q78 94 
 const flame = (x, y, h, fill) =>
   `<path d="M${x} ${y - h} C${x + h * 0.32} ${y - h * 0.62} ${x + h * 0.45} ${y - h * 0.4} ${x + h * 0.3} ${y - h * 0.12} C${x + h * 0.2} ${y + h * 0.05} ${x + h * 0.08} ${y + h * 0.1} ${x} ${y + h * 0.1} C${x - h * 0.1} ${y + h * 0.1} ${x - h * 0.24} ${y + h * 0.02} ${x - h * 0.3} ${y - h * 0.15} C${x - h * 0.4} ${y - h * 0.42} ${x - h * 0.2} ${y - h * 0.55} ${x - h * 0.12} ${y - h * 0.4} C${x - h * 0.08} ${y - h * 0.62} ${x - h * 0.06} ${y - h * 0.8} ${x} ${y - h}Z" fill="${fill}"/>`;
 
+/** Queue de dragon : tube effilé qui suit une chaîne de courbes de Bézier. Rend la partie de derrière (toute la
+ *  queue, assombrie, cachée en partie par la pièce) et la partie de devant (segments `front`), avec piquants
+ *  dorsaux, anneaux d'écailles et pointe en fer de lance. */
+const tail = (c, segs, front, w0, w1, spikeSegs) => {
+  const N = 18, pts = [];
+  segs.forEach(([a, b, d, e], si) => {
+    for (let i = si ? 1 : 0; i <= N; i++) {
+      const t = i / N, u = 1 - t;
+      const x = u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * d[0] + t * t * t * e[0];
+      const y = u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * d[1] + t * t * t * e[1];
+      const dx = 3 * u * u * (b[0] - a[0]) + 6 * u * t * (d[0] - b[0]) + 3 * t * t * (e[0] - d[0]);
+      const dy = 3 * u * u * (b[1] - a[1]) + 6 * u * t * (d[1] - b[1]) + 3 * t * t * (e[1] - d[1]);
+      const l = Math.hypot(dx, dy) || 1;
+      pts.push({ x, y, nx: -dy / l, ny: dx / l, tx: dx / l, ty: dy / l, seg: si });
+    }
+  });
+  pts.forEach((q, i) => (q.w = w0 + (w1 - w0) * (i / (pts.length - 1))));
+  const f = (v) => v.toFixed(2);
+  const tube = (P) => 'M' + P.map((q) => `${f(q.x + q.nx * q.w / 2)} ${f(q.y + q.ny * q.w / 2)}`).join(' L') + ' L' +
+    P.slice().reverse().map((q) => `${f(q.x - q.nx * q.w / 2)} ${f(q.y - q.ny * q.w / 2)}`).join(' L') + 'Z';
+  const sub = (lo, hi) => pts.filter((q) => q.seg >= lo && q.seg <= hi);
+  const F = sub(front[0], front[1]);
+  const end = pts[pts.length - 1];
+  // Pointe en fer de lance, orientée selon la fin de la queue
+  const tip = (() => {
+    const L = 9, W = 5, { x, y, tx, ty, nx, ny } = end;
+    const P = (a, b) => `${f(x + tx * a + nx * b)} ${f(y + ty * a + ny * b)}`;
+    return `<path d="M${P(-0.6, end.w / 2)} L${P(0.6, W)} Q${P(3.2, W * 0.75)} ${P(L, 0)} Q${P(3.2, -W * 0.75)} ${P(0.6, -W)} L${P(-0.6, -end.w / 2)}Z" fill="url(#gh)" stroke-width="1.4" stroke-linejoin="round"/>
+    <path class="dt" d="M${P(0.8, 0)} L${P(L - 1.6, 0)}" fill="none" stroke="${c.scale}" stroke-width="1"/>`;
+  })();
+  // Piquants dorsaux (côté +n), un tous les 4 points
+  const spikesOf = (segsOk) => pts.filter((q, i) => segsOk.includes(q.seg) && i % 4 === 2).map((q) => {
+    const h = 1.2 + q.w * 0.38, b = 1.3 + q.w * 0.12;
+    const bx = q.x + q.nx * q.w / 2, by = q.y + q.ny * q.w / 2;
+    return `M${f(bx - q.tx * b)} ${f(by - q.ty * b)} L${f(bx + q.nx * h + q.tx * b * 0.6)} ${f(by + q.ny * h + q.ty * b * 0.6)} L${f(bx + q.tx * b)} ${f(by + q.ty * b)}Z`;
+  }).join(' ');
+  const spkPath = (d) => (d ? `<path d="${d}" fill="url(#gh)" stroke-width="1.1" stroke-linejoin="round"/>` : '');
+  const spkBack = spkPath(spikesOf(spikeSegs.filter((k) => k < front[0] || k > front[1])));
+  const spkFront = spkPath(spikesOf(spikeSegs.filter((k) => k >= front[0] && k <= front[1])));
+  // Anneaux d'écailles (arcs en travers de la queue de devant)
+  const rings = F.filter((q, i) => i % 4 === 2).map((q) => {
+    const a = [q.x + q.nx * q.w / 2 * 0.85, q.y + q.ny * q.w / 2 * 0.85], b = [q.x - q.nx * q.w / 2 * 0.85, q.y - q.ny * q.w / 2 * 0.85];
+    return `M${f(a[0])} ${f(a[1])} Q${f(q.x - q.tx * q.w * 0.35)} ${f(q.y - q.ty * q.w * 0.35)} ${f(b[0])} ${f(b[1])}`;
+  }).join(' ');
+  return {
+    back: `<defs><linearGradient id="gt" gradientUnits="userSpaceOnUse" x1="34" y1="44" x2="70" y2="76"><stop offset="0" stop-color="${c.maneTop}"/><stop offset="1" stop-color="${c.maneBot}"/></linearGradient></defs>${spkBack}<path d="${tube(pts)}" fill="url(#gt)" stroke-width="1.6" stroke-linejoin="round"/><path class="dt" d="${tube(pts)}" fill="${c.dark}" opacity=".18" stroke="none"/>${tip}`,
+    front: `${spkFront}<path d="${tube(F)}" fill="url(#gt)" stroke-width="1.6" stroke-linejoin="round"/>
+    <path class="dt" d="${rings}" fill="none" stroke="${c.stroke}" stroke-width=".9" opacity=".55"/>
+    <path class="dt" d="M${F.map((q) => `${f(q.x + q.nx * q.w * 0.18)} ${f(q.y + q.ny * q.w * 0.18)}`).join(' L')}" fill="none" stroke="#fff" stroke-width=".8" opacity=".35"/>`,
+  };
+};
+
 const PIECES = {
   // Pion v2 : œuf de dragon pointu couvert d'écailles en tuiles, fendu par une fissure de feu qui rougeoie,
   // tenu par trois serres aux griffes de corne, sur un petit pied
@@ -54,9 +106,21 @@ const PIECES = {
   <path class="dt" d="M38 52 Q39 58 42.5 62.5 M62 52 Q61 58 57.5 62.5" fill="none" stroke="${c.scale}" stroke-width="1" opacity=".8"/>
   <ellipse class="dt" cx="42.5" cy="33" rx="2.6" ry="6.5" fill="#fff" opacity=".45" stroke="none" transform="rotate(22 42.5 33)"/>`,
 
-  // Tour v2 : donjon du dragon. Créneaux en crocs, pierres taillées, deux meurtrières de feu, porte en arc fermée
-  // par une herse où brûle le feu, et la queue du dragon (écailles, pointe en fer de lance) enroulée autour
-  r: (c) => `${base(c)}
+  // Tour v3 : donjon du dragon. Créneaux en crocs, pierres taillées, deux meurtrières de feu, porte en arc fermée
+  // par une herse où brûle le feu. La queue du dragon s'enroule autour : elle sort de derrière à droite, passe
+  // devant en tombant un peu, fait le tour par la gauche, repasse derrière les créneaux et ressort en haut à droite
+  // avec sa pointe en fer de lance ; piquants dorsaux et anneaux d'écailles
+  r: (c) => {
+    const T = tail(c, [
+      [[57, 77], [63, 77.5], [70.5, 76], [72.5, 70]],
+      [[72.5, 70], [74.5, 64], [71.5, 58.5], [65.9, 57]],
+      [[65.9, 57], [58, 62.4], [42, 62.4], [34.4, 55.6]],
+      [[34.4, 55.6], [29, 52.4], [27, 50], [29.6, 47.6]],
+      [[29.6, 47.6], [38, 40], [62, 40], [71, 43.5]],
+      [[71, 43.5], [74.5, 45], [77.5, 42.5], [77.6, 37.5]],
+    ], [2, 3], 8.6, 3.6, [1, 2, 5]);
+    return `${base(c)}
+  ${T.back}
   <path d="M32 80.5 L35 46 H65 L68 80.5Z" fill="url(#g)"/>
   <path d="M29 47.5 V34 L33 26 L37 34 V37 H44.5 V34 L50 23.5 L55.5 34 V37 H63 V34 L67 26 L71 34 V47.5Z" fill="url(#g)"/>
   <path d="M30.5 42 H69.5" fill="none" stroke="${c.scale}" stroke-width="1.1" opacity=".75"/>
@@ -69,11 +133,9 @@ const PIECES = {
   <path d="M43 80.5 V70 Q50 61.5 57 70 V80.5Z" fill="${c.dark}"/>
   ${flame(50, 79.5, 12, c.acc)}${flame(50, 79.5, 7, '#ffd36b')}
   <path d="M45.5 80.5 V67.5 M50 80.5 V64.8 M54.5 80.5 V67.5 M43 72.5 H57 M43 77 H57" fill="none" stroke="${c.stroke}" stroke-width="1.1" opacity=".9"/>
-  ${dbl('M28.5 64.5 C40 62.5 56 57 70 50.5', c, 4.4, 'url(#gh)')}
-  <path d="M69.4 50.9 L75.5 44.6 L74.3 51.8 L79.2 53.4Z" fill="url(#gh)" stroke-width="1.5" stroke-linejoin="round"/>
-  <path class="dt" d="M33 64.6 l1.3 -2.4 M38 63.8 l1.4 -2.5 M43 62.7 l1.5 -2.6 M48 61.3 l1.5 -2.7 M53 59.6 l1.6 -2.8 M58 57.6 l1.6 -2.8 M63 55.3 l1.6 -2.8" fill="none" stroke="${c.scale}" stroke-width="1" opacity=".9"/>
-  ${flame(33, 25.5, 6, c.acc)}${flame(67, 25.5, 6, c.acc)}${flame(50, 23, 7, c.acc)}`,
-
+  ${T.front}
+  ${flame(33, 25.5, 6, c.acc)}${flame(67, 25.5, 6, c.acc)}${flame(50, 23, 7, c.acc)}`;
+  },
 
   // Cavalier : tête de dragon (d'après le modèle choisi), dessinée en couches : crinière à deux rangées de lames
   // (sombre derrière, claire devant), deux cornes annelées, tête au museau crochu et gueule ouverte qui rougeoie,

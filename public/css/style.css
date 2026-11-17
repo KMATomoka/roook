@@ -93,7 +93,8 @@ p { margin: 0 0 0.6em; }
 .topnav { display: flex; gap: 22px; }
 .topnav a { color: var(--muted); text-decoration: none; font-weight: 600; }
 .topnav a:hover { color: var(--text); }
-.mode-label { color: var(--muted); font-weight: 600; font-size: 0.9rem; }
+/* étiquette du type de partie dans la barre du haut (« Partie entre amis »…) : retirée */
+.mode-label { display: none; }
 
 /* --- Cartes ---------------------------------------------------------------- */
 .card {

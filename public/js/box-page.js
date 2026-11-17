@@ -627,6 +627,7 @@ function buildCard(res) {
   result.className = `bx-result tier-${res.rarity}${ORDER.indexOf(res.rarity) >= ORDER.indexOf('legendaire') ? ' foil' : ''}${isNew ? ' is-new' : ' is-dup'}`;
   result.innerHTML = `<div class="bx-card3d">
       <div class="bx-fx" aria-hidden="true"><i></i></div>
+      <div class="bx-gloss" aria-hidden="true"><b class="foil"></b><s class="hl"></s></div>
       <div class="bx-res-head"><span class="bx-res-rarity">${escapeHtml(t.name)}</span>${isNew ? '<span class="bx-res-badge">Nouveau</span>' : ''}</div>
       <div class="bx-res-art"></div>
       <h2>${escapeHtml(title)}</h2>
@@ -718,15 +719,16 @@ result.addEventListener('pointermove', (e) => {
   const r = card.getBoundingClientRect();
   const x = (e.clientX - r.left) / r.width;
   const y = (e.clientY - r.top) / r.height;
-  card.style.setProperty('--ry', `${(x - 0.5) * 10}deg`);
-  card.style.setProperty('--rx', `${(0.5 - y) * 8}deg`);
-  card.style.setProperty('--mx', `${x * 100}%`);
-  card.style.setProperty('--my', `${y * 100}%`);
+  // On écrit directement les transform (pas de variables CSS sur la carte : une variable changée sur la carte est
+  // héritée par tout son contenu, et Chrome redessinait alors chaque pièce à chaque mouvement de souris)
+  card.style.transform = `rotateX(${((0.5 - y) * 8).toFixed(2)}deg) rotateY(${((x - 0.5) * 10).toFixed(2)}deg)`;
+  // le reflet glisse jusque sous la souris (décalage en px depuis le centre : un déplacement, pas un redessin)
+  const hl = card.querySelector('.bx-gloss .hl');
+  if (hl) hl.style.transform = `translate(${Math.round((x - 0.5) * card.offsetWidth)}px, ${Math.round((y - 0.5) * card.offsetHeight)}px)`;
 });
 result.addEventListener('pointerleave', () => {
   const card = result.querySelector('.bx-card3d');
-  card?.style.setProperty('--rx', '0deg');
-  card?.style.setProperty('--ry', '0deg');
+  if (card) card.style.transform = '';
 });
 
 // ---------------------------------------------------------------------------

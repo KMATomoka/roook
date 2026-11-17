@@ -2658,9 +2658,9 @@ html:has(body.bx-opening), body.bx-opening { overflow: hidden; overscroll-behavi
 .bx-result[hidden] { display: none; }
 .bx-result.preparing { opacity: 0.001; pointer-events: none; }
 .bx-card3d {
-  --rx: 0deg; --ry: 0deg; --mx: 50%; --my: 30%;
   position: relative; padding: 16px 18px 18px; border-radius: 22px; text-align: center; overflow: hidden;
-  transform: rotateX(var(--rx)) rotateY(var(--ry)); transition: transform 0.15s ease-out;
+  transform: rotateX(0deg) rotateY(0deg); transition: transform 0.15s ease-out; /* penchée vers la souris par js/box-page.js */
+  will-change: transform; /* dessinée une fois, puis seulement penchée : jamais redessinée pendant qu'elle bouge */
   background:
     radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--c) 34%, transparent), transparent 70%),
     linear-gradient(180deg, #1b1630, #0f0c1d 70%);
@@ -2668,16 +2668,20 @@ html:has(body.bx-opening), body.bx-opening { overflow: hidden; overscroll-behavi
   box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.4), 0 30px 80px rgba(0, 0, 0, 0.65), 0 0 80px color-mix(in srgb, var(--c) 50%, transparent), inset 0 0 30px color-mix(in srgb, var(--c) 18%, transparent);
 }
 .bx-card3d > * { position: relative; z-index: 1; }
-/* Quand la carte penche en 3D, Chrome ne découpe plus toujours les calques animés par les coins arrondis (on voyait
-   des angles carrés dépasser) : on les découpe nous-mêmes à la forme de la carte (rayon 22 px moins la bordure de 2 px) */
-.bx-card3d::before, .bx-card3d::after, .bx-card3d > .bx-fx { border-radius: 20px; clip-path: inset(0 round 20px); }
-.bx-card3d::after { /* reflet qui suit la souris */
-  content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
-  background: radial-gradient(circle at var(--mx) var(--my), rgba(255, 255, 255, 0.09), transparent 42%);
-}
-/* Fond propre à chaque palier, derrière le contenu de la carte (.bx-fx et son <i>) */
-.bx-card3d > .bx-fx { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; border-radius: inherit; }
-.bx-fx i { position: absolute; display: block; }
+/* Les effets de la carte vivent dans deux cadres fixes, découpés à sa forme arrondie (rayon 22 px moins la bordure) :
+   .bx-fx derrière le contenu (le fond du palier), .bx-gloss devant (reflet de la souris, arc-en-ciel). Tout ce qui y
+   bouge glisse ou tourne (transform) : la carte n'est jamais redessinée pendant qu'elle penche, sinon Chrome la
+   redessine par morceaux en retard et on voit des angles et des saccades aux coins. */
+.bx-card3d > .bx-fx, .bx-card3d > .bx-gloss { position: absolute; inset: 0; pointer-events: none; overflow: hidden; border-radius: 20px; clip-path: inset(0 round 20px); }
+.bx-card3d > .bx-fx { z-index: 0; }
+.bx-card3d > .bx-gloss { z-index: 2; }
+.bx-fx > *, .bx-gloss > * { position: absolute; display: block; pointer-events: none; }
+/* reflet qui suit la souris : une tache de lumière qui glisse (déplacée par js/box-page.js) */
+.bx-gloss .hl { left: 50%; top: 50%; width: 120%; aspect-ratio: 1; margin: -60% 0 0 -60%; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.1), transparent 70%);
+  transform: translate(0, -60px); transition: transform 0.15s ease-out; }
+/* arc-en-ciel holographique (Légendaire, Jeu complet) : une bande qui glisse en diagonale */
+.bx-gloss .foil { display: none; }
 /* Rare : du givre. Un treillis de cristaux de glace bleus, et un éclat de lumière froide qui balaie la carte. */
 .tier-rare .bx-fx {
   background:
@@ -2721,14 +2725,14 @@ html:has(body.bx-opening), body.bx-opening { overflow: hidden; overscroll-behavi
 }
 @keyframes bx-twinkle { from { opacity: 0.78; } to { opacity: 1; } }
 @keyframes bx-arcane { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .bx-fx, .bx-fx i { animation: none !important; } }
-.bx-result.foil .bx-card3d::before { /* reflets d'arc-en-ciel (Légendaire, Jeu complet) */
-  content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0.35;
-  background: linear-gradient(115deg, transparent 22%, rgba(255, 90, 200, 0.35) 34%, rgba(90, 200, 255, 0.35) 46%, rgba(120, 255, 170, 0.35) 58%, rgba(255, 220, 90, 0.3) 68%, transparent 80%) 0 0 / 300% 300%;
+@media (prefers-reduced-motion: reduce) { .bx-fx, .bx-fx i, .bx-gloss .hl { animation: none !important; transition: none !important; } }
+.bx-result.foil .bx-gloss .foil {
+  display: block; inset: -100%; opacity: 0.35;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 90, 200, 0.35) 44%, rgba(90, 200, 255, 0.35) 48%, rgba(120, 255, 170, 0.35) 52%, rgba(255, 220, 90, 0.3) 55.5%, transparent 60%);
   animation: bx-foil 5s linear infinite;
 }
-@keyframes bx-foil { from { background-position: 100% 100%; } to { background-position: 0% 0%; } }
-@media (prefers-reduced-motion: reduce) { .bx-result.foil .bx-card3d::before { animation: none; } }
+@keyframes bx-foil { from { transform: translate(28%, 28%); } to { transform: translate(-28%, -28%); } }
+@media (prefers-reduced-motion: reduce) { .bx-result.foil .bx-gloss .foil { animation: none; } }
 .bx-res-head { display: flex; justify-content: center; align-items: center; gap: 8px; min-height: 26px; }
 .bx-res-rarity {
   padding: 4px 14px; border-radius: 99px; font: 900 0.74rem var(--font); letter-spacing: 0.24em; text-transform: uppercase;
@@ -2747,6 +2751,10 @@ html:has(body.bx-opening), body.bx-opening { overflow: hidden; overscroll-behavi
 .bx-dust-gain { color: #ffd84a; font-size: 1.15em; text-shadow: 0 0 12px rgba(255, 216, 74, 0.6); }
 .bx-res-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
 .bx-result.is-dup .bx-res-art { filter: saturate(0.85); }
+/* Le damier dans la carte : ses braises montent en glissant (comme sur téléphone) au lieu de redessiner le plateau à
+   chaque image, et les reflets de l'Océan restent fixes : la carte penchée n'a rien à redessiner */
+.bx-board3d.board-dragon { --caustics-bg: var(--de1) 0 0 / 50% 25%; --caustics-bottom: -100%; --caustics-overflow: hidden; --caustics-anim: dragon-rise 16s linear infinite, dragon-flicker 2.4s ease-in-out infinite alternate; }
+.bx-board3d.board-ocean { --caustics-anim: none; }
 
 /* Une pièce : en grand sur un socle lumineux, qui tourne doucement, avec son reflet */
 .bx-show { position: relative; width: 250px; height: 250px; perspective: 700px; }
@@ -2841,7 +2849,7 @@ html:has(body.bx-opening), body.bx-opening { overflow: hidden; overscroll-behavi
   .bx-tier { text-shadow: 0 0 12px var(--tc), 0 3px 0 color-mix(in srgb, var(--tc) 50%, #000); }
   .bx-ped { animation: none; }
   .bx-rays { width: 115vmax; height: 115vmax; }
-  .bx-result.foil .bx-card3d::before { display: none; }
+  .bx-result.foil .bx-gloss .foil { display: none; }
   .bx-ring { box-shadow: none; }
 }
 

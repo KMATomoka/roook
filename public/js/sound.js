@@ -1160,16 +1160,8 @@ const horns = (at, notes, dur = 1.6, vol = 0.07) =>
     lairTone('sawtooth', f, f, at + i * 0.02, dur, vol, 0.12, 1300);
     lairTone('triangle', f * 2, f * 2, at + i * 0.02, dur * 0.8, vol * 0.4, 0.1);
   });
-/** Grondement de la terre (lave, plateau qui se fend). */
+/** Grondement de la terre. */
 const rumble = (at = 0, dur = 2.5, vol = 0.32) => lairNoise({ at, dur, vol, type: 'lowpass', f0: 140, f1: 70, q: 0.7, attack: 0.4 });
-/** Bulles de lave qui éclatent (« blop » gras). */
-const lavaBlops = (at = 0, n = 6, span = 1.5) => {
-  for (let i = 0; i < n; i++) {
-    const t = at + Math.random() * span;
-    lairTone('sine', 120 + Math.random() * 80, 60, t, 0.18, 0.22, 0.005);
-    burst({ at: t + 0.05, dur: 0.03, vol: 0.08, freq: 1800, q: 2 });
-  }
-};
 const dragon = {
   move: () => {
     stone(0);
@@ -1193,28 +1185,41 @@ const dragon = {
     crackle(0.1, 6, 0.4, 0.07);
   },
 };
-/** Mat « Le Souffle du Dragon ». Victoire : rugissement, souffle de feu, cors. Défaite : la terre gronde, la lave monte. */
+/** Coup de griffe : un sifflement qui déchire l'air (aigu qui descend) et un claquement sec. */
+const slash = (at = 0, vol = 0.3) => {
+  lairNoise({ at, dur: 0.2, vol, type: 'highpass', f0: 4200, f1: 900, q: 0.7, attack: 0.02 });
+  lairNoise({ at: at + 0.02, dur: 0.16, vol: vol * 0.6, f0: 2400, f1: 700, q: 1.4, attack: 0.01 });
+  burst({ at: at + 0.06, dur: 0.03, vol: vol * 0.5, freq: 3000, q: 2 });
+};
+/**
+ * Mat « Le Souffle du Dragon » (en phase avec dragonMateFx, qui démarre 0,14 s après le coup).
+ * Victoire : battements d'ailes, rugissement, long souffle de feu pendant que l'ombre passe, cors.
+ * Défaite : grondement, trois coups de griffe, le roi tranché, crépitements.
+ */
 function dragonMate(outcome) {
   if (outcome === 'loss') {
-    rumble(0.2, 3.6);
-    // le plateau se fend
-    burst({ at: 0.6, dur: 0.35, vol: 0.4, type: 'lowpass', freq: 1200, endFreq: 200, q: 0.8 });
-    crackle(0.6, 18, 0.8, 0.12);
-    lairTone('triangle', 196, 185, 0.7, 2.4, 0.08, 0.1);
-    lairTone('triangle', 138.6, 130.8, 0.85, 2.6, 0.08, 0.1);
-    lavaBlops(1.3, 8, 2.2);
-    // les yeux du dragon : un grondement lointain
-    roar(1.6, 2.4, 0.14, 0.7);
-    crackle(2.2, 16, 1.6, 0.08);
+    roar(0.12, 0.9, 0.2, 0.75);
+    rumble(0.1, 2.8, 0.26);
+    slash(0.66, 0.34);
+    slash(0.74, 0.38);
+    slash(0.82, 0.32);
+    // le roi tranché : un choc lourd
+    stone(0.77, 0.55);
+    burst({ at: 0.77, dur: 0.4, vol: 0.38, type: 'lowpass', freq: 900, endFreq: 120, q: 0.8 });
+    crackle(0.85, 22, 1.4, 0.1);
+    lairTone('triangle', 146.83, 138.6, 1.1, 2.4, 0.07, 0.15);
+    lairTone('triangle', 110, 103.8, 1.2, 2.6, 0.07, 0.15);
+    crackle(2.2, 10, 1.2, 0.06);
     return;
   }
-  // le dragon arrive (battements d'ailes), rugit, crache le feu
-  for (let i = 0; i < 4; i++) lairNoise({ at: 0.2 + i * 0.62, dur: 0.35, vol: 0.18, type: 'lowpass', f0: 380, f1: 160, attack: 0.08 });
-  roar(1.3, 1.6, 0.28);
-  fwoosh(1.95, 1.6, 0.42);
-  crackle(2.4, 30, 2, 0.1);
-  horns(3.2, [146.83, 220, 293.66, 369.99], 2.2, 0.07);
-  horns(4.1, [196, 293.66, 392, 493.88], 2.4, 0.07);
+  // l'ombre arrive (battements d'ailes), le dragon rugit, crache le feu en passant
+  for (let i = 0; i < 6; i++) lairNoise({ at: 0.14 + i * 0.56, dur: 0.32, vol: i < 2 || i > 3 ? 0.22 : 0.12, type: 'lowpass', f0: 380, f1: 150, attack: 0.08 });
+  roar(0.45, 1.1, 0.26);
+  fwoosh(0.9, 1.4, 0.46);
+  fwoosh(1.5, 1.1, 0.3);
+  crackle(1.3, 34, 2.2, 0.1);
+  horns(3.1, [146.83, 220, 293.66, 369.99], 2.2, 0.07);
+  horns(3.9, [196, 293.66, 392, 493.88], 2.4, 0.07);
 }
 
 const royalSet = { move: () => tok(), capture, castle, promote, check };

@@ -617,7 +617,7 @@ cg-board square.premove-sq { background: rgba(245, 150, 40, 0.5); }
 /* Reflets de l'océan : posés par une variable, pour qu'ils restent sur le plateau Océan (pas sur les aperçus voisins) */
 .board-ocean { --caustics: 0.3; --caustics-anim: ocean-caustic 26s linear infinite; }
 cg-board::before {
-  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: var(--caustics, 0); mix-blend-mode: var(--caustics-blend, soft-light);
+  content: ''; position: absolute; inset: 0 0 var(--caustics-bottom, 0) 0; z-index: 0; pointer-events: none; opacity: var(--caustics, 0); mix-blend-mode: var(--caustics-blend, soft-light);
   background: var(--caustics-bg, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Cpath d='M0 30 Q15 18 32 32 T70 26 T120 30 M0 80 Q24 66 44 84 T88 76 T120 80 M30 0 Q20 22 34 42 T28 86 T30 120 M86 0 Q98 26 82 46 T92 90 T86 120' fill='none' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") 0 0 / 50% 50%);
   animation: var(--caustics-anim, none);
   display: var(--caustics-display, none);
@@ -650,12 +650,18 @@ cg-board::before {
 /* Les braises montent en dérivant : une tuile de côté et deux vers le haut (la boucle ne se voit pas) */
 @keyframes dragon-embers { to { background-position: 100% -200%; } }
 @keyframes dragon-flicker { 0% { opacity: 0.7; } 40% { opacity: 1; } 70% { opacity: 0.8; } 100% { opacity: 1; } }
-/* Téléphone et tablette : les braises bougent aussi, mais une seule couche (moins de braises) et un peu plus lentement */
-@media (max-width: 900px), (pointer: coarse) { .board-dragon { --caustics-bg: var(--de1) 0 0 / 50% 50%; --caustics-anim: dragon-embers 22s linear infinite, dragon-flicker 2.4s ease-in-out infinite alternate; } }
+/* Téléphone et tablette : une seule couche de braises, et elle monte en glissant (transform) au lieu de redessiner
+   le plateau à chaque image (background-position) : le téléphone n'a plus qu'à déplacer une image déjà dessinée.
+   La couche fait deux plateaux de haut (tuiles carrées d'un demi-plateau) et remonte d'un plateau : la boucle ne se voit pas. */
+@media (max-width: 900px), (pointer: coarse) {
+  .board-dragon { --caustics-bg: var(--de1) 0 0 / 50% 25%; --caustics-bottom: -100%; --caustics-overflow: hidden; --caustics-anim: dragon-rise 16s linear infinite, dragon-flicker 2.4s ease-in-out infinite alternate; }
+}
+@keyframes dragon-rise { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(0, -50%, 0); } }
 @media (prefers-reduced-motion: reduce) { .board-dragon { --caustics-anim: none; } }
 
 /* Échiquier violet (remplace le thème bois) : damier en conic-gradient, a8 toujours clair */
 cg-board {
+  overflow: var(--caustics-overflow, visible);
   background-color: var(--sq-light);
   background-image: var(--board-img, conic-gradient(var(--sq-dark) 0 25%, transparent 0 50%, var(--sq-dark) 0 75%, transparent 0));
   background-size: var(--board-img-size, 25% 25%);
@@ -665,7 +671,7 @@ cg-board {
 .board-astrea, .board-classic, .board-royal { --board-img: initial; --board-img-size: initial; }
 .board-astrea, .board-classic, .board-royal, .board-japon, .board-western, .board-bois { --caustics: 0; --caustics-anim: none; --caustics-display: none; }
 /* Les braises du Dragon ne passent pas sur un aperçu Océan (et inversement) */
-.board-astrea, .board-classic, .board-royal, .board-japon, .board-western, .board-bois, .board-ocean { --caustics-bg: initial; --caustics-blend: initial; }
+.board-astrea, .board-classic, .board-royal, .board-japon, .board-western, .board-bois, .board-ocean { --caustics-bg: initial; --caustics-blend: initial; --caustics-bottom: initial; --caustics-overflow: initial; }
 /* Coordonnées : toujours lisibles — texte clair sur case sombre, texte sombre sur case claire.
    a1 est une case sombre : avec les Blancs en bas, rangées impaires et colonnes a, c, e, g sont sur cases sombres. */
 .cg-wrap coords { opacity: 1; }
@@ -1921,15 +1927,34 @@ a.person-link:hover { color: var(--accent-soft); }
 .fx-scorch { position: absolute; border-radius: 50%; background: radial-gradient(circle, rgba(20, 6, 2, 0.75) 0 30%, rgba(60, 18, 4, 0.45) 50%, rgba(60, 18, 4, 0) 70%); }
 .fx-dragon-clip { position: absolute; overflow: hidden; border-radius: 3px; pointer-events: none; }
 .fx-dragon-clip > * { position: absolute; }
-.fx-dragon-sky { inset: 0; background: radial-gradient(ellipse at 50% 0%, rgba(255, 120, 40, 0.35), rgba(120, 20, 6, 0.55) 55%, rgba(30, 4, 2, 0.75)); }
-.fx-dragon-fly svg, .fx-dragon-eyes svg, .fx-dragon-crack svg { display: block; width: 100%; height: 100%; overflow: visible; }
-.fx-dragon-fly { z-index: 8; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.55)); }
-.fx-dragon-shadow { z-index: 1; border-radius: 50%; background: radial-gradient(ellipse, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0) 70%); filter: blur(4px); }
 .fx-dragon-glow { border-radius: 50%; mix-blend-mode: screen; background: radial-gradient(circle, rgba(255, 245, 200, 0.9) 0%, rgba(255, 190, 60, 0.6) 30%, rgba(255, 90, 20, 0.25) 55%, rgba(255, 90, 20, 0) 70%); }
-.fx-dragon-dark { inset: 0; background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(0, 0, 0, 0) 0, rgba(10, 2, 2, 0.55) 30%, rgba(4, 0, 0, 0.88) 70%); }
-.fx-dragon-lava { border-radius: 50%; background: radial-gradient(circle, #fff1a8 0 10%, #ffb22e 25%, #ff5a12 48%, #a8200a 65%, rgba(80, 10, 2, 0) 72%); filter: drop-shadow(0 0 12px rgba(255, 90, 20, 0.9)); }
-.fx-dragon-eyes { z-index: 7; filter: drop-shadow(0 0 16px rgba(255, 120, 20, 0.85)); }
-.fx-dragon-crack { z-index: 2; filter: drop-shadow(0 0 6px rgba(255, 110, 20, 0.95)); }
+/* Victoire : la lumière baisse, l'ombre du dragon (flou dessiné dans le SVG) et la ligne de feu sur la colonne du roi */
+.fx-dragon-dim { inset: 0; background: radial-gradient(ellipse at 50% 35%, rgba(40, 10, 4, 0.22), rgba(12, 2, 0, 0.5)); }
+.fx-dragon-dim.loss { background: radial-gradient(circle at 50% 50%, rgba(70, 0, 0, 0.32), rgba(18, 0, 0, 0.72)); }
+.fx-dshadow { opacity: 0.62; transform-origin: 50% 99.5%; will-change: transform; }
+.fx-dshadow > div { position: absolute; inset: 0; }
+.fx-dshadow svg, .fx-claw svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.fx-dshadow .w { will-change: transform; }
+.fx-dshadow .w.l { transform-origin: 45.8% 45%; }
+.fx-dshadow .w.r { transform-origin: 54.2% 45%; }
+.fx-fireline, .fx-fireline-scar { transform-origin: 50% 0; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 7%, #000 93%, transparent); mask-image: linear-gradient(to bottom, transparent, #000 7%, #000 93%, transparent); will-change: transform, opacity; }
+.fx-fireline { mix-blend-mode: screen; overflow: hidden;
+  background: linear-gradient(90deg, rgba(255, 60, 0, 0), rgba(255, 70, 10, 0.45) 22%, rgba(255, 150, 40, 0.8) 40%, rgba(255, 220, 140, 0.95) 50%, rgba(255, 150, 40, 0.8) 60%, rgba(255, 70, 10, 0.45) 78%, rgba(255, 60, 0, 0)); }
+/* Les flammes : des langues de feu irrégulières, en motif qui se répète et qui coule vers le bas */
+.fx-fireline .flow { position: absolute; left: 0; right: 0; bottom: 0; will-change: transform; }
+.fx-fireline .flow.a { background-image: radial-gradient(ellipse 36% 30% at 30% 22%, rgba(255, 210, 100, 0.9), rgba(255, 110, 20, 0.55) 55%, rgba(255, 80, 0, 0) 74%), radial-gradient(ellipse 30% 26% at 66% 58%, rgba(255, 186, 80, 0.85), rgba(255, 90, 10, 0.5) 55%, rgba(255, 70, 0, 0) 74%), radial-gradient(ellipse 20% 18% at 14% 80%, rgba(255, 150, 40, 0.75), rgba(255, 70, 0, 0) 75%); }
+.fx-fireline .flow.b { background-image: radial-gradient(ellipse 30% 34% at 74% 18%, rgba(255, 196, 90, 0.85), rgba(255, 100, 15, 0.5) 55%, rgba(255, 70, 0, 0) 74%), radial-gradient(ellipse 26% 30% at 38% 70%, rgba(255, 220, 130, 0.8), rgba(255, 110, 20, 0.45) 55%, rgba(255, 70, 0, 0) 74%), radial-gradient(ellipse 18% 22% at 88% 76%, rgba(255, 140, 30, 0.7), rgba(255, 70, 0, 0) 75%); }
+.fx-fireline .core { position: absolute; inset: 0 32%; background: linear-gradient(90deg, rgba(255, 245, 200, 0), rgba(255, 245, 205, 0.75) 50%, rgba(255, 245, 200, 0)); will-change: transform, opacity; }
+.fx-fireline-scar { background: linear-gradient(90deg, rgba(20, 5, 2, 0), rgba(24, 6, 2, 0.28) 28%, rgba(46, 10, 2, 0.42) 50%, rgba(24, 6, 2, 0.28) 72%, rgba(20, 5, 2, 0)); }
+/* Défaite : trois coups de griffe de braise (la partie chaude refroidit et laisse une griffure sombre) */
+.fx-claw > div { position: absolute; inset: 0; }
+.fx-claw .hot { will-change: opacity; }
+.fx-claw-cut { border-radius: 50%; background: linear-gradient(90deg, rgba(255, 240, 200, 0), #fff6d2 50%, rgba(255, 240, 200, 0)); box-shadow: 0 0 10px 3px rgba(255, 120, 30, 0.9); }
+/* Téléphone et tablette : pas de mélange « screen » ni de halo autour de chaque braise (c'est ce qui fait ramer) */
+@media (max-width: 900px), (pointer: coarse) {
+  .fx-fire, .fx-fireline, .fx-dragon-glow { mix-blend-mode: normal; }
+  .fx-ember { box-shadow: none; background: radial-gradient(circle, #fff1b0 0 30%, #ffb02e 55%, rgba(255, 110, 20, 0) 72%); }
+}
 .fx-check-tag.dragon {
   font: 900 1em/1 'Cinzel Decorative', 'Cinzel', serif; letter-spacing: 0.04em; text-transform: none; color: #fff7e0;
   background: linear-gradient(180deg, #ff7a1f, #9c1c06);
@@ -1948,7 +1973,7 @@ a.person-link:hover { color: var(--accent-soft); }
 }
 .fx-mate-banner.dragon.loss .s { color: #ff8a6a; }
 /* Cinzel Decorative lie certaines lettres (« HE » de « ÉCHEC ») : on garde des lettres séparées */
-.fx-mate-banner.dragon, .fx-check-tag.dragon { font-variant-ligatures: none; font-feature-settings: 'liga' 0, 'dlig' 0, 'clig' 0; }
+.fx-mate-banner.dragon, .fx-check-tag.dragon { font-variant-ligatures: none; font-feature-settings: 'liga' 0, 'dlig' 0, 'clig' 0, 'calt' 0, 'hlig' 0; }
 
 
 /* Partie entre amis : quitter la page = défaite par abandon (js/jeu.js, js/online.js) */

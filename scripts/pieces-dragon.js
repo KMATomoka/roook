@@ -78,11 +78,11 @@ const tail = (c, segs, front, w0, w1, spikeSegs) => {
     return `M${f(a[0])} ${f(a[1])} Q${f(q.x - q.tx * q.w * 0.35)} ${f(q.y - q.ty * q.w * 0.35)} ${f(b[0])} ${f(b[1])}`;
   }).join(' ');
   return {
-    back: `<defs><linearGradient id="gt" gradientUnits="userSpaceOnUse" x1="34" y1="44" x2="70" y2="76"><stop offset="0" stop-color="${c.maneTop}"/><stop offset="1" stop-color="${c.maneBot}"/></linearGradient></defs>${spkBack}<path d="${tube(pts)}" fill="url(#gt)" stroke-width="1.6" stroke-linejoin="round"/><path class="dt" d="${tube(pts)}" fill="${c.dark}" opacity=".18" stroke="none"/>${tip}`,
+    back: `<defs><linearGradient id="gt" gradientUnits="userSpaceOnUse" x1="34" y1="44" x2="70" y2="76"><stop offset="0" stop-color="${c.maneTop}"/><stop offset="1" stop-color="${c.maneBot}"/></linearGradient></defs>${spkBack}<path d="${tube(pts)}" fill="url(#gt)" stroke-width="1.6" stroke-linejoin="round"/>`,
     front: `${spkFront}<path d="${tube(F)}" fill="url(#gt)" stroke="none"/>
     <path d="${edges(F)}" fill="none" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
     <path class="dt" d="${rings}" fill="none" stroke="${c.stroke}" stroke-width=".9" opacity=".55"/>
-    <path class="dt" d="M${F.map((q) => `${f(q.x + q.nx * q.w * 0.18)} ${f(q.y + q.ny * q.w * 0.18)}`).join(' L')}" fill="none" stroke="#fff" stroke-width=".8" opacity=".35"/>`,
+    <path class="dt" d="M${F.map((q) => `${f(q.x + q.nx * q.w * 0.18)} ${f(q.y + q.ny * q.w * 0.18)}`).join(' L')}" fill="none" stroke="#fff" stroke-width=".8" opacity=".35"/>${tip}`,
   };
 };
 
@@ -114,13 +114,11 @@ const PIECES = {
   // avec sa pointe en fer de lance ; piquants dorsaux et anneaux d'écailles
   r: (c) => {
     const T = tail(c, [
-      [[57, 77], [63, 77.5], [70.5, 76], [72.5, 70]],
-      [[72.5, 70], [74.3, 64.6], [71.45, 55.65], [65.9, 57]],
-      [[65.9, 57], [58.5, 58.8], [42, 62.4], [34.4, 55.6]],
-      [[34.4, 55.6], [30.6, 52.2], [30.4, 49.4], [35.5, 48.6]],
-      [[35.5, 48.6], [44, 46.5], [60, 41], [71, 43.5]],
-      [[71, 43.5], [74.5, 45], [77.5, 42.5], [77.6, 37.5]],
-    ], [1, 2], 8.6, 3.6, [1, 2, 5]);
+      [[58, 78], [64, 78.5], [71, 77.5], [74.5, 73]],
+      [[74.5, 73], [77.3, 69.4], [77.2, 61.2], [71.5, 60]],
+      [[71.5, 60], [62, 58], [46, 66.5], [34, 63]],
+      [[34, 63], [27.5, 61.2], [23.4, 57.6], [23.6, 51]],
+    ], [1, 3], 8.6, 3.8, [1, 2]);
     return `${base(c)}
   ${T.back}
   <path d="M32 80.5 L35 46 H65 L68 80.5Z" fill="url(#g)"/>

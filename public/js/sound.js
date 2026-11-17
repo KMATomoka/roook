@@ -1118,41 +1118,96 @@ const stone = (at = 0, pitch = 1) => {
   burst({ at, dur: 0.05, vol: 0.32, type: 'lowpass', freq: 900 * pitch, q: 0.8 });
   burst({ at, dur: 0.02, vol: 0.12, freq: 3200, q: 2 });
 };
-/** Rugissement du dragon : une voix grave saturée qui descend, avec un souffle par-dessus. */
+/**
+ * Rugissement du dragon, construit comme une voix de bête :
+ * - la gorge : plusieurs voix rauques très graves, légèrement désaccordées, dont la hauteur gonfle puis retombe ;
+ * - le raclement : la voix est hachée ~30 fois par seconde (le grondement qui « roule » au fond de la gorge) ;
+ * - la gueule : trois résonances (comme un « Ôôaaa » ouvert) qui donnent la forme de la voix ;
+ * - le souffle : un gros bruit rauque filtré par les mêmes résonances, très présent (un rugissement, c'est surtout de l'air) ;
+ * - le poids : une basse sourde dessous.
+ */
 function roar(at = 0, dur = 1.8, vol = 0.3, pitch = 1) {
   const a = lair();
   if (!a) return;
   const t = a.currentTime + at;
-  for (const [type, det, v] of [['sawtooth', 0, 1], ['square', 9, 0.5]]) {
-    const o = a.createOscillator();
-    o.type = type;
-    o.detune.value = det;
-    o.frequency.setValueAtTime(150 * pitch, t);
-    o.frequency.exponentialRampToValueAtTime(210 * pitch, t + dur * 0.25);
-    o.frequency.exponentialRampToValueAtTime(70 * pitch, t + dur);
-    const lfo = a.createOscillator();
-    const lg = a.createGain();
-    lfo.frequency.value = 23;
-    lg.gain.value = 9;
-    lfo.connect(lg).connect(o.frequency);
-    const f = a.createBiquadFilter();
-    f.type = 'bandpass';
-    f.Q.value = 1.6;
-    f.frequency.setValueAtTime(520, t);
-    f.frequency.linearRampToValueAtTime(900, t + dur * 0.3);
-    f.frequency.linearRampToValueAtTime(380, t + dur);
-    const g = a.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(vol * v, t + 0.12);
-    g.gain.setValueAtTime(vol * v, t + dur * 0.55);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(f).connect(g).connect(fireBus);
-    o.start(t);
-    lfo.start(t);
-    o.stop(t + dur + 0.05);
-    lfo.stop(t + dur + 0.05);
+  const end = t + dur;
+  // enveloppe commune : ça enfle, ça tient, ça s'étouffe
+  const env = a.createGain();
+  env.gain.setValueAtTime(0.0001, t);
+  env.gain.exponentialRampToValueAtTime(vol, t + Math.min(0.28, dur * 0.22));
+  env.gain.setValueAtTime(vol, t + dur * 0.5);
+  env.gain.exponentialRampToValueAtTime(0.0001, end);
+  // le raclement : modulation d'amplitude irrégulière
+  const rattle = a.createGain();
+  rattle.gain.value = 0.55;
+  const rl = a.createOscillator();
+  rl.type = 'triangle';
+  rl.frequency.setValueAtTime(34 * pitch, t);
+  rl.frequency.linearRampToValueAtTime(26 * pitch, end);
+  const rlg = a.createGain();
+  rlg.gain.value = 0.45;
+  rl.connect(rlg).connect(rattle.gain);
+  // les résonances de la gueule, en parallèle
+  const mouth = a.createGain();
+  for (const [f0, f1, q, g] of [[520, 380, 5, 1], [1050, 760, 6, 0.6], [2300, 1900, 7, 0.22]]) {
+    const bp = a.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = q;
+    bp.frequency.setValueAtTime(f0 * 0.8 * pitch, t);
+    bp.frequency.linearRampToValueAtTime(f0 * pitch, t + dur * 0.3);
+    bp.frequency.linearRampToValueAtTime(f1 * pitch, end);
+    const bg = a.createGain();
+    bg.gain.value = g * 3.2;
+    rattle.connect(bp).connect(bg).connect(mouth);
   }
-  lairNoise({ at, dur, vol: vol * 0.45, f0: 700, f1: 1400, q: 1.2, attack: 0.15 });
+  mouth.connect(env);
+  env.connect(fireBus);
+  // la gorge
+  const f = (x) => x * pitch;
+  for (const [det, mul, v] of [[-14, 1, 0.5], [0, 1, 0.6], [11, 1, 0.5], [0, 0.5, 0.45]]) {
+    const o = a.createOscillator();
+    o.type = 'sawtooth';
+    o.detune.value = det;
+    o.frequency.setValueAtTime(f(62) * mul, t);
+    o.frequency.exponentialRampToValueAtTime(f(96) * mul, t + dur * 0.3);
+    o.frequency.exponentialRampToValueAtTime(f(48) * mul, end);
+    // un tremblement lent et irrégulier de la hauteur
+    const wob = a.createOscillator();
+    wob.frequency.value = 5.5 + Math.random() * 2;
+    const wg = a.createGain();
+    wg.gain.value = 4 * mul;
+    wob.connect(wg).connect(o.frequency);
+    const g = a.createGain();
+    g.gain.value = v;
+    o.connect(g).connect(rattle);
+    o.start(t);
+    wob.start(t);
+    o.stop(end + 0.05);
+    wob.stop(end + 0.05);
+  }
+  // le souffle rauque
+  const n = a.createBufferSource();
+  n.buffer = noiseBuf;
+  n.loop = true;
+  const ng = a.createGain();
+  ng.gain.value = 1.1;
+  n.connect(ng).connect(rattle);
+  n.start(t, Math.random() * 0.5);
+  n.stop(end + 0.05);
+  rl.start(t);
+  rl.stop(end + 0.05);
+  // le poids : basse sourde
+  const sub = a.createOscillator();
+  sub.type = 'sine';
+  sub.frequency.setValueAtTime(f(52), t);
+  sub.frequency.exponentialRampToValueAtTime(f(38), end);
+  const sg = a.createGain();
+  sg.gain.setValueAtTime(0.0001, t);
+  sg.gain.exponentialRampToValueAtTime(vol * 0.9, t + 0.2);
+  sg.gain.exponentialRampToValueAtTime(0.0001, end);
+  sub.connect(sg).connect(fireBus);
+  sub.start(t);
+  sub.stop(end + 0.05);
 }
 /** Accord de cors (cuivres graves), pour la victoire. */
 const horns = (at, notes, dur = 1.6, vol = 0.07) =>
@@ -1181,7 +1236,7 @@ const dragon = {
     horns(0.08, [293.66, 440, 587.33], 1.1, 0.05);
   },
   check: () => {
-    roar(0.02, 0.8, 0.16, 1.25);
+    roar(0.02, 0.8, 0.12, 1.25);
     crackle(0.1, 6, 0.4, 0.07);
   },
 };
@@ -1198,7 +1253,7 @@ const slash = (at = 0, vol = 0.3) => {
  */
 function dragonMate(outcome) {
   if (outcome === 'loss') {
-    roar(0.12, 0.9, 0.2, 0.75);
+    roar(0.12, 0.9, 0.15, 0.75);
     rumble(0.1, 2.8, 0.26);
     slash(0.66, 0.34);
     slash(0.74, 0.38);
@@ -1214,7 +1269,7 @@ function dragonMate(outcome) {
   }
   // l'ombre arrive (battements d'ailes), le dragon rugit, crache le feu en passant
   for (let i = 0; i < 6; i++) lairNoise({ at: 0.14 + i * 0.56, dur: 0.32, vol: i < 2 || i > 3 ? 0.22 : 0.12, type: 'lowpass', f0: 380, f1: 150, attack: 0.08 });
-  roar(0.45, 1.1, 0.26);
+  roar(0.35, 1.6, 0.21);
   fwoosh(0.9, 1.4, 0.46);
   fwoosh(1.5, 1.1, 0.3);
   crackle(1.3, 34, 2.2, 0.1);

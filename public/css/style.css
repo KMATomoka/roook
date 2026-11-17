@@ -1937,22 +1937,18 @@ a.person-link:hover { color: var(--accent-soft); }
 .fx-dshadow .w { will-change: transform; }
 .fx-dshadow .w.l { transform-origin: 45.8% 45%; }
 .fx-dshadow .w.r { transform-origin: 54.2% 45%; }
-.fx-fireline, .fx-fireline-scar { transform-origin: 50% 0; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 7%, #000 93%, transparent); mask-image: linear-gradient(to bottom, transparent, #000 7%, #000 93%, transparent); will-change: transform, opacity; }
-.fx-fireline { mix-blend-mode: screen; overflow: hidden;
-  background: linear-gradient(90deg, rgba(255, 60, 0, 0), rgba(255, 70, 10, 0.45) 22%, rgba(255, 150, 40, 0.8) 40%, rgba(255, 220, 140, 0.95) 50%, rgba(255, 150, 40, 0.8) 60%, rgba(255, 70, 10, 0.45) 78%, rgba(255, 60, 0, 0)); }
-/* Les flammes : des langues de feu irrégulières, en motif qui se répète et qui coule vers le bas */
-.fx-fireline .flow { position: absolute; left: 0; right: 0; bottom: 0; will-change: transform; }
-.fx-fireline .flow.a { background-image: radial-gradient(ellipse 36% 30% at 30% 22%, rgba(255, 210, 100, 0.9), rgba(255, 110, 20, 0.55) 55%, rgba(255, 80, 0, 0) 74%), radial-gradient(ellipse 30% 26% at 66% 58%, rgba(255, 186, 80, 0.85), rgba(255, 90, 10, 0.5) 55%, rgba(255, 70, 0, 0) 74%), radial-gradient(ellipse 20% 18% at 14% 80%, rgba(255, 150, 40, 0.75), rgba(255, 70, 0, 0) 75%); }
-.fx-fireline .flow.b { background-image: radial-gradient(ellipse 30% 34% at 74% 18%, rgba(255, 196, 90, 0.85), rgba(255, 100, 15, 0.5) 55%, rgba(255, 70, 0, 0) 74%), radial-gradient(ellipse 26% 30% at 38% 70%, rgba(255, 220, 130, 0.8), rgba(255, 110, 20, 0.45) 55%, rgba(255, 70, 0, 0) 74%), radial-gradient(ellipse 18% 22% at 88% 76%, rgba(255, 140, 30, 0.7), rgba(255, 70, 0, 0) 75%); }
-.fx-fireline .core { position: absolute; inset: 0 32%; background: linear-gradient(90deg, rgba(255, 245, 200, 0), rgba(255, 245, 205, 0.75) 50%, rgba(255, 245, 200, 0)); will-change: transform, opacity; }
-.fx-fireline-scar { background: linear-gradient(90deg, rgba(20, 5, 2, 0), rgba(24, 6, 2, 0.28) 28%, rgba(46, 10, 2, 0.42) 50%, rgba(24, 6, 2, 0.28) 72%, rgba(20, 5, 2, 0)); }
+/* Le souffle : des langues de feu (cœur blanc-jaune, orange-rouge) et un peu de fumée, qui se fondent entre elles */
+.fx-flame { position: absolute; border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%; mix-blend-mode: screen; will-change: transform, opacity; pointer-events: none; z-index: 4; }
+.fx-flame.hot { background: radial-gradient(closest-side, rgba(255, 253, 235, 0.95), rgba(255, 226, 130, 0.88) 32%, rgba(255, 150, 40, 0.55) 62%, rgba(255, 90, 10, 0)); }
+.fx-flame.warm { background: radial-gradient(closest-side, rgba(255, 196, 90, 0.85), rgba(255, 118, 24, 0.62) 42%, rgba(214, 46, 6, 0.3) 72%, rgba(160, 20, 0, 0)); }
+.fx-flame.smoke { mix-blend-mode: normal; z-index: 3; background: radial-gradient(closest-side, rgba(70, 48, 40, 0.2), rgba(60, 40, 34, 0.09) 58%, rgba(50, 34, 30, 0)); }
 /* Défaite : trois coups de griffe de braise (la partie chaude refroidit et laisse une griffure sombre) */
 .fx-claw > div { position: absolute; inset: 0; }
 .fx-claw .hot { will-change: opacity; }
 .fx-claw-cut { border-radius: 50%; background: linear-gradient(90deg, rgba(255, 240, 200, 0), #fff6d2 50%, rgba(255, 240, 200, 0)); box-shadow: 0 0 10px 3px rgba(255, 120, 30, 0.9); }
 /* Téléphone et tablette : pas de mélange « screen » ni de halo autour de chaque braise (c'est ce qui fait ramer) */
 @media (max-width: 900px), (pointer: coarse) {
-  .fx-fire, .fx-fireline, .fx-dragon-glow { mix-blend-mode: normal; }
+  .fx-fire, .fx-flame, .fx-dragon-glow { mix-blend-mode: normal; }
   .fx-ember { box-shadow: none; background: radial-gradient(circle, #fff1b0 0 30%, #ffb02e 55%, rgba(255, 110, 20, 0) 72%); }
 }
 .fx-check-tag.dragon {

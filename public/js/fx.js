@@ -1611,6 +1611,26 @@ export function createFx(frame, getOrientation) {
       { duration, delay, easing: 'cubic-bezier(.2,.6,.4,1)', fill: 'backwards' },
     );
   }
+  /**
+   * Langue de feu du souffle : part de (x0, y0), file vers (x1, y1) en s'élargissant. Étirée dans le sens du jet au
+   * départ, elle s'arrondit et pâlit en refroidissant. kind : 'hot' (cœur blanc-jaune), 'warm' (orange-rouge), 'smoke'.
+   */
+  function flame(parent, x0, y0, x1, y1, size, { delay = 0, duration = 500, grow = 1.8, kind = 'warm' } = {}) {
+    const d = el(parent, 'fx-flame ' + kind, { left: `${x0}px`, top: `${y0}px`, width: `${size}px`, height: `${size}px` });
+    const ang = (Math.atan2(y1 - y0, x1 - x0) * 180) / Math.PI - 90;
+    const mx = (x1 - x0) * 0.45 + size * rand(-0.15, 0.15);
+    const my = (y1 - y0) * 0.45;
+    once(
+      d,
+      [
+        { transform: `translate(-50%,-50%) rotate(${ang}deg) scale(.35, .7)`, opacity: 0 },
+        { transform: `translate(calc(-50% + ${mx * 0.4}px), calc(-50% + ${my * 0.4}px)) rotate(${ang}deg) scale(${grow * 0.4}, ${grow * 0.8})`, opacity: 1, offset: 0.15 },
+        { transform: `translate(calc(-50% + ${mx}px), calc(-50% + ${my}px)) rotate(${ang}deg) scale(${grow * 0.6}, ${grow * 1})`, opacity: 0.9, offset: 0.55 },
+        { transform: `translate(calc(-50% + ${x1 - x0}px), calc(-50% + ${y1 - y0}px)) rotate(${ang}deg) scale(${grow}, ${grow * 1.05})`, opacity: 0 },
+      ],
+      { duration, delay, easing: 'cubic-bezier(.15,.55,.35,1)', fill: 'backwards' },
+    );
+  }
   /** Braises qui montent en vacillant. */
   function embers(parent, x, y, s, count, { delay = 0, spread = 0.45, rise = 1.4, span = 400 } = {}) {
     if (reduceMotion()) return;
@@ -1841,46 +1861,47 @@ export function createFx(frame, getOrientation) {
       }
       shake(2, 500);
 
-      // La ligne de feu : elle s'allonge derrière la gueule, sur la colonne du roi
-      const LW = s * 1.4;
-      // deux couches de flammes qui ne se répètent pas au même rythme (sinon on voit le motif)
-      const P1 = Math.round(s * 1.5);
-      const P2 = Math.round(s * 0.95);
-      const line = el(clip, 'fx-fireline', { left: `${kx - LW / 2}px`, top: `${y0}px`, width: `${LW}px`, height: `${y1 - y0}px`, zIndex: 4 }, `<div class="flow a" style="top:${-P1}px;background-size:100% ${P1}px"></div><div class="flow b" style="top:${-P2}px;background-size:100% ${P2}px"></div><div class="core"></div>`);
-      // les flammes coulent le long de la ligne, de la gueule vers le bas
-      for (const [cls, P, ms] of [['.a', P1, 330], ['.b', P2, 250]]) line.querySelector('.flow' + cls).animate([{ transform: 'translate3d(0,0,0)' }, { transform: `translate3d(0,${P}px,0)` }], { duration: ms, iterations: Math.ceil((tB + 1600) / ms), easing: 'linear' });
-      line.animate(
-        [
-          { transform: 'scaleY(0)', opacity: 1, offset: 0 },
-          { transform: 'scaleY(0)', opacity: 1, offset: tA / (tB + 1600) },
-          { transform: 'scaleY(1)', opacity: 1, offset: tB / (tB + 1600) },
-          { transform: 'scaleY(1)', opacity: 0.85, offset: (tB + 900) / (tB + 1600) },
-          { transform: 'scaleY(1)', opacity: 0 },
-        ],
-        { duration: tB + 1600, easing: 'linear', fill: 'forwards' },
-      );
-      line.querySelector('.core').animate([{ opacity: 0.75, transform: 'scaleX(.8)' }, { opacity: 1, transform: 'scaleX(1.1)' }, { opacity: 0.8, transform: 'scaleX(.9)' }], { duration: 180, iterations: Math.ceil((tB + 1600) / 180), direction: 'alternate' });
-      fades.push(line);
-      // Le jet à la gueule : des boules de feu qui partent de la gueule et s'écrasent sur la ligne
-      const n = lite(40);
-      for (let i = 0; i < n; i++) {
-        const t = tA + ((tB - tA) * i) / n;
+      // Le souffle : un jet continu de langues de feu qui sortent de la gueule et filent devant elle sur la colonne du
+      // roi. Chaque langue s'élargit, passe du blanc-jaune à l'orange puis au rouge, et se perd en fumée : les bords
+      // sont irréguliers et le bout du jet s'effiloche au lieu de s'arrêter net.
+      const steps = lite(90);
+      for (let i = 0; i < steps; i++) {
+        const t = tA + ((tB - tA) * (i + rand(0, 0.8))) / steps;
         const my = mouthY(t);
-        fireBlob(clip, kx + rand(-0.1, 0.1) * s, my - s * 0.5, kx + rand(-0.3, 0.3) * s, my + s * rand(0.1, 0.5), s * rand(0.7, 1.05), { delay: t, duration: rand(380, 520), grow: rand(1.4, 2) });
+        const reach = s * rand(1.6, 3.1);
+        const side = rand(-0.42, 0.42) * s;
+        flame(clip, kx + rand(-0.06, 0.06) * s, my + s * 0.15, kx + side * 0.4, my + reach * 0.6, s * rand(0.42, 0.62), { delay: t, duration: rand(320, 460), grow: rand(1.7, 2.2), kind: 'hot' });
+        flame(clip, kx + rand(-0.1, 0.1) * s, my + s * 0.3, kx + side, my + reach, s * rand(0.6, 0.9), { delay: t + rand(0, 40), duration: rand(620, 860), grow: rand(1.8, 2.4), kind: 'warm' });
+        if (i % 5 === 0) flame(clip, kx + rand(-0.15, 0.15) * s, my + s * 0.8, kx + side * 1.3, my + reach * 1.25, s * rand(0.7, 1), { delay: t + 160, duration: rand(900, 1300), grow: rand(1.8, 2.4), kind: 'smoke' });
       }
-      // Des flammes continuent de lécher la trace après le passage
-      for (let k = 0; k < 3; k++) {
+      // La trace continue de brûler derrière la gueule, de plus en plus faiblement, puis s'éteint
+      for (let k = 0, K = 30; k < K; k++) {
+        const now = tA + 120 + k * 70;
         later(() => {
-          for (let i = 0, m = lite(9); i < m; i++) {
-            const fy = rand(y0, Math.min(y1, mouthY(tA + 300 + k * 450)));
-            fireBlob(clip, kx + rand(-0.3, 0.3) * s, fy, kx + rand(-0.3, 0.3) * s, fy - s * rand(0.2, 0.5), s * rand(0.4, 0.65), { delay: rand(0, 380), duration: rand(520, 720), grow: rand(1.2, 1.6) });
+          const top = Math.max(y0 - s * 0.2, mouthY(Math.max(tA, Math.min(now, tB) - 750)));
+          const bottom = Math.min(y1 + s * 0.3, mouthY(Math.min(now, tB)) - s * 0.2);
+          if (bottom <= top) return;
+          for (let i = 0, m = lite(6); i < m; i++) {
+            const fy = rand(top, bottom);
+            const fx = kx + rand(-0.38, 0.38) * s;
+            flame(clip, fx, fy, fx + rand(-0.15, 0.15) * s, fy - s * rand(0.3, 0.6), s * rand(0.55, 0.85), { delay: rand(0, 70), duration: rand(460, 680), grow: rand(1.4, 1.8), kind: i % 4 ? 'warm' : 'hot' });
           }
-        }, tA + 300 + k * 450);
+        }, now);
       }
-      // La trace noircie reste sur le plateau
-      const scar = el(clip, 'fx-fireline-scar', { left: `${kx - LW * 0.4}px`, top: `${y0}px`, width: `${LW * 0.8}px`, height: `${y1 - y0}px`, zIndex: 2 });
-      scar.animate([{ transform: 'scaleY(0)', opacity: 1, offset: 0 }, { transform: 'scaleY(0)', opacity: 1, offset: tA / tB }, { transform: 'scaleY(1)', opacity: 1 }], { duration: tB, easing: 'linear', fill: 'forwards' });
-      fades.push(scar);
+      // Le bout du jet éclabousse quand le souffle s'arrête
+      later(() => {
+        for (let i = 0, m = lite(10); i < m; i++) {
+          const a = rand(-0.4, Math.PI + 0.4);
+          flame(clip, kx, y1, kx + Math.cos(a) * s * rand(0.6, 1.1), y1 + Math.sin(a) * s * rand(0.3, 0.8), s * rand(0.45, 0.7), { delay: rand(0, 120), duration: rand(420, 620), grow: 1.6, kind: i % 3 ? 'warm' : 'hot' });
+        }
+      }, tB - 60);
+      // Le plateau garde des brûlures irrégulières le long du passage
+      for (let yy = y0; yy <= y1; yy += s * rand(0.35, 0.55)) {
+        const sz = s * rand(0.75, 1.15);
+        const sc = el(clip, 'fx-scorch', { left: `${kx + rand(-0.14, 0.14) * s}px`, top: `${yy}px`, width: `${sz}px`, height: `${sz * rand(0.8, 1.2)}px`, zIndex: 2 });
+        sc.animate([{ transform: 'translate(-50%,-50%) scale(.4)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1)', opacity: rand(0.28, 0.42) }], { duration: 500, delay: tA + (yy - y0) / vb + 120, fill: 'both' });
+        fades.push(sc);
+      }
 
       // Le feu touche le roi : éclair, le plateau tremble, le roi s'embrase et tombe en cendres
       const tHit = tA + (ky - y0) / vb;

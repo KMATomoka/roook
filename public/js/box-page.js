@@ -21,9 +21,8 @@ import { boxMusic, unlockAudio, warmAudio, stopAllSounds } from './sound.js';
 // Téléphones et petites tablettes : effets allégés (même règle que js/coffre3d.js)
 const LOW_POWER = matchMedia('(pointer: coarse)').matches || innerWidth < 760;
 // Firefox et ses dérivés (Zen…) : la carte arrondie y est dessinée en neuf morceaux, et sous une bascule 3D les raccords
-// entre ces morceaux se voyaient (traits et angles aux coins). On y dessine la carte d'abord à plat, d'un bloc, puis on
-// la fait pencher (classe .gecko, voir .bx-result.gecko dans le CSS).
-const GECKO = /firefox/i.test(navigator.userAgent) && !/chrome|chromium|safari/i.test(navigator.userAgent);
+// entre ces morceaux se voyaient (traits et angles aux coins). Là, la carte ne bouge pas (le reflet suit quand même la souris).
+const NO_TILT = /firefox/i.test(navigator.userAgent) && !/chrome|chromium|safari/i.test(navigator.userAgent);
 // La 3D (Three.js, 700 Ko) se charge après la page, pour qu'elle s'affiche tout de suite
 let chestModule = null;
 const loadChest3d = () => (chestModule ||= import('./coffre3d.js').catch(() => null));
@@ -628,7 +627,7 @@ function buildCard(res) {
     : `<p class="bx-dup">${p.free ? 'Tu l’as depuis le début' : 'Déjà obtenu'} : <b class="bx-dust-gain">+<span>0</span> ${ico('dust')}</b></p>`;
   result.style.setProperty('--c', t.color);
   // Arc-en-ciel holographique : Légendaire et Jeu complet. Rare (givre) et Épique (nébuleuse) ont leur propre fond (.bx-fx).
-  result.className = `bx-result tier-${res.rarity}${ORDER.indexOf(res.rarity) >= ORDER.indexOf('legendaire') ? ' foil' : ''}${isNew ? ' is-new' : ' is-dup'}${GECKO ? ' gecko' : ''}`;
+  result.className = `bx-result tier-${res.rarity}${ORDER.indexOf(res.rarity) >= ORDER.indexOf('legendaire') ? ' foil' : ''}${isNew ? ' is-new' : ' is-dup'}`;
   result.innerHTML = `<div class="bx-card-shadow" aria-hidden="true"></div><div class="bx-card3d">
       <div class="bx-fx" aria-hidden="true"><i></i></div>
       <div class="bx-gloss" aria-hidden="true"><b class="foil"></b><s class="hl"></s></div>
@@ -727,7 +726,7 @@ result.addEventListener('pointermove', (e) => {
   const y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
   // On écrit directement les transform (pas de variables CSS sur la carte : une variable changée sur la carte est
   // héritée par tout son contenu, et Chrome redessinait alors chaque pièce à chaque mouvement de souris)
-  card.style.transform = `rotateX(${((0.5 - y) * 8).toFixed(2)}deg) rotateY(${((x - 0.5) * 10).toFixed(2)}deg)`;
+  if (!NO_TILT) card.style.transform = `rotateX(${((0.5 - y) * 8).toFixed(2)}deg) rotateY(${((x - 0.5) * 10).toFixed(2)}deg)`;
   // le reflet glisse jusque sous la souris (décalage en px depuis le centre : un déplacement, pas un redessin)
   const hl = card.querySelector('.bx-gloss .hl');
   if (hl) hl.style.transform = `translate(${Math.round((x - 0.5) * card.offsetWidth)}px, ${Math.round((y - 0.5) * card.offsetHeight)}px)`;

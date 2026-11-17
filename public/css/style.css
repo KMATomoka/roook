@@ -2675,10 +2675,6 @@ html:has(body.bx-opening), body.bx-opening { overflow: hidden; overscroll-behavi
 .bx-card-shadow { position: absolute; inset: 14px; border-radius: 22px; pointer-events: none;
   box-shadow: 0 34px 90px rgba(0, 0, 0, 0.6), 0 0 95px 6px color-mix(in srgb, var(--c) 50%, transparent); }
 .bx-card3d > * { position: relative; z-index: 1; }
-/* Firefox, Zen : un filtre (invisible) oblige le moteur à dessiner la carte d'abord à plat, d'un bloc, puis à la faire
-   pencher comme une image. Sans lui, la carte arrondie était dessinée en neuf morceaux et leurs raccords se voyaient
-   pendant la bascule (traits et angles aux coins). */
-.bx-result.gecko .bx-card3d { filter: drop-shadow(0 0 0.5px rgba(0, 0, 0, 0)); }
 /* Les effets de la carte vivent dans deux cadres fixes, découpés à sa forme arrondie (rayon 22 px moins la bordure) :
    .bx-fx derrière le contenu (le fond du palier), .bx-gloss devant (reflet de la souris, arc-en-ciel). Tout ce qui y
    bouge glisse ou tourne (transform) : la carte n'est jamais redessinée pendant qu'elle penche, sinon Chrome la
@@ -2753,7 +2749,7 @@ html:has(body.bx-opening), body.bx-opening { overflow: hidden; overscroll-behavi
   padding: 3px 10px; border-radius: 6px; font: 900 0.7rem var(--font); letter-spacing: 0.16em; text-transform: uppercase;
   color: #0c0a16; background: #ffd84a; box-shadow: 0 0 14px rgba(255, 216, 74, 0.6); transform: rotate(4deg);
 }
-.bx-res-art { display: grid; place-items: center; min-height: 250px; margin: 6px 0 4px; transition: transform 0.2s ease-out; }
+.bx-res-art { display: grid; place-items: center; min-height: 250px; margin: 6px 0 4px; }
 .bx-card3d h2 { margin: 6px 0 2px; font: 800 clamp(1.4rem, 5vw, 1.75rem) / 1.1 var(--serif); text-transform: uppercase; letter-spacing: 0.03em; text-shadow: 0 0 20px color-mix(in srgb, var(--c) 60%, transparent); }
 .bx-res-sub { margin: 0; color: var(--muted); font-weight: 600; }
 .bx-res-demo { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 10px; }

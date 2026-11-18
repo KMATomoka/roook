@@ -15,7 +15,7 @@ import {
   PACKS, PACK_COLOR, SLOT_NAMES, RARITY, PIECE_TYPES, PIECE_NAMES, PIECE_ROLE, PACK_ITEMS,
   themeClasses, setEquip, equipOwnedPieces, getEquip, itemName, loadPackFont, packHas,
 } from './theme.js';
-import { RATES, DUST_PER_BOX, watchBoxes, openBox, grantTestBox, isSpecial } from './box.js';
+import { RATES, RARE_RATES, DUST_PER_RARE, DUST_PER_BOX, watchBoxes, openBox, grantTestBox, isSpecial } from './box.js';
 import { createFx } from './fx.js';
 import { boxMusic, unlockAudio, warmAudio, stopAllSounds } from './sound.js';
 // Téléphones et petites tablettes : effets allégés (même règle que js/coffre3d.js)
@@ -33,7 +33,7 @@ const TIERS = {
   rare: { name: 'Rare', color: RARITY.rare.color },
   epique: { name: 'Épique', color: RARITY.epique.color },
   legendaire: { name: 'Légendaire', color: RARITY.legendaire.color },
-  jeu: { name: 'Jeu complet', color: '#3cf2a3' },
+  jeu: { name: 'Pack de pièces', color: '#3cf2a3' },
 };
 const packById = (id) => PACKS.find((p) => p.id === id);
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -141,7 +141,7 @@ const ratesHTML = (rates) => `<span class="bx-rates-head">Taux de drop</span>
 // Taux prévus pour les autres coffres : affichés seulement, ces coffres ne s'ouvrent pas encore
 const CHEST_RATES = {
   commun: RATES,
-  rare: [{ id: 'jeu', pct: 0.5 }, { id: 'legendaire', pct: 7.5 }, { id: 'epique', pct: 17 }, { id: 'rare', pct: 45 }, { id: 'commun', pct: 30 }],
+  rare: RARE_RATES,
   epique: [{ id: 'jeu', pct: 1.5 }, { id: 'legendaire', pct: 18.5 }, { id: 'epique', pct: 45 }, { id: 'rare', pct: 35 }],
   legendaire: [{ id: 'jeu', pct: 5 }, { id: 'legendaire', pct: 55 }, { id: 'epique', pct: 40 }],
 };
@@ -164,6 +164,17 @@ const haveHTML = (n, canOpen) => `<p class="bx-have${n ? '' : ' none'}">Tu as <b
       <button class="btn btn-primary bx-open-btn" type="button"${canOpen ? ' data-open' : ''} ${n && canOpen ? '' : 'disabled'}>${ico('key')} Ouvrir</button>
     </div>`;
 
+/** La jauge de poussière d'étoile et son bouton, pour acheter un coffre (commun ou rare). */
+const dustHTML = (chest) => {
+  const cost = chest === 'rare' ? DUST_PER_RARE : DUST_PER_BOX;
+  const ok = state.dust >= cost && !banned;
+  return `<div class="bx-dust">
+      <span>${ico('dust')} Poussière d’étoile : <b>${state.dust}</b> / ${cost} <button class="bx-info bx-help" type="button" data-info data-help="dust" aria-label="C’est quoi, la poussière d’étoile ?" aria-expanded="false">?</button></span>
+      <div class="bx-dust-bar"><i style="width:${Math.min(100, (state.dust / cost) * 100)}%"></i></div>
+      <button class="btn btn-ghost small" type="button" data-dust="${chest}" ${ok ? '' : 'disabled'}>Ouvrir un coffre${chest === 'rare' ? ' rare' : ''} avec ${cost} ${ico('dust')}</button>
+    </div>`;
+};
+
 /** Une carte du carrousel. */
 const slideHTML = (c) => {
   const isCommun = c.id === 'commun';
@@ -172,7 +183,7 @@ const slideHTML = (c) => {
     <div class="bx-slide-body">
       <span class="bx-chest-rarity">${c.rarity}</span>
       <h2 class="bx-title">${c.name} <button class="bx-info" type="button" data-info aria-label="Infos sur le ${c.name.toLowerCase()}" aria-expanded="false">i</button></h2>
-      <div class="bx-slide-dyn"${isCommun ? ' id="bx-commun-body"' : ''}>${isCommun ? '' : haveHTML(0, false)}</div>
+      <div class="bx-slide-dyn"${isCommun ? ' id="bx-commun-body"' : c.id === 'rare' ? ' id="bx-rare-body"' : ''}>${isCommun ? '' : haveHTML(0, false)}</div>
     </div>
   </article>`;
 };
@@ -309,7 +320,7 @@ function showPop(btn) {
     el.innerHTML = btn.dataset.help === 'dust'
       ? `${close}<h3>${ico('dust')} Poussière d’étoile</h3>
         <p>Quand un coffre te donne un objet que tu as déjà, il se transforme en poussière d’étoile. Plus il est rare, plus tu en reçois.</p>
-        <p>Réunis-en ${DUST_PER_BOX} ${ico('dust')} pour ouvrir un coffre commun gratuit.</p>`
+        <p>Réunis-en ${DUST_PER_BOX} ${ico('dust')} pour ouvrir un coffre commun gratuit, ou ${DUST_PER_RARE} ${ico('dust')} pour un coffre rare.</p>`
       : `${close}<h3>${c.name}</h3>${ratesHTML(CHEST_RATES[c.id])}`;
     el.style.setProperty('--c', btn.dataset.help === 'dust' ? '#ffd84a' : c.color);
     pop.for?.setAttribute('aria-expanded', 'false');
@@ -377,16 +388,11 @@ function renderMain() {
   if (pop.for && !pop.for.isConnected) hidePop();
   const n = state.keys.length;
   const specials = state.keys.filter(isSpecial).length;
-  const dustOk = state.dust >= DUST_PER_BOX;
   slide.classList.toggle('has', n > 0);
   art.querySelector('.bx-count')?.remove();
   art.insertAdjacentHTML('beforeend', `<span class="bx-count${n ? '' : ' zero'}">×${n}</span>`);
-  body.innerHTML = `${haveHTML(n, !banned)}
-    <div class="bx-dust">
-      <span>${ico('dust')} Poussière d’étoile : <b>${state.dust}</b> / ${DUST_PER_BOX} <button class="bx-info bx-help" type="button" data-info data-help="dust" aria-label="C’est quoi, la poussière d’étoile ?" aria-expanded="false">?</button></span>
-      <div class="bx-dust-bar"><i style="width:${Math.min(100, (state.dust / DUST_PER_BOX) * 100)}%"></i></div>
-      <button class="btn btn-ghost small" type="button" data-dust ${dustOk && !banned ? '' : 'disabled'}>Ouvrir un coffre avec ${DUST_PER_BOX} ${ico('dust')}</button>
-    </div>`;
+  body.innerHTML = `${haveHTML(n, !banned)}${dustHTML('commun')}`;
+  $('#bx-rare-body').innerHTML = `${haveHTML(0, false)}${dustHTML('rare')}`;
   under.innerHTML = `${specials ? `<p class="bx-staff"><button class="btn btn-primary small" type="button" data-open-special ${banned ? 'disabled' : ''}>${ico('key')} Ouvrir un coffre spécial ×${specials}</button> <span class="muted">50 % épique, 50 % légendaire</span></p>` : ''}
     ${staff ? `<p class="bx-staff"><button class="btn btn-ghost small" type="button" data-grant>${ico('tools')} +1 coffre de test</button> <button class="btn btn-ghost small" type="button" data-grant-special>${ico('tools')} +1 coffre spécial (épique ou légendaire)</button> <span class="muted">(admins et fondateur)</span></p>` : ''}`;
   placeCardChest(n);
@@ -728,7 +734,7 @@ function tierUp(id) {
   stopHum();
   stopHum = () => {};
   flash(t.color, 0.55, 600);
-  slam(id === 'jeu' ? 'Jeu complet ?!' : `${t.name} !`, t.color);
+  slam(id === 'jeu' ? 'Pack de pièces ?!' : `${t.name} !`, t.color);
   ring(t.color, 4.5);
   const c = center();
   emit({ x: c.x, y: c.y, n: 40, speed: [4, 12], color: [t.color, '#fff'], kind: 'star', size: [2, 4], life: [40, 70], gravity: 0.05, drag: 0.95 });
@@ -827,7 +833,7 @@ async function doOpen(key, fake = null, variant = 'commun') {
   let res;
   try {
     // Le tirage est fait et enregistré tout de suite (une box ne s'ouvre qu'une fois) ; la suite est le spectacle
-    [res] = await Promise.all([fake || openBox(uid, key, state), reduce ? null : landing()]);
+    [res] = await Promise.all([fake || openBox(uid, key, state, variant), reduce ? null : landing()]);
   } catch (e) {
     closeStage();
     opening = false;
@@ -1053,7 +1059,8 @@ document.addEventListener('click', async (e) => {
   // le bouton principal ouvre d'abord les coffres normaux ; les coffres spéciaux ont leur bouton
   if (e.target.closest('[data-open]')) return state.keys.length && doOpen(state.keys.find((k) => !isSpecial(k)) || state.keys[0]);
   if (e.target.closest('[data-open-special]')) { const k = state.keys.find(isSpecial); return k && doOpen(k); }
-  if (e.target.closest('[data-dust]')) return doOpen(null);
+  const dustBtn = e.target.closest('[data-dust]');
+  if (dustBtn) return doOpen(null, null, dustBtn.dataset.dust === 'rare' ? 'rare' : 'commun');
   if (e.target.closest('[data-grant-special]')) {
     try {
       await grantTestBox(uid, true);

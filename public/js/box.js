@@ -17,7 +17,7 @@ export const BOX_TYPES = {
 };
 /** Taux de drop de la box classique, en pourcentage. */
 export const RATES = [
-  { id: 'jeu', name: 'Jeu complet', pct: 0.3 },
+  { id: 'jeu', name: 'Pack de pièces', pct: 0.3 },
   { id: 'legendaire', name: 'Légendaire', pct: 2.5 },
   { id: 'epique', name: 'Épique', pct: 7.2 },
   { id: 'rare', name: 'Rare', pct: 25 },
@@ -26,6 +26,15 @@ export const RATES = [
 /** Poussière d'étoile donnée par un doublon, selon sa rareté. */
 export const DUST = { commun: 1, rare: 3, epique: 6, legendaire: 10, jeu: 20 };
 export const DUST_PER_BOX = 10;
+/** Le coffre rare, ouvert avec la poussière d'étoile : son prix et ses taux (moins d'épique et de légendaire). */
+export const DUST_PER_RARE = 50;
+export const RARE_RATES = [
+  { id: 'jeu', name: 'Pack de pièces', pct: 0.5 },
+  { id: 'legendaire', name: 'Légendaire', pct: 4 },
+  { id: 'epique', name: 'Épique', pct: 12 },
+  { id: 'rare', name: 'Rare', pct: 45 },
+  { id: 'commun', name: 'Commun', pct: 38.5 },
+];
 /** Coffre spécial de test : une box offerte dont la clé commence par ça donne 50 % épique, 50 % légendaire. */
 export const SPECIAL = 'special-';
 export const isSpecial = (key) => typeof key === 'string' && key.startsWith(SPECIAL);
@@ -58,9 +67,9 @@ export function watchBoxes(uid, cb) {
 
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 /** Tire une rareté selon les taux. */
-function rollRarity() {
+function rollRarity(rates = RATES) {
   let r = Math.random() * 100;
-  for (const t of RATES) {
+  for (const t of rates) {
     if (r < t.pct) return t.id;
     r -= t.pct;
   }
@@ -72,8 +81,8 @@ function rollRarity() {
  * Renvoie { rarity, pack, slots: [élément…], fresh: [élément…] (nouveaux), dust (gagnée en doublons) }.
  * Un élément : board, endAnim, capture, ou une pièce (P, R, N, B, Q, K).
  */
-export function drawBox(owned, forced = null) {
-  const rarity = forced || rollRarity();
+export function drawBox(owned, forced = null, rates = RATES) {
+  const rarity = forced || rollRarity(rates);
   const has = (p, s) => !!p.free || !!owned[p.id]?.[s] || (PIECE_TYPES.includes(s) && !!owned[p.id]?.pieces);
   if (rarity === 'jeu') {
     const missing = PACKS.filter((p) => p.box && PIECE_TYPES.some((t) => !has(p, t)));
@@ -93,14 +102,17 @@ export function drawBox(owned, forced = null) {
 
 /**
  * Ouvre une box (key : une victoire, une box offerte, ou null pour une box payée en ✨).
+ * chest : avec la poussière, le coffre acheté (commun : 10 ✨, rare : 50 ✨ et ses propres taux).
  * Enregistre tout d'un coup : la box ouverte, les nouveaux éléments, la poussière.
  */
-export async function openBox(uid, key, state) {
+export async function openBox(uid, key, state, chest = 'commun') {
   const fromDust = !key;
-  if (fromDust && state.dust < DUST_PER_BOX) throw new Error(`Il te faut ${DUST_PER_BOX} poussières d’étoile pour ouvrir un coffre.`);
+  const rare = fromDust && chest === 'rare';
+  const cost = fromDust ? (rare ? DUST_PER_RARE : DUST_PER_BOX) : 0;
+  if (fromDust && state.dust < cost) throw new Error(`Il te faut ${cost} poussières d’étoile pour ouvrir ce coffre.`);
   const boxKey = key || 'dust-' + push(ref(db, `loot/${uid}/opened`)).key;
-  const res = drawBox(state.owned, isSpecial(key) ? (Math.random() < 0.5 ? 'epique' : 'legendaire') : null);
-  const dust = state.dust - (fromDust ? DUST_PER_BOX : 0) + res.dust;
+  const res = drawBox(state.owned, isSpecial(key) ? (Math.random() < 0.5 ? 'epique' : 'legendaire') : null, rare ? RARE_RATES : RATES);
+  const dust = state.dust - cost + res.dust;
   const up = {
     [`loot/${uid}/opened/${boxKey}`]: {
       at: serverTimestamp(),

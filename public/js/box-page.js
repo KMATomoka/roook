@@ -305,9 +305,13 @@ function showPop(btn) {
   clearTimeout(pop.timer);
   if (pop.for !== btn || el.hidden) {
     const c = CHESTS.find((x) => x.id === btn.closest('.bx-slide').dataset.chest);
-    el.innerHTML = `<button class="bx-pop-close" type="button" data-pop-close aria-label="Fermer">✕</button>
-      <h3>${c.name}</h3>${ratesHTML(CHEST_RATES[c.id])}`;
-    el.style.setProperty('--c', c.color);
+    const close = '<button class="bx-pop-close" type="button" data-pop-close aria-label="Fermer">✕</button>';
+    el.innerHTML = btn.dataset.help === 'dust'
+      ? `${close}<h3>${ico('dust')} Poussière d’étoile</h3>
+        <p>Tu en gagnes quand un coffre te donne un objet que tu as déjà. Plus il est rare, plus tu en gagnes.</p>
+        <p>Avec ${DUST_PER_BOX} ${ico('dust')}, tu ouvres un coffre commun en plus.</p>`
+      : `${close}<h3>${c.name}</h3>${ratesHTML(CHEST_RATES[c.id])}`;
+    el.style.setProperty('--c', btn.dataset.help === 'dust' ? '#ffd84a' : c.color);
     pop.for?.setAttribute('aria-expanded', 'false');
     pop.for = btn;
     btn.setAttribute('aria-expanded', 'true');
@@ -370,6 +374,7 @@ function renderMain() {
     return;
   }
   if (!state.ready) return;
+  if (pop.for && !pop.for.isConnected) hidePop();
   const n = state.keys.length;
   const specials = state.keys.filter(isSpecial).length;
   const dustOk = state.dust >= DUST_PER_BOX;
@@ -378,7 +383,7 @@ function renderMain() {
   art.insertAdjacentHTML('beforeend', `<span class="bx-count${n ? '' : ' zero'}">×${n}</span>`);
   body.innerHTML = `${haveHTML(n, !banned)}
     <div class="bx-dust">
-      <span>${ico('dust')} Poussière d’étoile : <b>${state.dust}</b> / ${DUST_PER_BOX}</span>
+      <span>${ico('dust')} Poussière d’étoile : <b>${state.dust}</b> / ${DUST_PER_BOX} <button class="bx-info bx-help" type="button" data-info data-help="dust" aria-label="C’est quoi, la poussière d’étoile ?" aria-expanded="false">?</button></span>
       <div class="bx-dust-bar"><i style="width:${Math.min(100, (state.dust / DUST_PER_BOX) * 100)}%"></i></div>
       <button class="btn btn-ghost small" type="button" data-dust ${dustOk && !banned ? '' : 'disabled'}>Ouvrir un coffre avec ${DUST_PER_BOX} ${ico('dust')}</button>
     </div>`;

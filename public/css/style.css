@@ -2509,6 +2509,11 @@ body { overflow-x: clip; position: relative; }
   .bx-slide .bx-info { cursor: help; }
 }
 .bx-info[aria-expanded='true'] { color: var(--c); border-color: var(--c); }
+/* le « ? » de la poussière d'étoile, et le texte de sa bulle */
+.bx-info.bx-help { width: 20px; height: 20px; margin-left: 4px; vertical-align: -3px; font: 800 0.75rem var(--font); font-style: normal; }
+.bx-pop p { margin: 0 0 6px; font-size: 0.86rem; line-height: 1.4; color: var(--text); }
+.bx-pop p:last-child { margin-bottom: 0; }
+.bx-pop h3 .ui-ico, .bx-pop p .ui-ico { width: 1.1em; height: 1.1em; vertical-align: -0.15em; }
 @keyframes bx-pop-in { from { opacity: 0; translate: 0 4px; } }
 .bx-car-nav {
   position: absolute; top: 50%; z-index: 4; width: 42px; height: 42px; translate: 0 -50%; border-radius: 50%; cursor: pointer;

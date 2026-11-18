@@ -813,8 +813,8 @@ function startOnline() {
 
     if (s.status === 'over' && !wasOver) {
       finish({ result: s.result, reason: s.reason });
-    } else if (s.status !== 'over' && over) {
-      // Revanche acceptée : nouvelle partie
+    } else if (s.status !== 'over' && over && (s.round || 0) !== lastRound) {
+      // Revanche acceptée : nouvelle partie (nouvelle manche ; un vieil état « en cours » ne doit pas effacer la fin)
       over = null;
       fx.reset();
       lowWarned.w = lowWarned.b = false;

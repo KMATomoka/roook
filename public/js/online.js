@@ -228,9 +228,11 @@ export function gameSocket(gameId, user) {
       }
       ack({ color, chat: [], round: g.round, random: !!g.mm });
 
+      let seen = 0; // numéro du dernier état reçu
       onValue(gRef, (s) => {
         const game = s.val();
         if (!game) return;
+        const mine = ++seen;
         if (round !== null && game.round !== round) {
           // Revanche : les couleurs sont inversées
           color = seatOf(game);
@@ -243,6 +245,10 @@ export function gameSocket(gameId, user) {
         else if (game.status === 'over') unmarkPlaying();
         if (game.status === 'over') saveHistory(game);
         else checkBoardEnd(game);
+        // checkBoardEnd peut écrire la fin de partie (mat constaté par le joueur maté) : Firebase relance alors ce
+        // rappel tout de suite, avec l'état « terminé », avant d'avoir fini celui-ci. L'état d'ici est donc périmé :
+        // l'envoyer après ferait croire à une revanche, ce qui effaçait l'animation de mat chez le perdant.
+        if (mine !== seen) return;
         fire('state', publicState(game));
       });
       onChildAdded(ref(db, `games/${gameId}/chat`), (s) => fire('chat', s.val()));

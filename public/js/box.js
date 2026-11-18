@@ -17,11 +17,11 @@ export const BOX_TYPES = {
 };
 /** Taux de drop de la box classique, en pourcentage. */
 export const RATES = [
-  { id: 'jeu', name: 'Pack de pièces', pct: 0.3 },
+  { id: 'jeu', name: 'Pack de pièces', pct: 0.1 },
   { id: 'legendaire', name: 'Légendaire', pct: 2.5 },
   { id: 'epique', name: 'Épique', pct: 7.2 },
   { id: 'rare', name: 'Rare', pct: 25 },
-  { id: 'commun', name: 'Commun', pct: 65 },
+  { id: 'commun', name: 'Commun', pct: 65.2 },
 ];
 /** Poussière d'étoile donnée par un doublon, selon sa rareté. */
 export const DUST = { commun: 1, rare: 3, epique: 6, legendaire: 10, jeu: 20 };
@@ -31,9 +31,9 @@ export const DUST_PER_RARE = 50;
 export const RARE_RATES = [
   { id: 'jeu', name: 'Pack de pièces', pct: 0.5 },
   { id: 'legendaire', name: 'Légendaire', pct: 4 },
-  { id: 'epique', name: 'Épique', pct: 12 },
+  { id: 'epique', name: 'Épique', pct: 10 },
   { id: 'rare', name: 'Rare', pct: 45 },
-  { id: 'commun', name: 'Commun', pct: 38.5 },
+  { id: 'commun', name: 'Commun', pct: 40.5 },
 ];
 /** Coffre spécial de test : une box offerte dont la clé commence par ça donne 50 % épique, 50 % légendaire. */
 export const SPECIAL = 'special-';

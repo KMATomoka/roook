@@ -161,18 +161,12 @@ const CHESTS = [
 /** Une carte du carrousel. */
 const slideHTML = (c) => {
   const isCommun = c.id === 'commun';
-  const info = ratesHTML(CHEST_RATES[c.id]);
   return `<article class="bx-slide${isCommun ? '' : ' soon'}" data-chest="${c.id}" style="--c:${c.color}" aria-roledescription="carte" aria-label="${c.name}">
     <div class="bx-slide-art"${isCommun ? ' id="bx-card-art"' : ` data-variant="${c.id}"`}>${isCommun ? '' : '<span class="bx-count zero">×0</span>'}</div>
     <div class="bx-slide-body">
       <span class="bx-chest-rarity">${c.rarity}</span>
       <h2 class="bx-title">${c.name} <button class="bx-info" type="button" data-info aria-label="Infos sur le ${c.name.toLowerCase()}" aria-expanded="false">i</button></h2>
       <div class="bx-slide-dyn"${isCommun ? ' id="bx-commun-body"' : ''}>${isCommun ? '' : `<p class="bx-slide-soon">${ico('lock')} Bientôt</p>`}</div>
-    </div>
-    <div class="bx-slide-info">
-      <button class="bx-slide-close" type="button" data-info-close aria-label="Fermer les infos">✕</button>
-      <h3>${c.name}</h3>
-      ${info}
     </div>
   </article>`;
 };
@@ -184,6 +178,7 @@ function buildCarousel() {
       <button class="bx-car-nav prev" type="button" data-car="-1" aria-label="Coffre précédent">‹</button>
       <div class="bx-car-track" id="bx-car-track" tabindex="0" aria-label="Les coffres (flèches gauche et droite)">${CHESTS.map(slideHTML).join('')}</div>
       <button class="bx-car-nav next" type="button" data-car="1" aria-label="Coffre suivant">›</button>
+      <div class="bx-pop" id="bx-pop" role="dialog" aria-label="Taux de drop" hidden></div>
     </div>
     <div class="bx-car-dots" role="tablist">${CHESTS.map((c, i) => `<button class="bx-car-dot" type="button" data-go="${i}" style="--c:${c.color}" aria-label="${c.name}"></button>`).join('')}</div>
     <div class="bx-under" id="bx-under"></div>`;
@@ -235,13 +230,16 @@ function buildCarousel() {
   let moved = false;
   track.addEventListener('pointerdown', (e) => {
     moved = false;
-    if (e.button !== 0 || e.target.closest('button, a, .bx-slide-info')) return;
+    if (e.button !== 0 || e.target.closest('button, a')) return;
     x0 = e.clientX;
   });
   addEventListener('pointermove', (e) => {
     if (x0 === null) return;
     drag = e.clientX - x0;
-    if (Math.abs(drag) > 8) moved = true;
+    if (Math.abs(drag) > 8 && !moved) {
+      moved = true;
+      hidePop();
+    }
     if (moved) carousel.layout(false);
   });
   const release = () => {
@@ -267,6 +265,21 @@ function buildCarousel() {
     if (e.key === 'ArrowRight') goSlide(carousel.cur + 1);
     else if (e.key === 'ArrowLeft') goSlide(carousel.cur - 1);
   });
+  // ⓘ : sur ordinateur la bulle s'ouvre au survol et reste ouverte tant que la souris est dessus
+  const popEl = $('#bx-pop');
+  if (CAN_HOVER) {
+    track.addEventListener('pointerover', (e) => {
+      const b = e.target.closest('.bx-info');
+      if (b) showPop(b);
+    });
+    track.addEventListener('pointerout', (e) => {
+      if (e.target.closest('.bx-info')) hidePop(200);
+    });
+    popEl.addEventListener('pointerenter', () => clearTimeout(pop.timer));
+    popEl.addEventListener('pointerleave', () => hidePop(150));
+  }
+  addEventListener('resize', placePop);
+  addEventListener('keydown', (e) => e.key === 'Escape' && hidePop());
   // La 3D des trois autres coffres : un seul contexte WebGL pour les trois, après le coffre commun
   loadChest3d().then((mod) => (window.requestIdleCallback || setTimeout)(() => {
     const hosts = [...track.querySelectorAll('.bx-slide-art[data-variant]')];
@@ -274,13 +287,62 @@ function buildCarousel() {
     if (showcase && opening) showcase.setPaused(true);
   }, { timeout: 1500 }));
 }
+// ---------------------------------------------------------------------------
+// Bulle ⓘ : les taux de drop du coffre, dans une petite fenêtre au-dessus du bouton (en dessous s'il n'y a pas
+// la place). Elle vit hors des cartes, pour ne pas être coupée par leurs bords.
+// ---------------------------------------------------------------------------
+const CAN_HOVER = matchMedia('(hover: hover) and (pointer: fine)').matches;
+const pop = { for: null, timer: 0 };
+function showPop(btn) {
+  const el = $('#bx-pop');
+  if (!el) return;
+  clearTimeout(pop.timer);
+  if (pop.for !== btn || el.hidden) {
+    const c = CHESTS.find((x) => x.id === btn.closest('.bx-slide').dataset.chest);
+    el.innerHTML = `<button class="bx-pop-close" type="button" data-pop-close aria-label="Fermer">✕</button>
+      <h3>${c.name}</h3>${ratesHTML(CHEST_RATES[c.id])}`;
+    el.style.setProperty('--c', c.color);
+    pop.for?.setAttribute('aria-expanded', 'false');
+    pop.for = btn;
+    btn.setAttribute('aria-expanded', 'true');
+    el.hidden = false;
+  }
+  placePop();
+}
+function placePop() {
+  const el = $('#bx-pop');
+  if (!el || el.hidden || !pop.for) return;
+  const host = el.parentElement.getBoundingClientRect();
+  const b = pop.for.getBoundingClientRect();
+  const w = el.offsetWidth;
+  const h = el.offsetHeight;
+  const cx = b.left + b.width / 2 - host.left;
+  const x = Math.max(8, Math.min(host.width - w - 8, cx - w / 2));
+  const above = b.top - h - 14 > 64; // pas sous la barre du haut
+  el.style.left = `${x}px`;
+  el.style.top = `${above ? b.top - host.top - h - 14 : b.bottom - host.top + 14}px`;
+  el.style.setProperty('--ax', `${cx - x}px`);
+  el.classList.toggle('below', !above);
+}
+function hidePop(delay = 0) {
+  clearTimeout(pop.timer);
+  const go = () => {
+    const el = $('#bx-pop');
+    if (el) el.hidden = true;
+    pop.for?.setAttribute('aria-expanded', 'false');
+    pop.for = null;
+  };
+  if (delay) pop.timer = setTimeout(go, delay);
+  else go();
+}
+
 /** Le carrousel (infini) : la carte du centre. */
 const carousel = { cur: 0, layout: () => {} };
 /** Amène la carte i au centre (en boucle : -1 donne la dernière). */
 function goSlide(i) {
   const n = $('#bx-car-track')?.children.length || 1;
   carousel.cur = ((i % n) + n) % n;
-  for (const sl of document.querySelectorAll('.bx-slide.flipped')) sl.classList.remove('flipped');
+  hidePop();
   carousel.layout();
 }
 
@@ -956,19 +1018,18 @@ result.addEventListener('pointerleave', () => {
 // Clics
 // ---------------------------------------------------------------------------
 document.addEventListener('click', async (e) => {
-  // Carrousel : flèches, points, ⓘ qui retourne la carte
+  // Carrousel : flèches, points, ⓘ qui ouvre la bulle des taux
   const nav = e.target.closest('[data-car]');
   if (nav) return goSlide(carousel.cur + Number(nav.dataset.car));
   const dot = e.target.closest('[data-go]');
   if (dot) return goSlide(Number(dot.dataset.go));
-  const flip = e.target.closest('[data-info], [data-info-close]');
-  if (flip) {
-    const sl = flip.closest('.bx-slide');
-    const show = flip.hasAttribute('data-info') && !sl.classList.contains('flipped');
-    sl.classList.toggle('flipped', show);
-    sl.querySelector('[data-info]').setAttribute('aria-expanded', String(show));
+  const infoBtn = e.target.closest('[data-info]');
+  if (infoBtn) {
+    if (pop.for === infoBtn && !CAN_HOVER) hidePop();
+    else showPop(infoBtn);
     return;
   }
+  if (e.target.closest('[data-pop-close]') || (pop.for && !e.target.closest('#bx-pop'))) hidePop();
   // Bulle ⓘ des taux : un toucher l'ouvre ou la ferme ; un clic ailleurs la ferme
   const info = e.target.closest('.bx-info');
   for (const w of document.querySelectorAll('.bx-info-wrap.open')) {

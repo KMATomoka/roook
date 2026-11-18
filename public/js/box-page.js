@@ -370,10 +370,9 @@ function renderMain() {
   slide.classList.toggle('has', n > 0);
   art.querySelector('.bx-count')?.remove();
   art.insertAdjacentHTML('beforeend', `<span class="bx-count${n ? '' : ' zero'}">×${n}</span>`);
-  body.innerHTML = `<p class="bx-have">${n ? `Tu as <b>${n} coffre${n > 1 ? 's' : ''}</b> à ouvrir.` : 'Gagne une partie en ligne pour en avoir un.'}</p>
+  body.innerHTML = `${n ? `<p class="bx-have">Tu as <b>${n} coffre${n > 1 ? 's' : ''}</b> à ouvrir.</p>` : ''}
     <div class="bx-actions">
       <button class="btn btn-primary bx-open-btn" type="button" data-open ${n && !banned ? '' : 'disabled'}>${ico('key')} Ouvrir</button>
-      <a class="btn btn-ghost" href="jouer.html">Jouer en ligne</a>
     </div>
     <div class="bx-dust">
       <span>${ico('dust')} Poussière d’étoile : <b>${state.dust}</b> / ${DUST_PER_BOX}</span>

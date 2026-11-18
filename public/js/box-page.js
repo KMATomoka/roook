@@ -308,8 +308,8 @@ function showPop(btn) {
     const close = '<button class="bx-pop-close" type="button" data-pop-close aria-label="Fermer">✕</button>';
     el.innerHTML = btn.dataset.help === 'dust'
       ? `${close}<h3>${ico('dust')} Poussière d’étoile</h3>
-        <p>Tu en gagnes quand un coffre te donne un objet que tu as déjà. Plus il est rare, plus tu en gagnes.</p>
-        <p>Avec ${DUST_PER_BOX} ${ico('dust')}, tu ouvres un coffre commun en plus.</p>`
+        <p>Quand un coffre te donne un objet que tu as déjà, il se transforme en poussière d’étoile. Plus il est rare, plus tu en reçois.</p>
+        <p>Réunis-en ${DUST_PER_BOX} ${ico('dust')} pour ouvrir un coffre commun gratuit.</p>`
       : `${close}<h3>${c.name}</h3>${ratesHTML(CHEST_RATES[c.id])}`;
     el.style.setProperty('--c', btn.dataset.help === 'dust' ? '#ffd84a' : c.color);
     pop.for?.setAttribute('aria-expanded', 'false');

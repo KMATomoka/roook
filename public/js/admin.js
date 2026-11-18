@@ -4,11 +4,12 @@
 import { $, escapeHtml } from './common.js';
 import { ico } from './icons.js'; // icônes dessinées (à la place des emojis)
 import { session, toast, picHtml, isBanActive, banEndText, profileUrl, roleBadge, isOnline, isPlaying } from './compte.js';
-import { db, ref, get, set, remove, onValue, serverTimestamp, serverNow, sendPasswordResetEmail, auth } from './fb.js';
+import { db, ref, get, set, remove, onValue, serverTimestamp, serverNow, sendPasswordResetEmail, auth, isLegacyEmail } from './fb.js';
 
 const { user, banned } = await session;
 
-const data = { users: {}, private: {}, status: {}, roles: {}, bans: {}, avatars: {}, games: {}, friends: {} };
+// Les adresses e-mail des membres ne sont ni chargées ni affichées ici (confidentialité).
+const data = { users: {}, status: {}, roles: {}, bans: {}, avatars: {}, games: {}, friends: {} };
 let openId = null; // fiche ouverte
 let banTarget = null;
 
@@ -25,7 +26,7 @@ if (banned) {
 function start() {
   $('#admin-app').hidden = false;
   // Tout est suivi en direct : un nouveau membre, une connexion, un bannissement apparaissent tout seuls
-  for (const node of ['users', 'private', 'status', 'roles', 'bans', 'avatars']) {
+  for (const node of ['users', 'status', 'roles', 'bans', 'avatars']) {
     onValue(
       ref(db, node),
       (s) => {
@@ -86,7 +87,6 @@ function members() {
         username: u.username,
         bio: typeof u.bio === 'string' ? u.bio : '',
         createdAt: u.createdAt || 0,
-        email: data.private[id]?.email || null,
         online: isOnline(st),
         playing: isPlaying(st),
         lastSeen: isOnline(st) ? serverNow() : st.lastSeen || 0,
@@ -126,7 +126,7 @@ function render() {
   const sort = $('#member-sort').value;
   let list = all.filter(
     (m) =>
-      (!q || m.username.toLowerCase().includes(q) || (m.email || '').toLowerCase().includes(q)) &&
+      (!q || m.username.toLowerCase().includes(q)) &&
       (filter === 'all' || (filter === 'online' && m.online) || (filter === 'banned' && m.ban) || (filter === 'admin' && m.admin)),
   );
   const by = {
@@ -157,7 +157,6 @@ function row(m) {
       ${picHtml(m.username, m.avatar, 'person-avatar', `<i class="presence ${presence}"></i>`)}
       <span class="member-id">
         <span class="member-name">${escapeHtml(m.username)} ${badges}</span>
-        <span class="member-email">${m.email ? escapeHtml(m.email) : '<em>ancien compte, sans e-mail</em>'}</span>
       </span>
       <span class="member-col"><small>Inscrit</small>${date(m.createdAt)}</span>
       <span class="member-col"><small>Statut</small>${statusTxt}</span>
@@ -178,7 +177,7 @@ function details(m, me) {
   else if (!me && !m.admin) actions.push(`<button class="btn btn-danger small" data-a="ban">${ico('ban')} Bannir…</button>`);
   if (m.avatar) actions.push(`<button class="btn btn-ghost small" data-a="photo">${ico('noPhoto')} Retirer la photo</button>`);
   if (m.bio) actions.push(`<button class="btn btn-ghost small" data-a="bio">${ico('broom')} Effacer la bio</button>`);
-  if (m.email) actions.push(`<button class="btn btn-ghost small" data-a="reset">${ico('mail')} Envoyer un lien « nouveau mot de passe »</button>`);
+  actions.push(`<button class="btn btn-ghost small" data-a="reset">${ico('mail')} Envoyer un lien « nouveau mot de passe »</button>`);
   actions.unshift(`<a class="btn btn-ghost small" href="${profileUrl(m.id)}">${ico('user')} Voir le profil</a>`);
   // Nommer admin : admins et fondateur. Retirer le rôle d'un admin : le fondateur seulement. Le fondateur est intouchable.
   if (!me && m.role === 'member') actions.push(`<button class="btn btn-ghost small" data-a="promote">${ico('shield')} Nommer admin</button>`);
@@ -186,7 +185,6 @@ function details(m, me) {
   return `<div class="member-details">
     ${banInfo}
     <dl class="member-facts">
-      <div><dt>E-mail</dt><dd>${m.email ? escapeHtml(m.email) : '—'}</dd></div>
       <div><dt>Inscription</dt><dd>${date(m.createdAt)}</dd></div>
       <div><dt>Dernière connexion</dt><dd>${m.online ? 'en ligne maintenant' : ago(m.lastSeen)}</dd></div>
       <div><dt>Rôle</dt><dd>${m.role === 'fondateur' ? 'Fondateur' : m.role === 'admin' ? 'Administrateur' : 'Membre'}</dd></div>
@@ -237,12 +235,15 @@ async function onClick(e) {
       toast(`Bio de <b>${escapeHtml(m.username)}</b> effacée.`, { cls: 'info' });
     }
     if (a === 'reset') {
-      if (!confirm(`Envoyer à ${m.email} un e-mail pour choisir un nouveau mot de passe ?`)) return;
-      await sendPasswordResetEmail(auth, m.email);
-      toast(`E-mail envoyé à <b>${escapeHtml(m.email)}</b>.`, { cls: 'info' });
+      if (!confirm(`Envoyer à ${m.username}, sur son adresse e-mail, un lien pour choisir un nouveau mot de passe ?`)) return;
+      // L'adresse est lue seulement ici, le temps de l'envoi, et n'est jamais affichée
+      const email = (await get(ref(db, `private/${id}/email`))).val();
+      if (isLegacyEmail(email)) return toast(`<b>${escapeHtml(m.username)}</b> n’a pas d’adresse e-mail (ancien compte) : impossible d’envoyer le lien.`, { cls: 'error' });
+      await sendPasswordResetEmail(auth, email);
+      toast(`Lien envoyé à <b>${escapeHtml(m.username)}</b>.`, { cls: 'info' });
     }
     if (a === 'promote') {
-      if (!confirm(`Nommer ${m.username} administrateur ? Il pourra bannir des membres et voir les adresses e-mail.`)) return;
+      if (!confirm(`Nommer ${m.username} administrateur ? Il pourra bannir des membres.`)) return;
       await set(ref(db, `roles/${id}`), 'admin');
       toast(`<b>${escapeHtml(m.username)}</b> est maintenant admin.`, { cls: 'info' });
     }

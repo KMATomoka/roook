@@ -169,7 +169,7 @@ const slideHTML = (c) => {
   const info = c.info || `<p class="bx-info-how">${ico(c.icon)}<span>${c.how}</span></p>
     <p class="muted">Son contenu sera dévoilé bientôt.</p>`;
   return `<article class="bx-slide${isCommun ? '' : ' soon'}" data-chest="${c.id}" style="--c:${c.color}" aria-roledescription="carte" aria-label="${c.name}">
-    <div class="bx-slide-art"${isCommun ? ' id="bx-card-art"' : ` data-variant="${c.id}"`}></div>
+    <div class="bx-slide-art"${isCommun ? ' id="bx-card-art"' : ` data-variant="${c.id}"`}>${isCommun ? '' : '<span class="bx-count zero">×0</span>'}</div>
     <div class="bx-slide-body">
       <span class="bx-chest-rarity">${c.rarity}</span>
       <h2 class="bx-title">${c.name} <button class="bx-info" type="button" data-info aria-label="Infos sur le ${c.name.toLowerCase()}" aria-expanded="false">i</button></h2>
@@ -203,15 +203,32 @@ function buildCarousel() {
   // Chaque carte est placée par rapport à la carte du centre : -1 à gauche, +1 à droite, ±2 hors de l'écran.
   // Le carrousel boucle : après le Légendaire revient le Commun. Une carte qui passe d'un bord à l'autre
   // le fait hors de l'écran, sans animation.
+  let prev = carousel.cur;
   carousel.layout = (anim = true) => {
     const w = slides[0].offsetWidth + GAP;
+    const tf = (d) => `translateX(${d * w + drag}px)${d ? ' scale(.94)' : ''}`;
+    // sens du déplacement : +1 quand on va vers la carte de droite (les cartes partent à gauche)
+    let dir = (((carousel.cur - prev) % N) + N) % N;
+    dir = dir === 0 ? 0 : dir <= N / 2 ? 1 : -1;
+    prev = carousel.cur;
     slides.forEach((sl, i) => {
       let d = (((i - carousel.cur) % N) + N) % N;
       if (d > N / 2) d -= N;
-      if (d === N / 2 && sl._d < 0) d = -d; // la carte du fond reste du côté d'où elle vient
+      if (d === N / 2) {
+        // la carte du fond attend du côté où l'on glisse (pour arriver par là), sinon du côté d'où elle vient
+        if (drag < 0) d = N / 2;
+        else if (drag > 0) d = -N / 2;
+        else if (sl._d < 0) d = -d;
+      }
       const jump = sl._d !== undefined && Math.abs(d - sl._d) > 1;
-      sl.style.transition = !anim || jump ? 'none' : '';
-      sl.style.transform = `translateX(${d * w + drag}px)${d ? ' scale(.94)' : ''}`;
+      if (anim && jump && Math.abs(d) < N / 2) {
+        // carte qui change de bord : on la pose d'abord hors de l'écran, du bon côté, puis elle glisse à sa place
+        sl.style.transition = 'none';
+        sl.style.transform = tf(d === 0 ? dir * (N / 2) : d + Math.sign(d));
+        void sl.offsetWidth;
+        sl.style.transition = '';
+      } else sl.style.transition = !anim || jump ? 'none' : '';
+      sl.style.transform = tf(d);
       sl.classList.toggle('is-active', d === 0);
       sl.toggleAttribute('inert', d !== 0);
       sl._d = d;
@@ -288,6 +305,7 @@ function renderMain() {
       <a class="btn btn-primary" href="connexion.html?retour=box.html">Se connecter</a>`;
     under.innerHTML = '';
     placeCardChest(0);
+    if (!art.querySelector('.bx-count')) art.insertAdjacentHTML('beforeend', '<span class="bx-count zero">×0</span>');
     return;
   }
   if (!state.ready) return;
@@ -296,7 +314,7 @@ function renderMain() {
   const dustOk = state.dust >= DUST_PER_BOX;
   slide.classList.toggle('has', n > 0);
   art.querySelector('.bx-count')?.remove();
-  if (n) art.insertAdjacentHTML('beforeend', `<span class="bx-count">×${n}</span>`);
+  art.insertAdjacentHTML('beforeend', `<span class="bx-count${n ? '' : ' zero'}">×${n}</span>`);
   body.innerHTML = `<p class="bx-have">${n ? `Tu as <b>${n} coffre${n > 1 ? 's' : ''}</b> à ouvrir.` : 'Gagne une partie en ligne pour en avoir un.'}</p>
     <div class="bx-actions">
       <button class="btn btn-primary bx-open-btn" type="button" data-open ${n && !banned ? '' : 'disabled'}>${ico('key')} Ouvrir</button>

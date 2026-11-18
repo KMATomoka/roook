@@ -2389,7 +2389,10 @@ body { overflow-x: clip; position: relative; }
 .bx-count {
   position: absolute; top: 6%; right: 4%; padding: 4px 12px; border-radius: 99px; font: 800 1.1rem var(--font);
   background: #3cf2a3; color: #0c0a16; box-shadow: 0 0 0 3px #0e0b1c, 0 0 18px rgba(60, 242, 163, 0.6);
+  z-index: 2; pointer-events: none;
 }
+/* Aucun coffre de ce type : pastille éteinte */
+.bx-count.zero { background: #2a2540; color: #9a93b8; box-shadow: 0 0 0 3px #0e0b1c; }
 .bx-card-body h2 { margin: 0 0 6px; }
 /* Bulle ⓘ des taux de drop, à côté du nom du coffre : au survol (ordinateur) ou d'un toucher (téléphone) */
 .bx-card-body { position: relative; }

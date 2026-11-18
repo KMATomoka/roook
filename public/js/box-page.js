@@ -135,16 +135,16 @@ let opening = false;
 // ---------------------------------------------------------------------------
 // Taux de drop
 // ---------------------------------------------------------------------------
-function renderRates() {
-  const who = (id) => {
-    if (id === 'jeu') return 'Les 6 pièces d’un pack d’un coup';
-    const list = PACKS.filter((p) => p.box && p.rarity === id).map((p) => p.name).join(', ');
-    return id === 'commun' ? `${list} : le plateau ou une pièce` : `${list} : un plateau, une pièce, une fin de partie ou une prise`;
-  };
-  // Seulement ce qu'on peut trouver dans le coffre
-  const list = $('#bx-rates');
-  if (list) list.innerHTML = RATES.map((r) => `<li style="--c:${TIERS[r.id].color}"><span class="bx-rate-name">${r.id === 'jeu' ? '♚ ' : ''}${escapeHtml(r.name)}</span><b>${String(r.pct).replace('.', ',')} %</b><small>${escapeHtml(who(r.id))}</small></li>`).join('');
-}
+/** La liste des taux d'un coffre (seulement ce qu'on peut y trouver). */
+const ratesHTML = (rates) => `<span class="bx-rates-head">Taux de drop</span>
+  <ul class="bx-rates">${rates.map((r) => `<li style="--c:${TIERS[r.id].color}"><span class="bx-rate-name">${r.id === 'jeu' ? '♚ ' : ''}${escapeHtml(TIERS[r.id].name)}</span><b>${String(r.pct).replace('.', ',')} %</b></li>`).join('')}</ul>`;
+// Taux prévus pour les autres coffres : affichés seulement, ces coffres ne s'ouvrent pas encore
+const CHEST_RATES = {
+  commun: RATES,
+  rare: [{ id: 'jeu', pct: 0.5 }, { id: 'legendaire', pct: 7.5 }, { id: 'epique', pct: 17 }, { id: 'rare', pct: 45 }, { id: 'commun', pct: 30 }],
+  epique: [{ id: 'jeu', pct: 1.5 }, { id: 'legendaire', pct: 18.5 }, { id: 'epique', pct: 45 }, { id: 'rare', pct: 35 }],
+  legendaire: [{ id: 'jeu', pct: 5 }, { id: 'legendaire', pct: 55 }, { id: 'epique', pct: 40 }],
+};
 // ---------------------------------------------------------------------------
 // Les coffres, en carrousel : un coffre par carte (Commun, Rare, Épique, Légendaire). Le ⓘ de chaque carte la
 // retourne pour montrer ses infos (taux de drop, comment l'obtenir). Seul le coffre commun s'ouvre pour l'instant.
@@ -152,11 +152,6 @@ function renderRates() {
 const CHESTS = [
   {
     id: 'commun', name: 'Coffre commun', rarity: 'Commun', color: '#3cf2a3',
-    info: `<p>Un plateau, une pièce (pion, tour, cavalier, fou, dame ou roi), une fin de partie ou une prise et son. Et parfois, très rarement, un jeu de pièces complet.</p>
-      <p class="bx-info-how">${ico('swords')}<span>Un à chaque victoire en ligne.</span></p>
-      <span class="bx-rates-head">Taux de drop</span>
-      <ul class="bx-rates" id="bx-rates"></ul>
-      <span class="bx-rates-foot">Plus le drop est gros, plus il faut frapper le coffre avant qu’il s’ouvre.</span>`,
   },
   { id: 'rare', name: 'Coffre rare', rarity: 'Rare', how: '1 par jour avec les quêtes quotidiennes.', icon: 'target' },
   { id: 'epique', name: 'Coffre épique', rarity: 'Épique', how: 'Avec les quêtes hebdomadaires.', icon: 'trophy' },
@@ -166,8 +161,7 @@ const CHESTS = [
 /** Une carte du carrousel. */
 const slideHTML = (c) => {
   const isCommun = c.id === 'commun';
-  const info = c.info || `<p class="bx-info-how">${ico(c.icon)}<span>${c.how}</span></p>
-    <p class="muted">Son contenu sera dévoilé bientôt.</p>`;
+  const info = ratesHTML(CHEST_RATES[c.id]);
   return `<article class="bx-slide${isCommun ? '' : ' soon'}" data-chest="${c.id}" style="--c:${c.color}" aria-roledescription="carte" aria-label="${c.name}">
     <div class="bx-slide-art"${isCommun ? ' id="bx-card-art"' : ` data-variant="${c.id}"`}>${isCommun ? '' : '<span class="bx-count zero">×0</span>'}</div>
     <div class="bx-slide-body">
@@ -193,7 +187,6 @@ function buildCarousel() {
     </div>
     <div class="bx-car-dots" role="tablist">${CHESTS.map((c, i) => `<button class="bx-car-dot" type="button" data-go="${i}" style="--c:${c.color}" aria-label="${c.name}"></button>`).join('')}</div>
     <div class="bx-under" id="bx-under"></div>`;
-  renderRates();
   const track = $('#bx-car-track');
   const slides = [...track.children];
   const dots = [...document.querySelectorAll('.bx-car-dot')];
@@ -1114,7 +1107,6 @@ if (demoArg) {
 addEventListener('load', () => (window.requestIdleCallback || setTimeout)(() => warmAudio(), { timeout: 3000 }));
 
 // ---------------------------------------------------------------------------
-renderRates();
 renderMain();
 if (uid) {
   staff = user.role === 'admin' || user.role === 'fondateur';

@@ -18,10 +18,10 @@ export const BOX_TYPES = {
 /** Taux de drop de la box classique, en pourcentage. */
 export const RATES = [
   { id: 'jeu', name: 'Jeu complet', pct: 0.3 },
-  { id: 'legendaire', name: 'Légendaire', pct: 7 },
-  { id: 'epique', name: 'Épique', pct: 12.7 },
+  { id: 'legendaire', name: 'Légendaire', pct: 2.5 },
+  { id: 'epique', name: 'Épique', pct: 7.2 },
   { id: 'rare', name: 'Rare', pct: 25 },
-  { id: 'commun', name: 'Commun', pct: 55 },
+  { id: 'commun', name: 'Commun', pct: 65 },
 ];
 /** Poussière d'étoile donnée par un doublon, selon sa rareté. */
 export const DUST = { commun: 1, rare: 3, epique: 6, legendaire: 10, jeu: 20 };

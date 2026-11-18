@@ -2488,7 +2488,11 @@ body { overflow-x: clip; position: relative; }
 }
 .bx-slide-info h3 { margin: 0 0 10px; color: var(--c); }
 .bx-slide-info p { margin: 0 0 10px; }
-.bx-slide-info .bx-rates li { grid-template-columns: 118px 58px 1fr; padding: 7px 12px; }
+.bx-slide-info { padding-block: 16px; }
+.bx-slide-info .bx-rates { gap: 5px; }
+.bx-slide-info .bx-rates li { grid-template-columns: 1fr auto; padding: 5px 12px; }
+.bx-slide-info .bx-rates-head { margin-bottom: 6px; }
+.bx-slide-info h3 { margin-bottom: 6px; }
 .bx-slide-info .bx-rates small { font-size: 0.78rem; }
 .bx-info-how { display: flex; align-items: center; gap: 10px; font-weight: 700; }
 .bx-info-how .ui-ico { width: 24px; height: 24px; }

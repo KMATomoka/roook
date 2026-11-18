@@ -2467,6 +2467,10 @@ body { overflow-x: clip; position: relative; }
 .bx-slide-body .bx-have { margin: 0 0 12px; }
 .bx-slide-body .bx-have b { color: var(--c); }
 .bx-slide-body .bx-actions { margin: 0; }
+/* Poussière d'étoile : dans la carte du coffre commun, sous les boutons */
+.bx-slide-body .bx-dust { margin-top: 14px; padding: 10px 12px; gap: 8px 12px; font-size: 0.92rem; }
+.bx-slide-body .bx-dust-bar { flex-basis: 100%; order: 1; }
+.bx-slide-body .bx-dust .btn { margin-left: auto; }
 .bx-slide-soon { display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 7px 14px; border-radius: 99px; font-weight: 700; color: var(--muted); background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line); }
 .bx-slide-soon .ui-ico { width: 18px; height: 18px; }
 /* Le ⓘ retourne la carte : ses infos viennent par-dessus */

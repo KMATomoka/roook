@@ -319,13 +319,13 @@ function renderMain() {
     <div class="bx-actions">
       <button class="btn btn-primary bx-open-btn" type="button" data-open ${n && !banned ? '' : 'disabled'}>${ico('key')} Ouvrir</button>
       <a class="btn btn-ghost" href="jouer.html">Jouer en ligne</a>
-    </div>`;
-  under.innerHTML = `<div class="bx-dust">
+    </div>
+    <div class="bx-dust">
       <span>${ico('dust')} Poussière d’étoile : <b>${state.dust}</b> / ${DUST_PER_BOX}</span>
       <div class="bx-dust-bar"><i style="width:${Math.min(100, (state.dust / DUST_PER_BOX) * 100)}%"></i></div>
       <button class="btn btn-ghost small" type="button" data-dust ${dustOk && !banned ? '' : 'disabled'}>Ouvrir un coffre avec ${DUST_PER_BOX} ${ico('dust')}</button>
-    </div>
-    ${specials ? `<p class="bx-staff"><button class="btn btn-primary small" type="button" data-open-special ${banned ? 'disabled' : ''}>${ico('key')} Ouvrir un coffre spécial ×${specials}</button> <span class="muted">50 % épique, 50 % légendaire</span></p>` : ''}
+    </div>`;
+  under.innerHTML = `${specials ? `<p class="bx-staff"><button class="btn btn-primary small" type="button" data-open-special ${banned ? 'disabled' : ''}>${ico('key')} Ouvrir un coffre spécial ×${specials}</button> <span class="muted">50 % épique, 50 % légendaire</span></p>` : ''}
     ${staff ? `<p class="bx-staff"><button class="btn btn-ghost small" type="button" data-grant>${ico('tools')} +1 coffre de test</button> <button class="btn btn-ghost small" type="button" data-grant-special>${ico('tools')} +1 coffre spécial (épique ou légendaire)</button> <span class="muted">(admins et fondateur)</span></p>` : ''}`;
   placeCardChest(n);
 }

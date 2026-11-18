@@ -1391,15 +1391,181 @@ function boxHum(level = 0) {
     clearTimeout(timer);
   };
 }
+// --- Chaque coffre a sa voix ----------------------------------------------------------------
+// Commun : bois qui craque, fer qui cliquette. Rare : glace qui se fissure, tintements de cristal.
+// Épique : coffre de magie (runes qui tintent, harpe en tons entiers, célesta, poussière de fée, chœur mystérieux). Légendaire : or lourd, grondement, chœur et carillon.
+let chestKind = 'commun';
+const CHEST_KINDS = ['commun', 'rare', 'epique', 'legendaire'];
+
+/** Craquement de bois sec (quelques éclats de bruit très courts). */
+function woodCrack(at = 0, vol = 1) {
+  for (let k = 0; k < 3; k++) burst({ at: at + k * 0.014 + Math.random() * 0.01, dur: 0.02, vol: 0.1 * vol, type: 'highpass', freq: 1800 + Math.random() * 1600, q: 0.7 });
+}
+/** Glace qui se fissure : petits éclats secs, très aigus, en grappe. */
+function iceCrack(at = 0, vol = 1, n = 5, span = 0.09) {
+  for (let i = 0; i < n; i++) burst({ at: at + Math.random() * span, dur: 0.01 + Math.random() * 0.02, vol: (0.07 + Math.random() * 0.08) * vol, type: 'highpass', freq: 3600 + Math.random() * 3600, q: 0.8 });
+}
+/** Tintement de cristal : partiels purs, aigus, un peu inharmoniques. */
+function crystal(freq, at = 0, vol = 0.03, dur = 1.2) {
+  [1, 2.32, 4.25].forEach((m, i) => tone({ freq: freq * m, type: 'sine', at, dur: Math.max(0.2, dur - i * 0.3), vol: vol / (i + 1), attack: 0.002 }));
+}
+/** Bourdonnement arcanique : deux sinus graves qui battent, et une harmonique douce. */
+function arcaneHum(at = 0, dur = 0.8, vol = 0.07, f = 98) {
+  tone({ freq: f, at, dur, vol, attack: 0.06 });
+  tone({ freq: f * 1.015, at, dur, vol: vol * 0.8, attack: 0.06 });
+  tone({ freq: f * 3, type: 'triangle', at, dur: dur * 0.7, vol: vol * 0.15, attack: 0.08 });
+}
+/** Choc d'or massif : partiels de cloche graves, un éclat, une masse. */
+function goldClang(at = 0, vol = 1, pitch = 1) {
+  [1, 2.76, 5.4, 8.93].forEach((m, i) => tone({ freq: 196 * pitch * m, type: 'sine', at, dur: 1.5 - i * 0.3, vol: (0.05 * vol) / (i + 1), attack: 0.002 }));
+  burst({ at, dur: 0.06, vol: 0.18 * vol, type: 'bandpass', freq: 2600, q: 1.5 });
+  tone({ freq: 70, endFreq: 40, at, dur: 0.45, vol: 0.34 * vol });
+}
+/** Grondement grave (la terre qui tremble). */
+function rumbleLow(at = 0, dur = 1.2, vol = 0.3) {
+  noiseSweep({ at, dur, type: 'lowpass', f: [90, 200, 60], q: 0.7, vol, peak: 0.45 });
+  tone({ freq: 46, endFreq: 38, at, dur, vol: vol * 0.6, attack: dur * 0.3 });
+}
+/** Chœur : un « aah » (dents de scie filtrées par deux formants), qui enfle doucement. */
+function choir(freqs, at = 0, dur = 2, vol = 0.05) {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + at;
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + dur * 0.35);
+  g.gain.setValueAtTime(vol, t + dur * 0.7);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  g.connect(master);
+  const voice = a.createGain();
+  for (const [fr, q, lvl] of [[730, 6, 1], [1090, 7, 0.6], [2440, 8, 0.25]]) {
+    const bp = a.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = fr;
+    bp.Q.value = q;
+    const bg = a.createGain();
+    bg.gain.value = lvl;
+    voice.connect(bp).connect(bg).connect(g);
+  }
+  // un léger vibrato commun, comme des voix
+  const lfo = a.createOscillator();
+  lfo.frequency.value = 5.2;
+  const depth = a.createGain();
+  depth.gain.value = 6;
+  lfo.connect(depth);
+  lfo.start(t);
+  lfo.stop(t + dur + 0.1);
+  for (const fr of freqs) {
+    for (const det of LOW_POWER ? [0] : [-8, 7]) {
+      const o = a.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.value = fr;
+      o.detune.value = det;
+      depth.connect(o.detune);
+      o.connect(voice);
+      o.start(t);
+      o.stop(t + dur + 0.1);
+    }
+  }
+}
+// Magie (coffre épique) : gamme par tons entiers, le son « enchanté » des contes
+const WHOLE = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24];
+const EPIC_ROOT = 466.16; // si bémol
+const wt = (k, root = EPIC_ROOT) => root * Math.pow(2, WHOLE[Math.max(0, Math.min(WHOLE.length - 1, k))] / 12);
+/** Célesta : une note claire et douce, avec son écho. */
+function celesta(freq, at = 0, vol = 0.03, dur = 0.9) {
+  echo({ freq, type: 'sine', at, dur, vol, attack: 0.003 }, { times: 2, gap: 0.16, decay: 0.4 });
+  tone({ freq: freq * 2, type: 'sine', at, dur: dur * 0.5, vol: vol * 0.35, attack: 0.003 });
+  tone({ freq: freq * 4.01, type: 'sine', at, dur: dur * 0.25, vol: vol * 0.12, attack: 0.002 });
+}
+/** Glissando de harpe en tons entiers (montant ou descendant). */
+function harpGliss(at = 0, { from = 0, n = 10, step = 0.035, vol = 0.03, down = false, root = EPIC_ROOT / 2 } = {}) {
+  for (let i = 0; i < n; i++) {
+    const k = down ? from + n - 1 - i : from + i;
+    const fr = root * Math.pow(2, (2 * k) / 12); // un ton entier par corde
+    tone({ freq: fr, type: 'triangle', at: at + i * step, dur: 0.9, vol: vol * (0.7 + 0.3 * Math.random()), attack: 0.004 });
+    tone({ freq: fr * 2, type: 'sine', at: at + i * step, dur: 0.4, vol: vol * 0.25, attack: 0.003 });
+  }
+}
+/** Poussière de fée : des petites notes très aiguës, éparpillées. */
+function fairyDust(at = 0, n = 6, span = 0.4, vol = 0.012) {
+  for (let i = 0; i < n; i++) tone({ freq: wt(6 + Math.floor(Math.random() * 7), EPIC_ROOT * 2), type: 'sine', at: at + Math.random() * span, dur: 0.25, vol: vol * (0.6 + Math.random() * 0.6), attack: 0.002 });
+}
+/** Souffle magique : un vent filtré qui monte puis retombe. */
+function magicWhoosh(at = 0, dur = 0.6, vol = 0.05, peak = 0.6) {
+  noiseSweep({ at, dur, type: 'bandpass', f: [500, 3200, 900], q: 2.2, vol, peak });
+}
+/** Une rune qui s'allume : un « boum » de verre doux, qui glisse un peu vers le bas, et son écho. */
+function runeChime(freq, at = 0, vol = 0.03) {
+  tone({ freq, endFreq: freq * 0.985, type: 'sine', at, dur: 1.4, vol, attack: 0.004 });
+  tone({ freq: freq * 2.005, type: 'sine', at, dur: 0.8, vol: vol * 0.4, attack: 0.004 });
+  tone({ freq: freq * 3.01, type: 'sine', at, dur: 0.5, vol: vol * 0.18, attack: 0.003 });
+  tone({ freq, type: 'sine', at: at + 0.22, dur: 1, vol: vol * 0.3, attack: 0.02 });
+}
+
+/** La note qui monte à chaque coup (on sent que ça approche), dans la gamme de la musique. */
+const climb = (n) => Math.pow(2, [0, 3, 5, 7, 10, 12][Math.min(5, n)] / 12);
+
 export const boxSfx = {
   hum: boxHum,
+  /** Choisit la voix du coffre ouvert (commun, rare, epique, legendaire). */
+  chest(kind) {
+    chestKind = CHEST_KINDS.includes(kind) ? kind : 'commun';
+  },
   /** Un coup sur le coffre (n : 0, 1, 2… un peu plus fort et plus aigu). */
   hit(n = 0) {
     const p = 1 + n * 0.07;
-    woodThud(0, 0.85 + n * 0.08, p);
-    ironRattle(0.03, 0.9 + n * 0.15);
-    // Une petite note claire qui monte à chaque coup : on sent que ça approche
-    tone({ freq: 587.33 * Math.pow(2, [0, 3, 5, 7, 10, 12][Math.min(5, n)] / 12), type: 'triangle', at: 0.04, dur: 0.35, vol: 0.03, attack: 0.008 });
+    const c = climb(n);
+    if (chestKind === 'rare') {
+      // Glace : un choc plus léger, la glace qui craque, un tintement de cristal
+      woodThud(0, 0.55 + n * 0.06, p * 1.2);
+      iceCrack(0.004, 1 + n * 0.2, 4 + n * 2);
+      crystal(1174.66 * c, 0.03, 0.022 + n * 0.003, 0.9);
+    } else if (chestKind === 'epique') {
+      // Magie : un choc feutré, une rune qui s'allume (une note de plus à chaque coup), un peu de poussière de fée
+      woodThud(0, 0.5 + n * 0.06, p * 0.85);
+      magicWhoosh(0, 0.35, 0.03 + n * 0.006, 0.3);
+      runeChime(wt(n * 2, EPIC_ROOT / 2), 0.02, 0.034 + n * 0.004);
+      celesta(wt(n * 2 + 2), 0.06, 0.02);
+      fairyDust(0.08, 3 + n, 0.35);
+    } else if (chestKind === 'legendaire') {
+      // Or massif : un choc lourd et qui sonne, la terre qui gronde un peu
+      goldClang(0, 0.8 + n * 0.1, p * 0.9);
+      rumbleLow(0, 0.5 + n * 0.1, 0.12 + n * 0.03);
+      bell(587.33 * c, 0.05, 0.03);
+    } else {
+      // Bois cerclé de fer : choc sourd, le bois qui craque, les ferrures qui tintent
+      woodThud(0, 0.85 + n * 0.08, p);
+      woodCrack(0.01, 0.8 + n * 0.15);
+      ironRattle(0.03, 0.9 + n * 0.15);
+      tone({ freq: 587.33 * c, type: 'triangle', at: 0.04, dur: 0.35, vol: 0.03, attack: 0.008 });
+    }
+  },
+  /** Le dernier coup : la serrure cède. */
+  unlock() {
+    if (chestKind === 'rare') {
+      // La glace vole en éclats, des morceaux de verre retombent
+      iceCrack(0, 1.6, LOW_POWER ? 10 : 16, 0.25);
+      noiseSweep({ at: 0, dur: 0.35, type: 'highpass', f: [6000, 3000, 8000], q: 0.7, vol: 0.06, peak: 0.1 });
+      for (let i = 0; i < 7; i++) crystal(1400 + Math.random() * 2200, 0.06 + i * 0.05 + Math.random() * 0.03, 0.012, 0.5);
+    } else if (chestKind === 'epique') {
+      // Le sortilège : la harpe monte en glissando, le vent magique enfle, un chœur mystérieux se lève
+      harpGliss(0, { n: LOW_POWER ? 10 : 14, step: 0.03, vol: 0.03 });
+      magicWhoosh(0, 0.55, 0.06, 0.85);
+      choir([116.54, 164.81, 220], 0.05, 1.1, 0.026);
+      fairyDust(0.3, 8, 0.4, 0.014);
+    } else if (chestKind === 'legendaire') {
+      // Le verrou d'or tourne lourdement, la terre gronde, le chœur retient son souffle
+      goldClang(0, 1.1, 0.75);
+      goldClang(0.16, 0.7, 1.12);
+      rumbleLow(0, 1.1, 0.26);
+      choir([146.83, 220], 0.1, 1.2, 0.035);
+    } else {
+      // Clé dans la serrure : clac-clac, le fer tinte
+      tok(0, 1.3);
+      tok(0.09, 0.95);
+      ironRattle(0.1, 1.4);
+    }
   },
   /** La rareté monte d'un cran : montée douce, puis accord. */
   tierUp(tier) {
@@ -1409,16 +1575,50 @@ export const boxSfx = {
     [1, 1.25, 1.5, 2].forEach((m, i) => tone({ freq: r * m, type: 'triangle', at: 0.38 + i * 0.04, dur: 0.9, vol: 0.045, attack: 0.012 }));
     if (lvl >= 2) tone({ freq: 65, endFreq: 40, at: 0.38, dur: 0.8, vol: 0.3 });
     if (lvl >= 3) [2, 2.5, 3, 4].forEach((m, i) => bell(r * m, 0.45 + i * 0.07, 0.035));
+    // la touche du coffre
+    if (chestKind === 'rare') crystal(r * 2, 0.42, 0.02);
+    else if (chestKind === 'epique') runeChime(r / 2, 0.38, 0.03);
+    else if (chestKind === 'legendaire') choir([r / 2, (r * 0.75)], 0.38, 1, 0.025);
   },
-  /** Le couvercle s'ouvre : grincement, souffle de lumière, étincelles. */
+  /** Le couvercle s'ouvre, chaque coffre à sa façon. */
   open(tier) {
     const lvl = TIER_LEVEL[tier] || 0;
-    creak(0, 0.42, 0.9);
-    woodThud(0.36, 0.7, 0.8);
-    noiseSweep({ at: 0.1, dur: 0.9 + lvl * 0.2, type: 'bandpass', f: [400, 3800, 1500], q: 0.8, vol: 0.09 + lvl * 0.02, peak: 0.35 });
-    tone({ freq: 80, endFreq: 36, at: 0.1, dur: 0.7 + lvl * 0.2, vol: 0.32 + lvl * 0.06 });
+    // Souffle de lumière et étincelles, communs à tous
+    noiseSweep({ at: 0.1, dur: 0.9 + lvl * 0.2, type: 'bandpass', f: [400, 3800, 1500], q: 0.8, vol: 0.08 + lvl * 0.02, peak: 0.35 });
     const n = 5 + lvl * 4;
-    for (let i = 0; i < n; i++) tone({ freq: 1600 + Math.random() * 2400, type: 'sine', at: 0.2 + Math.random() * (0.6 + lvl * 0.25), dur: 0.16, vol: 0.016 + Math.random() * 0.014 });
+    for (let i = 0; i < n; i++) tone({ freq: 1600 + Math.random() * 2400, type: 'sine', at: 0.2 + Math.random() * (0.6 + lvl * 0.25), dur: 0.16, vol: 0.014 + Math.random() * 0.012 });
+    if (chestKind === 'rare') {
+      // Le couvercle claque, le givre souffle, une cascade de cristal descend
+      burst({ at: 0, dur: 0.05, vol: 0.2, type: 'bandpass', freq: 2200, q: 1.2 });
+      tone({ freq: 90, endFreq: 45, at: 0, dur: 0.4, vol: 0.28 });
+      noiseSweep({ at: 0.02, dur: 1.2, type: 'highpass', f: [2500, 7000, 4000], q: 0.6, vol: 0.06, peak: 0.25 });
+      [24, 19, 17, 12, 10, 7, 5, 0].forEach((s, i) => crystal(1174.66 * Math.pow(2, s / 12) / 2, 0.1 + i * 0.07, 0.022, 1.4));
+    } else if (chestKind === 'epique') {
+      // Le coffre de magie s'ouvre : un souffle feutré, une pluie de poussière de fée, la harpe qui redescend,
+      // un célesta en écho et le chœur mystérieux (accord de si bémol lydien, avec sa quarte augmentée)
+      tone({ freq: 70, endFreq: 36, at: 0.05, dur: 0.9, vol: 0.22 });
+      magicWhoosh(0, 0.9, 0.07, 0.35);
+      fairyDust(0.1, LOW_POWER ? 14 : 22, 1.3, 0.016);
+      harpGliss(0.25, { from: 4, n: LOW_POWER ? 10 : 14, step: 0.04, vol: 0.026, down: true });
+      [0, 4, 6, 8, 12].forEach((k, i) => celesta(wt(k), 0.3 + i * 0.12, 0.022, 1.2));
+      choir([116.54, 164.81, 220, 293.66], 0.2, 2.6, 0.04);
+      arcaneHum(0.2, 2, 0.04, 58.27);
+    } else if (chestKind === 'legendaire') {
+      // Le grand moment : roulement de timbales, grondement, chœur et carillon en majeur
+      for (let i = 0; i < 6; i++) timpani(i * 0.05, 0.16 + i * 0.03);
+      timpani(0.32, 0.5);
+      rumbleLow(0, 1.8, 0.3);
+      choir([146.83, 220, 293.66, 369.99], 0.25, 2.6, 0.05);
+      [2, 2.5, 3, 4, 5, 6].forEach((m, i) => bell(293.66 * m, 0.35 + i * 0.1, 0.03));
+      brass({ freq: 293.66, at: 0.32, dur: 1.2, vol: 0.06 });
+      brass({ freq: 440, at: 0.32, dur: 1.2, vol: 0.05 });
+    } else {
+      // Charnières qui grincent, le couvercle retombe en arrière
+      creak(0, 0.42, 0.9);
+      woodThud(0.36, 0.7, 0.8);
+      woodCrack(0.36, 0.6);
+      tone({ freq: 80, endFreq: 36, at: 0.1, dur: 0.7 + lvl * 0.2, vol: 0.32 + lvl * 0.06 });
+    }
   },
   /** Accord tenu quand l'objet apparaît (plus riche selon la rareté). */
   reveal(tier, isNew = true) {
@@ -1428,6 +1628,10 @@ export const boxSfx = {
     if (lvl >= 1) pad(chord.map((m) => (r * m) / 2), { at: 0, dur: 1.8 + lvl * 0.5, vol: 0.028 + lvl * 0.008, open: 2400 + lvl * 700 });
     chord.forEach((m, i) => tone({ freq: r * m, type: 'triangle', at: i * 0.06, dur: 1.2 + lvl * 0.3, vol: 0.04, attack: 0.012 }));
     if (isNew) [2, 2.5, 3, 4, 5].slice(0, 2 + lvl).forEach((m, i) => bell(r * m, 0.35 + i * 0.09, 0.035));
+    // la signature du coffre
+    if (chestKind === 'rare') crystal(r * 3, 0.5, 0.016, 1.6);
+    else if (chestKind === 'epique') [0, 2, 4, 6].forEach((k, i) => celesta(wt(k + 6), 0.4 + i * 0.1, 0.014, 1));
+    else if (chestKind === 'legendaire') choir(chord.slice(0, 3).map((m) => (r * m) / 2), 0, 2.2, 0.03);
   },
   /** Doublon : la carte se change en poussière d'étoile. */
   dust(n = 1) {
@@ -1493,7 +1697,7 @@ export function warmAudio() {
 // Téléphones : musique plus légère à calculer (pas de réverbération, moins de voix), même règle que js/coffre3d.js
 const LOW_POWER = typeof matchMedia === 'function' && (matchMedia('(pointer: coarse)').matches || innerWidth < 760);
 const midi = (m) => 440 * Math.pow(2, (m - 69) / 12);
-const music = { bus: null, timer: 0, playing: false, next: 0, step: 0, level: 0, track: 'calm', bright: false, gains: {} };
+const music = { bus: null, timer: 0, playing: false, next: 0, step: 0, level: 0, track: 'calm', bright: false, gains: {}, chest: 'commun' };
 
 /** Bus de la musique : sortie, réverbération légère (1,4 s, mono : peu coûteuse), écho de la harpe. */
 function musicBus(a) {
@@ -1683,8 +1887,193 @@ function battleStep(a, t, s, dest) {
     }
   }
 }
-const TRACKS = { calm: calmStep, battle: battleStep };
-const bpmFor = () => (music.track === 'calm' ? 72 : [96, 104, 112, 124][music.level]);
+// --- Une musique par coffre -------------------------------------------------------------------
+// Même moteur (« attente » puis « combat » qui monte avec la rareté), mais chaque coffre a ses accords et ses
+// instruments :
+//  - rare (glace) : ré mineur 9, célesta et boîte à musique, nappe de verre, pizzicati, percussions de glace ;
+//  - épique (magie) : si bémol lydien et accords par tons entiers, harpe, chœur « ooh », tambour sur cadre, souffles ;
+//  - légendaire (royal) : ré majeur héroïque, cuivres en fanfare, timbales, caisse claire, chœur, carillon.
+// Le coffre commun garde la musique d'origine (calmStep, battleStep).
+const THEMES = {
+  rare: {
+    bpm: 66, battleBpm: [92, 100, 108, 118], voice: 'celesta', pad: 'glass', perc: 'ice',
+    calm: [
+      { pad: [50, 53, 57, 64], bright: [50, 54, 57, 64], bass: 38, arp: [62, 64, 69, 72, 76, 72], arpB: [62, 64, 69, 73, 76, 73] },
+      { pad: [46, 50, 53, 57], bass: 34, arp: [58, 62, 65, 69, 74, 69] },
+      { pad: [43, 46, 50, 57], bass: 31, arp: [55, 57, 62, 65, 70, 65] },
+      { pad: [45, 50, 52, 57], bass: 33, arp: [57, 62, 64, 69, 76, 69] },
+    ],
+    battle: [{ root: 38, chord: [62, 65, 69] }, { root: 38, chord: [62, 65, 69] }, { root: 34, chord: [58, 62, 65] }, { root: 33, chord: [57, 61, 64] }],
+    ostinato: [12, 19, 24, 19, 12, 19, 24, 27, 12, 19, 24, 19, 12, 17, 19, 24],
+    melody: [76, 74, 72, 69, 72, 74, 76, 81],
+  },
+  epique: {
+    bpm: 68, battleBpm: [94, 102, 110, 120], voice: 'harp', pad: 'choir', perc: 'frame',
+    calm: [
+      { pad: [46, 50, 53, 57, 64], bass: 34, arp: [58, 62, 64, 69, 72, 69] }, // si♭ maj7♯11 (lydien)
+      { pad: [48, 52, 55, 60], bass: 34, arp: [60, 64, 67, 72, 76, 72] }, // do sur si♭
+      { pad: [43, 50, 55, 57], bass: 31, arp: [55, 57, 62, 67, 69, 62] }, // sol m (add9)
+      { pad: [42, 46, 50, 54], bass: 30, arp: [54, 58, 62, 66, 70, 66] }, // sol♭ augmenté : tons entiers, mystère
+    ],
+    battle: [{ root: 34, chord: [58, 62, 64] }, { root: 36, chord: [60, 64, 67] }, { root: 31, chord: [55, 58, 62] }, { root: 30, chord: [54, 58, 62] }],
+    ostinato: [0, 12, 4, 16, 7, 12, 4, 16, 0, 12, 6, 18, 8, 12, 6, 18],
+    melody: [70, 72, 74, 76, 78, 76, 74, 72],
+  },
+  legendaire: {
+    bpm: 74, battleBpm: [100, 108, 116, 128], voice: 'harp', pad: 'brass', perc: 'timpani',
+    calm: [
+      { pad: [50, 54, 57, 62], bass: 38, arp: [62, 66, 69, 74, 78, 74] }, // ré
+      { pad: [50, 55, 59, 62], bass: 43, arp: [62, 67, 71, 74, 79, 74] }, // sol
+      { pad: [47, 50, 54, 59], bass: 35, arp: [59, 62, 66, 71, 74, 71] }, // si m
+      { pad: [45, 49, 52, 57], bass: 33, arp: [57, 61, 64, 69, 73, 69] }, // la
+    ],
+    battle: [{ root: 38, chord: [62, 66, 69] }, { root: 43, chord: [62, 67, 71] }, { root: 45, chord: [61, 64, 69] }, { root: 35, chord: [59, 62, 66] }],
+    ostinato: [0, 0, 7, 0, 12, 0, 7, 0, 0, 0, 7, 0, 12, 7, 12, 14],
+    melody: [74, 78, 81, 86, 85, 81, 78, 81],
+  },
+};
+const theme = () => THEMES[music.chest];
+
+/** Une note de mélodie, selon l'instrument du coffre. */
+function mvoice(a, dest, kind, freq, t, vol) {
+  if (kind === 'celesta') {
+    // célesta / boîte à musique : attaque nette, partiels aigus qui s'éteignent vite
+    mnote(a, dest, { freq, t, dur: 1.1, vol, attack: 0.003, release: 1 });
+    mnote(a, dest, { freq: freq * 2, t, dur: 0.5, vol: vol * 0.35, attack: 0.002, release: 0.45 });
+    if (!LOW_POWER) mnote(a, dest, { freq: freq * 4.01, t, dur: 0.22, vol: vol * 0.15, attack: 0.002, release: 0.2 });
+  } else {
+    mnote(a, dest, { freq, type: 'triangle', t, dur: 0.85, vol, attack: 0.004, release: 0.8 });
+  }
+}
+/** Une cloche, dans la musique (passe par son fondu). */
+function mbell(a, dest, freq, t, vol) {
+  [1, 2.01, 2.76, 4.07].forEach((m, i) => mnote(a, dest, { freq: freq * m, t, dur: 2.2 - i * 0.45, vol: vol / (i + 1), attack: 0.002, release: 2 - i * 0.45 }));
+}
+/** Un accord tenu, selon la nappe du coffre (verre, chœur, cuivres). */
+function mpad(a, dest, kind, notes, t, len, vol, lvl) {
+  const list = LOW_POWER ? notes.slice(0, 3) : notes;
+  if (kind === 'glass') {
+    for (const m of list) {
+      mnote(a, dest, { freq: midi(m + 12), type: 'triangle', t, dur: len, vol: vol * 1.4, attack: 1.6, release: 1.4 });
+      if (!LOW_POWER) mnote(a, dest, { freq: midi(m + 12), t, dur: len, vol: vol, attack: 1.8, release: 1.4, detune: 7 });
+    }
+  } else if (kind === 'choir') {
+    // un chœur « ooh » : dents de scie dans un formant grave
+    const fl = a.createBiquadFilter();
+    fl.type = 'bandpass';
+    fl.frequency.value = 520 + lvl * 80;
+    fl.Q.value = 2.2;
+    fl.connect(dest);
+    for (const m of list) mnote(a, fl, { freq: midi(m + 12), type: 'sawtooth', t, dur: len, vol: vol * 3.2, attack: 1.2, release: 1.2, detune: (Math.random() - 0.5) * 12 });
+  } else {
+    // cuivres doux : le filtre s'ouvre lentement
+    for (const m of list) mnote(a, dest, { freq: midi(m), type: 'sawtooth', t, dur: len, vol: vol * 1.2, attack: 0.9, release: 1, filter: 600 + lvl * 250 });
+  }
+}
+/** Percussions du coffre. */
+function mperc(a, dest, kind, t, vol, accent) {
+  if (kind === 'ice') {
+    // un coup sourd, et un éclat de glace par-dessus
+    mtaiko(a, dest, t, vol * 0.7, 0.75);
+    mnoise(a, dest, t, { freq: 7000, dur: 0.05, vol: vol * 0.25 });
+    if (accent) mnote(a, dest, { freq: 2637 + Math.random() * 600, t, dur: 0.3, vol: vol * 0.08, attack: 0.002, release: 0.28 });
+  } else if (kind === 'frame') {
+    // tambour sur cadre : plus aigu et plus sec que le taiko, avec la peau qui frémit
+    mtaiko(a, dest, t, vol * 0.8, accent ? 1.1 : 1.45);
+    mnoise(a, dest, t, { type: 'bandpass', freq: 2600, q: 1.2, dur: 0.07, vol: vol * 0.3 });
+  } else {
+    // timbales : une note grave qui résonne
+    const fr = accent ? 73.42 : 110;
+    mnote(a, dest, { freq: fr, t, dur: 0.9, vol: vol * 1.1, attack: 0.004, release: 0.85 });
+    mnoise(a, dest, t, { type: 'lowpass', freq: 380, dur: 0.15, vol: vol * 0.6 });
+  }
+}
+
+/** « Attente », version du coffre. */
+function themedCalm(a, t, s, dest) {
+  const T = theme();
+  const lvl = music.level;
+  const bright = music.bright;
+  const sd = 60 / T.bpm / 4;
+  const ch = T.calm[Math.floor(s / 32) % T.calm.length];
+  const pad = bright && ch.bright ? ch.bright : ch.pad;
+  const arp = bright && ch.arpB ? ch.arpB : ch.arp;
+  const up = T.voice === 'celesta' ? 12 : 0; // le célesta joue une octave plus haut
+  if (s % 32 === 0) {
+    const len = sd * 32 + 1;
+    mpad(a, dest, T.pad, pad, t, len, 0.006, lvl);
+    mnote(a, dest, { freq: midi(ch.bass), t, dur: len, vol: 0.045, attack: 0.4, release: 1 });
+    // carillon (légendaire) ou cloche douce en début d'accord
+    const bf = midi(arp[3] + 12);
+    if (T.perc === 'timpani') [0, 4, 7].forEach((k, i) => mbell(a, dest, midi(arp[0] + 12 + k), t + i * 0.12, 0.012));
+    else if (lvl >= 2 || Math.random() < 0.4) [1, 2.01, 2.76].forEach((m, i) => mnote(a, dest, { freq: bf * m, t, dur: 2 - i * 0.5, vol: 0.01 / (i + 1), attack: 0.003, release: 1.8 - i * 0.5 }));
+  }
+  // Épique : un souffle magique qui enfle toutes les deux mesures
+  if (T.perc === 'frame' && s % 64 === 48 && !LOW_POWER) mnoise(a, dest, t, { type: 'bandpass', freq: 1400, q: 1.5, dur: sd * 16, vol: 0.02, swell: true });
+  const every = bright && lvl >= 2 ? 1 : 2;
+  if (s % every === 0 && (lvl >= 1 || bright || Math.random() < (s % 4 === 0 ? 0.85 : 0.45))) {
+    const f = midi(arp[(s / every) % arp.length] + up + (bright && lvl >= 2 && s % 4 === 2 ? 12 : 0));
+    mvoice(a, dest, T.voice, f, t, T.voice === 'celesta' ? 0.016 : 0.02);
+    if (s % 4 === 0) {
+      const eg = a.createGain();
+      eg.gain.value = 0.45;
+      eg.connect(music.bus.delay);
+      mvoice(a, eg, T.voice, f, t, 0.016);
+    }
+  }
+  if (bright && lvl >= 1 && s % 8 === 0) mperc(a, dest, T.perc, t, 0.05 + lvl * 0.02, true);
+}
+
+/** « Combat », version du coffre. */
+function themedBattle(a, t, s, dest) {
+  const T = theme();
+  const lvl = music.level;
+  const sd = 60 / music.bpm / 4;
+  const bar = Math.floor(s / 16);
+  const ch = T.battle[bar % T.battle.length];
+  const i = s % 16;
+  const accent = i % 4 === 0 ? 1.4 : 1;
+  const o = T.ostinato[i];
+  // Ostinato : pizzicati (rare), harpe (épique), cordes graves (légendaire)
+  if (T.perc === 'ice') mnote(a, dest, { freq: midi(ch.root + o), type: 'triangle', t, dur: sd * 1.4, vol: 0.022 * accent, attack: 0.002, release: sd * 1.2 });
+  else if (T.perc === 'frame') mvoice(a, dest, 'harp', midi(ch.root + 12 + o), t, 0.017 * accent);
+  else mnote(a, dest, { freq: midi(ch.root + o), type: 'sawtooth', t, dur: sd * 0.9, vol: 0.022 * accent, attack: 0.004, release: sd * 0.6, filter: 1000 + lvl * 350 });
+  // Percussions, de plus en plus chargées
+  const hits = lvl === 0 ? [0, 8] : lvl === 1 ? [0, 6, 8, 11] : [0, 3, 6, 8, 10, 11, 14];
+  if (hits.includes(i)) mperc(a, dest, T.perc, t, (i === 0 ? 0.15 : 0.1) + lvl * 0.02, i % 8 === 0);
+  // Caisse claire : roulement du légendaire, éclats de glace du rare
+  if (lvl >= 1 && (i === 4 || i === 12)) {
+    if (T.perc === 'ice') mnoise(a, dest, t, { freq: 6500, dur: 0.12, vol: 0.04 + lvl * 0.01 });
+    else mnoise(a, dest, t, { type: 'bandpass', freq: T.perc === 'frame' ? 3200 : 1800, q: 0.7, dur: 0.12, vol: 0.045 + lvl * 0.01 });
+  }
+  if (T.perc === 'timpani' && lvl >= 2 && i >= 12) mnoise(a, dest, t, { type: 'bandpass', freq: 1900, q: 0.7, dur: 0.06, vol: 0.03 });
+  // Nappe (rare et plus ; tout de suite pour le légendaire)
+  if ((lvl >= 1 || T.pad === 'brass') && i === 0) mpad(a, dest, T.pad, ch.chord.map((m) => m - 12), t, sd * 16 + 0.3, 0.006 + lvl * 0.002, lvl);
+  // Fanfare de cuivres (légendaire), arpèges de cloches (épique), célesta (rare)
+  if (T.pad === 'brass' && (i === 0 || i === 6 || i === 10)) {
+    for (const m of ch.chord) mnote(a, dest, { freq: midi(m - 12), type: 'sawtooth', t, dur: i === 0 ? 0.5 : 0.25, vol: 0.015, attack: 0.02, release: 0.18, filter: 500, fenv: 2600 + lvl * 400 });
+  }
+  if (T.pad === 'choir' && lvl >= 1 && i % 4 === 2) mbell(a, dest, midi(ch.chord[(i / 4 | 0) % 3] + 12), t, 0.008 + lvl * 0.002);
+  if (T.pad === 'glass' && lvl >= 1 && i % 4 === 2) mvoice(a, dest, 'celesta', midi(ch.chord[(i / 4 | 0) % 3] + 12), t, 0.012);
+  // Mélodie à partir d'épique
+  if (lvl >= 2 && i % 4 === 0) {
+    const n = T.melody[((bar % 2) * 4 + i / 4) % T.melody.length];
+    if (T.pad === 'brass') mnote(a, dest, { freq: midi(n), type: 'sawtooth', t, dur: sd * 3.6, vol: 0.016, attack: 0.03, release: 0.25, filter: 700, fenv: 3200 });
+    else mvoice(a, dest, T.voice === 'celesta' ? 'celesta' : 'harp', midi(n + (T.voice === 'celesta' ? 12 : 0)), t, 0.02);
+  }
+  // Jeu complet : cymbale qui monte
+  if (lvl >= 3 && i === 0 && bar % 2 === 1) mnoise(a, dest, t, { freq: 5000, dur: sd * 16, vol: 0.045, swell: true });
+}
+
+const TRACKS = {
+  calm: (a, t, s, d) => (theme() ? themedCalm : calmStep)(a, t, s, d),
+  battle: (a, t, s, d) => (theme() ? themedBattle : battleStep)(a, t, s, d),
+};
+const bpmFor = () => {
+  const T = theme();
+  if (music.track === 'calm') return T ? T.bpm : 72;
+  return (T ? T.battleBpm : [96, 104, 112, 124])[music.level];
+};
 
 function fadeTrack(a, name, to, time = 0.6) {
   const g = music.gains[name].gain;
@@ -1713,10 +2102,12 @@ function stopMusicNow() {
   music.gains = {};
 }
 export const boxMusic = {
-  /** Morceau « attente » (calme). À appeler dans le geste de l'utilisateur (le clic sur « Ouvrir »). */
-  start() {
+  /** Morceau « attente » (calme), dans le style du coffre. À appeler dans le geste de l'utilisateur (le clic sur « Ouvrir »). */
+  start(chest = 'commun') {
     music.level = 0;
     music.bright = false;
+    if (music.chest !== chest) music.step = 0; // nouvel air : on repart du début
+    music.chest = chest;
     if (!musicOn) return;
     const a = audio();
     if (!a) return;

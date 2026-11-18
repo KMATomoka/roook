@@ -99,6 +99,7 @@ const stageHost = document.createElement('div');
 stageHost.className = 'chest3d chest-stage';
 let chest = null;
 let chestReady = null;
+let showcase = null; // la vitrine des autres coffres (rare, épique, légendaire)
 let boxCount = 0;
 /** Crée le coffre (3D si possible, sinon CSS), une seule fois. */
 function ensureChest() {
@@ -144,28 +145,148 @@ function renderRates() {
   const list = $('#bx-rates');
   if (list) list.innerHTML = RATES.map((r) => `<li style="--c:${TIERS[r.id].color}"><span class="bx-rate-name">${r.id === 'jeu' ? '♚ ' : ''}${escapeHtml(r.name)}</span><b>${String(r.pct).replace('.', ',')} %</b><small>${escapeHtml(who(r.id))}</small></li>`).join('');
 }
-/** Titre du coffre avec sa bulle ⓘ : les taux de drop s'affichent au survol (ou d'un toucher sur téléphone). */
-const chestTitle = () => `<h2 class="bx-title">Coffre commun
-  <span class="bx-info-wrap">
-    <button class="bx-info" type="button" aria-label="Taux de drop" aria-expanded="false" aria-controls="bx-rates-pop">i</button>
-    <span class="bx-rates-pop" id="bx-rates-pop" role="tooltip">
+// ---------------------------------------------------------------------------
+// Les coffres, en carrousel : un coffre par carte (Commun, Rare, Épique, Légendaire). Le ⓘ de chaque carte la
+// retourne pour montrer ses infos (taux de drop, comment l'obtenir). Seul le coffre commun s'ouvre pour l'instant.
+// ---------------------------------------------------------------------------
+const CHESTS = [
+  {
+    id: 'commun', name: 'Coffre commun', rarity: 'Commun', color: '#3cf2a3',
+    info: `<p>Un plateau, une pièce (pion, tour, cavalier, fou, dame ou roi), une fin de partie ou une prise et son. Et parfois, très rarement, un jeu de pièces complet.</p>
+      <p class="bx-info-how">${ico('swords')}<span>Un à chaque victoire en ligne.</span></p>
       <span class="bx-rates-head">Taux de drop</span>
       <ul class="bx-rates" id="bx-rates"></ul>
-      <span class="bx-rates-foot">Plus le drop est gros, plus il faut frapper le coffre avant qu’il s’ouvre.</span>
-    </span>
-  </span>
-</h2>`;
+      <span class="bx-rates-foot">Plus le drop est gros, plus il faut frapper le coffre avant qu’il s’ouvre.</span>`,
+  },
+  { id: 'rare', name: 'Coffre rare', rarity: 'Rare', how: '1 par jour avec les quêtes quotidiennes.', icon: 'target' },
+  { id: 'epique', name: 'Coffre épique', rarity: 'Épique', how: 'Avec les quêtes hebdomadaires.', icon: 'trophy' },
+  { id: 'legendaire', name: 'Coffre légendaire', rarity: 'Légendaire', how: 'Pas encore disponible.', icon: 'lock' },
+].map((c) => ({ ...c, color: c.color || RARITY[c.id].color }));
+
+/** Une carte du carrousel. */
+const slideHTML = (c) => {
+  const isCommun = c.id === 'commun';
+  const info = c.info || `<p class="bx-info-how">${ico(c.icon)}<span>${c.how}</span></p>
+    <p class="muted">Son contenu sera dévoilé bientôt.</p>`;
+  return `<article class="bx-slide${isCommun ? '' : ' soon'}" data-chest="${c.id}" style="--c:${c.color}" aria-roledescription="carte" aria-label="${c.name}">
+    <div class="bx-slide-art"${isCommun ? ' id="bx-card-art"' : ` data-variant="${c.id}"`}></div>
+    <div class="bx-slide-body">
+      <span class="bx-chest-rarity">${c.rarity}</span>
+      <h2 class="bx-title">${c.name} <button class="bx-info" type="button" data-info aria-label="Infos sur le ${c.name.toLowerCase()}" aria-expanded="false">i</button></h2>
+      <div class="bx-slide-dyn"${isCommun ? ' id="bx-commun-body"' : ''}>${isCommun ? '' : `<p class="bx-slide-soon">${ico('lock')} Bientôt</p>`}</div>
+    </div>
+    <div class="bx-slide-info">
+      <button class="bx-slide-close" type="button" data-info-close aria-label="Fermer les infos">✕</button>
+      <h3>${c.name}</h3>
+      ${info}
+    </div>
+  </article>`;
+};
+
+/** Construit le carrousel une seule fois (les coffres 3D y vivent ; on ne met à jour ensuite que le texte). */
+function buildCarousel() {
+  if ($('#bx-car-track')) return;
+  $('#bx-main').innerHTML = `<div class="bx-carousel">
+      <button class="bx-car-nav prev" type="button" data-car="-1" aria-label="Coffre précédent">‹</button>
+      <div class="bx-car-track" id="bx-car-track" tabindex="0" aria-label="Les coffres (flèches gauche et droite)">${CHESTS.map(slideHTML).join('')}</div>
+      <button class="bx-car-nav next" type="button" data-car="1" aria-label="Coffre suivant">›</button>
+    </div>
+    <div class="bx-car-dots" role="tablist">${CHESTS.map((c, i) => `<button class="bx-car-dot" type="button" data-go="${i}" style="--c:${c.color}" aria-label="${c.name}"></button>`).join('')}</div>
+    <div class="bx-under" id="bx-under"></div>`;
+  renderRates();
+  const track = $('#bx-car-track');
+  const slides = [...track.children];
+  const dots = [...document.querySelectorAll('.bx-car-dot')];
+  const N = slides.length;
+  const GAP = 18;
+  let drag = 0;
+  // Chaque carte est placée par rapport à la carte du centre : -1 à gauche, +1 à droite, ±2 hors de l'écran.
+  // Le carrousel boucle : après le Légendaire revient le Commun. Une carte qui passe d'un bord à l'autre
+  // le fait hors de l'écran, sans animation.
+  carousel.layout = (anim = true) => {
+    const w = slides[0].offsetWidth + GAP;
+    slides.forEach((sl, i) => {
+      let d = (((i - carousel.cur) % N) + N) % N;
+      if (d > N / 2) d -= N;
+      if (d === N / 2 && sl._d < 0) d = -d; // la carte du fond reste du côté d'où elle vient
+      const jump = sl._d !== undefined && Math.abs(d - sl._d) > 1;
+      sl.style.transition = !anim || jump ? 'none' : '';
+      sl.style.transform = `translateX(${d * w + drag}px)${d ? ' scale(.94)' : ''}`;
+      sl.classList.toggle('is-active', d === 0);
+      sl.toggleAttribute('inert', d !== 0);
+      sl._d = d;
+    });
+    dots.forEach((dt, k) => dt.classList.toggle('on', k === carousel.cur));
+  };
+  carousel.layout(false);
+  addEventListener('resize', () => carousel.layout(false));
+  // Glisser au doigt (ou à la souris) : la carte suit, puis passe à la suivante au-delà de 50 px
+  let x0 = null;
+  let moved = false;
+  track.addEventListener('pointerdown', (e) => {
+    moved = false;
+    if (e.button !== 0 || e.target.closest('button, a, .bx-slide-info')) return;
+    x0 = e.clientX;
+  });
+  addEventListener('pointermove', (e) => {
+    if (x0 === null) return;
+    drag = e.clientX - x0;
+    if (Math.abs(drag) > 8) moved = true;
+    if (moved) carousel.layout(false);
+  });
+  const release = () => {
+    if (x0 === null) return;
+    const d = drag;
+    x0 = null;
+    drag = 0;
+    setTimeout(() => (moved = false), 0); // le clic qui suit un glissé est ignoré, pas les suivants
+    if (Math.abs(d) > 50) goSlide(carousel.cur - Math.sign(d));
+    else carousel.layout();
+  };
+  addEventListener('pointerup', release);
+  addEventListener('pointercancel', release);
+  // après un glissé, pas de « clic » sur la carte
+  track.addEventListener('click', (e) => {
+    if (moved) {
+      e.stopPropagation();
+      moved = false;
+    }
+  }, true);
+  // Clavier : flèches gauche et droite quand le carrousel a le focus
+  track.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') goSlide(carousel.cur + 1);
+    else if (e.key === 'ArrowLeft') goSlide(carousel.cur - 1);
+  });
+  // La 3D des trois autres coffres : un seul contexte WebGL pour les trois, après le coffre commun
+  loadChest3d().then((mod) => (window.requestIdleCallback || setTimeout)(() => {
+    const hosts = [...track.querySelectorAll('.bx-slide-art[data-variant]')];
+    showcase = mod?.createShowcase?.(hosts.map((h) => ({ host: h, variant: h.dataset.variant, dim: h.dataset.variant === 'legendaire' }))) || null;
+    if (showcase && opening) showcase.setPaused(true);
+  }, { timeout: 1500 }));
+}
+/** Le carrousel (infini) : la carte du centre. */
+const carousel = { cur: 0, layout: () => {} };
+/** Amène la carte i au centre (en boucle : -1 donne la dernière). */
+function goSlide(i) {
+  const n = $('#bx-car-track')?.children.length || 1;
+  carousel.cur = ((i % n) + n) % n;
+  for (const sl of document.querySelectorAll('.bx-slide.flipped')) sl.classList.remove('flipped');
+  carousel.layout();
+}
 
 // ---------------------------------------------------------------------------
-// Box disponibles
+// Coffres disponibles (la carte du coffre commun)
 // ---------------------------------------------------------------------------
 function renderMain() {
-  const main = $('#bx-main');
+  buildCarousel();
+  const body = $('#bx-commun-body');
+  const under = $('#bx-under');
+  const slide = body.closest('.bx-slide');
+  const art = $('#bx-card-art');
   if (!uid) {
-    main.innerHTML = `<div class="bx-card"><div class="bx-card-art" id="bx-card-art"></div><div class="bx-card-body">
-      ${chestTitle()}<p class="muted">Connecte-toi pour gagner des coffres : un à chaque victoire en ligne.</p>
-      <a class="btn btn-primary" href="connexion.html?retour=box.html">Se connecter</a></div></div>`;
-    renderRates();
+    body.innerHTML = `<p class="muted">Connecte-toi pour gagner des coffres.</p>
+      <a class="btn btn-primary" href="connexion.html?retour=box.html">Se connecter</a>`;
+    under.innerHTML = '';
     placeCardChest(0);
     return;
   }
@@ -173,26 +294,21 @@ function renderMain() {
   const n = state.keys.length;
   const specials = state.keys.filter(isSpecial).length;
   const dustOk = state.dust >= DUST_PER_BOX;
-  main.innerHTML = `<div class="bx-card${n ? ' has' : ''}">
-      <div class="bx-card-art" id="bx-card-art">${n ? `<span class="bx-count">×${n}</span>` : ''}</div>
-      <div class="bx-card-body">
-        ${chestTitle()}
-        <p class="muted">Un plateau, une pièce (pion, tour, cavalier, fou, dame ou roi), une fin de partie ou une prise et son. Et parfois, très rarement, un jeu de pièces complet.</p>
-        <p class="bx-have">${n ? `Tu as <b>${n} coffre${n > 1 ? 's' : ''}</b> à ouvrir.` : 'Plus de coffre à ouvrir : gagne une partie en ligne pour en avoir un.'}</p>
-        <div class="bx-actions">
-          <button class="btn btn-primary bx-open-btn" type="button" data-open ${n && !banned ? '' : 'disabled'}>${ico('key')} Ouvrir le coffre</button>
-          <a class="btn btn-ghost" href="jouer.html">Jouer en ligne</a>
-        </div>
-        <div class="bx-dust">
-          <span>${ico('dust')} Poussière d’étoile : <b>${state.dust}</b> / ${DUST_PER_BOX}</span>
-          <div class="bx-dust-bar"><i style="width:${Math.min(100, (state.dust / DUST_PER_BOX) * 100)}%"></i></div>
-          <button class="btn btn-ghost small" type="button" data-dust ${dustOk && !banned ? '' : 'disabled'}>Ouvrir un coffre avec ${DUST_PER_BOX} ${ico('dust')}</button>
-        </div>
-        ${specials ? `<p class="bx-staff"><button class="btn btn-primary small" type="button" data-open-special ${banned ? 'disabled' : ''}>${ico('key')} Ouvrir un coffre spécial ×${specials}</button> <span class="muted">50 % épique, 50 % légendaire</span></p>` : ''}
-        ${staff ? `<p class="bx-staff"><button class="btn btn-ghost small" type="button" data-grant>${ico('tools')} +1 coffre de test</button> <button class="btn btn-ghost small" type="button" data-grant-special>${ico('tools')} +1 coffre spécial (épique ou légendaire)</button> <span class="muted">(admins et fondateur)</span></p>` : ''}
-      </div>
+  slide.classList.toggle('has', n > 0);
+  art.querySelector('.bx-count')?.remove();
+  if (n) art.insertAdjacentHTML('beforeend', `<span class="bx-count">×${n}</span>`);
+  body.innerHTML = `<p class="bx-have">${n ? `Tu as <b>${n} coffre${n > 1 ? 's' : ''}</b> à ouvrir.` : 'Gagne une partie en ligne pour en avoir un.'}</p>
+    <div class="bx-actions">
+      <button class="btn btn-primary bx-open-btn" type="button" data-open ${n && !banned ? '' : 'disabled'}>${ico('key')} Ouvrir</button>
+      <a class="btn btn-ghost" href="jouer.html">Jouer en ligne</a>
     </div>`;
-  renderRates();
+  under.innerHTML = `<div class="bx-dust">
+      <span>${ico('dust')} Poussière d’étoile : <b>${state.dust}</b> / ${DUST_PER_BOX}</span>
+      <div class="bx-dust-bar"><i style="width:${Math.min(100, (state.dust / DUST_PER_BOX) * 100)}%"></i></div>
+      <button class="btn btn-ghost small" type="button" data-dust ${dustOk && !banned ? '' : 'disabled'}>Ouvrir un coffre avec ${DUST_PER_BOX} ${ico('dust')}</button>
+    </div>
+    ${specials ? `<p class="bx-staff"><button class="btn btn-primary small" type="button" data-open-special ${banned ? 'disabled' : ''}>${ico('key')} Ouvrir un coffre spécial ×${specials}</button> <span class="muted">50 % épique, 50 % légendaire</span></p>` : ''}
+    ${staff ? `<p class="bx-staff"><button class="btn btn-ghost small" type="button" data-grant>${ico('tools')} +1 coffre de test</button> <button class="btn btn-ghost small" type="button" data-grant-special>${ico('tools')} +1 coffre spécial (épique ou légendaire)</button> <span class="muted">(admins et fondateur)</span></p>` : ''}`;
   placeCardChest(n);
 }
 
@@ -279,6 +395,39 @@ function tick() {
       g2.moveTo(p.x, p.y);
       g2.lineTo(p.x - p.vx * 3, p.y - p.vy * 3);
       g2.stroke();
+    } else if (p.kind === 'shard') {
+      // Éclat de glace : un triangle fin qui tournoie
+      g2.fillStyle = p.c;
+      g2.save();
+      g2.translate(p.x, p.y);
+      g2.rotate(p.rot);
+      g2.beginPath();
+      g2.moveTo(0, -p.s * 1.8);
+      g2.lineTo(p.s * 0.55, p.s * 0.6);
+      g2.lineTo(-p.s * 0.45, p.s * 0.9);
+      g2.closePath();
+      g2.fill();
+      g2.restore();
+    } else if (p.kind === 'coin') {
+      // Pièce d'or qui tourne sur elle-même (une ellipse qui s'aplatit), avec un reflet
+      g2.globalCompositeOperation = 'source-over';
+      const w = Math.abs(Math.cos(p.age * 0.18 + p.rot)) * p.s + 0.6;
+      g2.fillStyle = p.c;
+      g2.beginPath();
+      g2.ellipse(p.x, p.y, w, p.s, 0, 0, Math.PI * 2);
+      g2.fill();
+      g2.fillStyle = '#fff3c4';
+      g2.beginPath();
+      g2.ellipse(p.x - w * 0.3, p.y - p.s * 0.3, w * 0.3, p.s * 0.3, 0, 0, Math.PI * 2);
+      g2.fill();
+      g2.globalCompositeOperation = LOW_POWER ? 'source-over' : 'lighter';
+    } else if (p.kind === 'flake') {
+      // Flocon : un point doux qui flotte en zigzag
+      p.x += Math.sin(p.age * 0.08 + p.rot) * 0.6;
+      g2.fillStyle = p.c;
+      g2.beginPath();
+      g2.arc(p.x, p.y, p.s, 0, Math.PI * 2);
+      g2.fill();
     } else if (p.kind === 'star') {
       g2.fillStyle = p.c;
       g2.save();
@@ -401,6 +550,14 @@ const inner = $('#bx-inner');
 const result = $('#bx-result');
 let demoCtl = null;
 let stopHum = () => {};
+let curChest = 'commun'; // le coffre ouvert en ce moment (commun, rare, epique, legendaire)
+/** Effets d'ouverture propres à chaque coffre : éclats, onde, pièces d'or. */
+const CHEST_FX = {
+  commun: { bits: { kind: 'confetti', color: ['#7a4e2c', '#a8744a', '#5c3a20'], size: [1.5, 3] }, flash: '#fff', fade: 900 },
+  rare: { bits: { kind: 'shard', color: ['#e6f6ff', '#a9dcff', '#ffffff'], size: [2.5, 5] }, flash: '#d8f0ff', fade: 900, conf: ['#ffffff', '#a9dcff', '#4fa8ff', '#d8f0ff'] },
+  epique: { bits: { kind: 'star', color: ['#c98aff', '#f0dcff'], size: [2, 4] }, flash: '#e2c4ff', fade: 1150, conf: ['#b26bff', '#e2c4ff', '#8f4dff', '#ffd98a'] },
+  legendaire: { bits: { kind: 'coin', color: ['#f5b83d', '#ffd77a', '#e09a20'], size: [3, 5.5] }, flash: '#fff1c8', fade: 1350, conf: ['#f5b83d', '#ffd77a', '#fff1c8', '#e09a20'] },
+};
 let tapResolve = null;
 
 /** Attend que le joueur frappe le coffre (clic, toucher, Espace, Entrée) : rien ne se fait tout seul. */
@@ -464,15 +621,23 @@ const setTier = (id) => {
 };
 
 /** Un coup sur la box : elle s'écrase, rebondit, le couvercle se soulève et la lumière fuit. */
-function hit(k, color) {
+function hit(k, color, power = 1, last = false) {
   boxSfx.hit(k);
+  if (last) boxSfx.unlock();
   chest.setOpen(4 + k * 3);
   chest.setLeak(Math.min(1, 0.3 + k * 0.18));
+  chest.setPower?.(power);
   chest.hit(k);
-  shake(3 + k * 2);
+  const fx = CHEST_FX[curChest];
+  shake(curChest === 'legendaire' ? 5 + k * 2.5 : curChest === 'rare' ? 4 + k * 2 : 3 + k * 2);
   ring(color, 2.2 + k * 0.4);
+  // Épique : une onde violette à chaque coup ; Légendaire : un anneau d'or en plus
+  if (curChest === 'epique') setTimeout(() => ring('#b26bff', 3 + k * 0.5), 90);
+  if (curChest === 'legendaire') setTimeout(() => ring('#f5b83d', 2.6 + k * 0.5), 60);
   const c = center();
   emit({ x: c.x, y: c.y - 10, n: 14 + k * 8, speed: [3, 7 + k * 2], angle: [-Math.PI * 0.95, -Math.PI * 0.05], color: [color, '#fff'], size: [1.5, 3], life: [25, 50], gravity: 0.2 });
+  // les éclats du coffre : copeaux de bois, glace, éclats violets, pièces d'or
+  emit({ x: c.x, y: c.y + 10, n: 8 + k * 5, speed: [2, 6 + k], angle: [-Math.PI * 0.9, -Math.PI * 0.1], ...fx.bits, life: [35, 65], gravity: fx.bits.kind === 'star' ? 0.04 : 0.28, drag: 0.97 });
 }
 
 /** La rareté monte d'un cran. */
@@ -496,26 +661,53 @@ async function burstOpen(id) {
   boxMusic.resolve(lvl); // retour au calme, en majeur pour un gros drop
   stopHum();
   boxSfx.open(id);
-  // Le couvercle bascule sur sa charnière (à l'arrière), rebondit un peu et reste ouvert
+  // Le couvercle s'ouvre, chaque coffre à sa façon (claque, lévite, tourne…)
   chest.open();
+  const fx = CHEST_FX[curChest];
   $('#bx-beam').animate([{ transform: 'translateX(-50%) scaleY(0)', opacity: 0 }, { transform: 'translateX(-50%) scaleY(1)', opacity: 1, offset: 0.35 }, { transform: 'translateX(-50%) scaleY(1.08)', opacity: 0 }], { duration: 1700, delay: 150, easing: 'ease-out' });
-  flash('#fff', 0.9, 700);
-  shake(12 + lvl * 4, 500);
+  flash(fx.flash, curChest === 'legendaire' ? 1 : 0.9, curChest === 'legendaire' ? 1000 : 700);
+  shake(12 + lvl * 4 + (curChest === 'legendaire' ? 6 : 0), curChest === 'legendaire' ? 800 : 500);
   ring(t.color, 6);
   const c = center();
+  chestBurst(c);
   emit({ x: c.x, y: c.y, n: 70 + lvl * 40, speed: [5, 16 + lvl * 3], color: [t.color, '#fff', t.color], size: [2, 4], life: [40, 90], gravity: 0.15 });
   emit({ x: c.x, y: c.y - 20, n: 30 + lvl * 20, speed: [2, 8], angle: [-Math.PI * 0.85, -Math.PI * 0.15], color: [t.color, '#fff'], kind: 'star', size: [2, 5], life: [60, 110], gravity: -0.02, drag: 0.96 });
   if (lvl >= 2) {
-    const conf = ['#ff5fa2', '#ffd84a', '#3cf2a3', '#4fa8ff', '#b26bff'];
+    // confettis aux couleurs du coffre (arc-en-ciel pour le coffre commun)
+    const conf = CHEST_FX[curChest].conf || ['#ff5fa2', '#ffd84a', '#3cf2a3', '#4fa8ff', '#b26bff'];
     // Pluie de confettis sur toute la largeur de l'écran
     for (let i = 0; i < 24; i++) emit({ x: rnd(0, innerWidth), y: rnd(-60, -10), n: 4 + lvl, speed: [0.5, 3], angle: [Math.PI * 0.3, Math.PI * 0.7], color: conf, kind: 'confetti', size: [3, 6], life: [160, 240], gravity: 0.06, drag: 0.99 });
   }
-  stageHost.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateY(60px) scale(.8)', opacity: 0 }], { duration: 650, delay: 900, easing: 'ease-in', fill: 'forwards' })
+  stageHost.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateY(60px) scale(.8)', opacity: 0 }], { duration: 650, delay: fx.fade, easing: 'ease-in', fill: 'forwards' })
     .finished.then(() => opening && chest.setPaused(true), () => {}); // parti : plus de rendu 3D pendant la carte
-  await wait(1100);
+  await wait(fx.fade + 200);
 }
 
-async function doOpen(key, fake = null) {
+/** L'explosion propre à chaque coffre, quand le couvercle saute. */
+function chestBurst(c) {
+  if (curChest === 'rare') {
+    // La glace vole en éclats, puis il neige un peu
+    emit({ x: c.x, y: c.y, n: 60, speed: [5, 15], color: ['#e6f6ff', '#a9dcff', '#ffffff'], kind: 'shard', size: [3, 6], life: [45, 85], gravity: 0.3, drag: 0.97 });
+    for (let i = 0; i < 10; i++) emit({ x: rnd(0, innerWidth), y: rnd(-40, 0), n: 4, speed: [0.3, 1.2], angle: [Math.PI * 0.4, Math.PI * 0.6], color: ['#ffffff', '#d8f0ff'], kind: 'flake', size: [1.2, 2.6], life: [180, 260], gravity: 0.015, drag: 0.99 });
+  } else if (curChest === 'epique') {
+    // Onde violette : trois anneaux qui partent l'un après l'autre, des étoiles qui tourbillonnent vers le haut
+    [0, 160, 320].forEach((d, i) => setTimeout(() => ring(i === 1 ? '#e2c4ff' : '#b26bff', 7 + i * 1.5), d));
+    emit({ x: c.x, y: c.y - 20, n: 50, speed: [2, 9], angle: [-Math.PI * 0.95, -Math.PI * 0.05], color: ['#c98aff', '#f0dcff', '#8f4dff'], kind: 'star', size: [2, 4.5], life: [70, 120], gravity: -0.05, drag: 0.96 });
+  } else if (curChest === 'legendaire') {
+    // Explosion de lumière dorée : fontaine de pièces d'or, pluie d'or sur tout l'écran, deuxième onde
+    setTimeout(() => {
+      ring('#ffd77a', 9);
+      flash('#f5b83d', 0.45, 700);
+    }, 260);
+    emit({ x: c.x, y: c.y, n: 70, speed: [6, 17], angle: [-Math.PI * 0.92, -Math.PI * 0.08], color: ['#f5b83d', '#ffd77a', '#e09a20'], kind: 'coin', size: [3, 6], life: [70, 120], gravity: 0.32, drag: 0.985 });
+    for (let i = 0; i < 16; i++) emit({ x: rnd(0, innerWidth), y: rnd(-80, -10), n: 3, speed: [1, 4], angle: [Math.PI * 0.35, Math.PI * 0.65], color: ['#f5b83d', '#ffd77a'], kind: 'coin', size: [3, 5], life: [140, 200], gravity: 0.12, drag: 0.99 });
+  } else {
+    // Copeaux de bois
+    emit({ x: c.x, y: c.y, n: 30, speed: [4, 11], color: ['#7a4e2c', '#a8744a', '#5c3a20'], kind: 'confetti', size: [1.5, 3], life: [40, 70], gravity: 0.35 });
+  }
+}
+
+async function doOpen(key, fake = null, variant = 'commun') {
   if (opening) return;
   // Coffre suivant (la scène est encore ouverte) : on coupe les sons de la carte d'avant (accord, aperçu…)
   if (!stage.hidden) stopAllSounds();
@@ -532,19 +724,25 @@ async function doOpen(key, fake = null) {
   scene.prepend(stageHost);
   stageHost.getAnimations().forEach((a) => a.cancel());
   $('#bx-hint').hidden = true;
-  stage.style.setProperty('--c', '#2fe38a'); // le coffre éteint : la lueur verte de sa gemme
+  stage.style.setProperty('--c', '#2fe38a'); // le coffre éteint : la lueur de sa gemme
   stage.dataset.level = '-1';
+  showcase?.setPaused(true); // la vitrine est sous la scène : plus de rendu
   stage.hidden = false;
   document.body.classList.add('bx-opening');
   // Son et musique lancés tout de suite, dans le geste du joueur (sinon les téléphones les bloquent)
   unlockAudio();
-  boxMusic.start();
+  boxMusic.start(CHEST_FX[variant] ? variant : 'commun'); // chaque coffre a sa musique
   // Le coffre de la page passe dans la scène (déjà prêt : pas de chargement au moment d'ouvrir)
   await ensureChest();
-  chest.moveTo(stageHost, { idle: false, zoom: 1.08, sharp: true });
+  chest.moveTo(stageHost, { idle: false, zoom: 0.96, sharp: true, look: 0.66 }); // de la place au-dessus : le couvercle ouvert tient en entier
   chest.reset();
   chest.setPaused(false);
-  chest.setTint('#2fe38a');
+  const base = chest.setVariant?.(variant) || '#2fe38a';
+  curChest = CHEST_FX[variant] ? variant : 'commun';
+  boxSfx.chest(curChest);
+  chest.setPower?.(0); // runes éteintes, aura faible : chaque coup les rallume
+  stage.style.setProperty('--c', base);
+  chest.setTint(base);
 
   let res;
   try {
@@ -572,7 +770,7 @@ async function doOpen(key, fake = null) {
         setTier('commun');
         boxMusic.battle(); // premier coup : place à la musique épique
       }
-      hit(k, TIERS[ORDER[Math.min(k, target)]].color);
+      hit(k, TIERS[ORDER[Math.min(k, target)]].color, (k + 1) / (target + 2), k === target + 1);
       if (k === target + 1) break;
       if (k >= 1) {
         await wait(220);
@@ -710,8 +908,13 @@ function closeStage() {
   document.body.classList.remove('bx-opening');
   renderMain();
   stopAllSounds(); // on ferme : plus aucun son (musique, accord, animation gagnée)
+  curChest = 'commun';
+  boxSfx.chest('commun');
   setTimeout(warmAudio, 400); // et on prépare déjà la musique du prochain coffre
+  showcase?.setPaused(false);
   if (chest) {
+    chest.setVariant?.('commun');
+    chest.setPower?.(1);
     chest.moveTo(cardHost, { idle: true, zoom: 1.1 });
     chest.reset();
     chest.setPaused(false);
@@ -742,6 +945,19 @@ result.addEventListener('pointerleave', () => {
 // Clics
 // ---------------------------------------------------------------------------
 document.addEventListener('click', async (e) => {
+  // Carrousel : flèches, points, ⓘ qui retourne la carte
+  const nav = e.target.closest('[data-car]');
+  if (nav) return goSlide(carousel.cur + Number(nav.dataset.car));
+  const dot = e.target.closest('[data-go]');
+  if (dot) return goSlide(Number(dot.dataset.go));
+  const flip = e.target.closest('[data-info], [data-info-close]');
+  if (flip) {
+    const sl = flip.closest('.bx-slide');
+    const show = flip.hasAttribute('data-info') && !sl.classList.contains('flipped');
+    sl.classList.toggle('flipped', show);
+    sl.querySelector('[data-info]').setAttribute('aria-expanded', String(show));
+    return;
+  }
   // Bulle ⓘ des taux : un toucher l'ouvre ou la ferme ; un clic ailleurs la ferme
   const info = e.target.closest('.bx-info');
   for (const w of document.querySelectorAll('.bx-info-wrap.open')) {
@@ -815,17 +1031,65 @@ addEventListener('keydown', (e) => {
 
 // En local seulement (localhost) : rejouer l'ouverture sans rien enregistrer, pour régler l'animation.
 // bxDemo('legendaire', 'ocean', 'N') ; bxDemo('jeu', 'japon') ; bxDemo('rare', 'western', 'endAnim', false)
+// Le 5e argument choisit le coffre : bxDemo('epique', 'japon', 'N', true, 'legendaire') ouvre le coffre légendaire.
+// En local, toucher un coffre de la vitrine l'ouvre aussi pour de faux.
 if (location.hostname === 'localhost') {
-  window.bxDemo = (rarity = 'rare', pack = 'japon', slot = 'N', isNew = true) => {
+  window.bxDemo = (rarity = 'rare', pack = 'japon', slot = 'N', isNew = true, variant = 'commun') => {
     const slots = rarity === 'jeu' ? [...PIECE_TYPES] : [slot];
-    return doOpen(null, { rarity, pack, slots, fresh: isNew ? slots : [], dust: isNew ? 0 : { commun: 1, rare: 3, epique: 6, legendaire: 10, jeu: 20 }[rarity] });
+    return doOpen(null, { rarity, pack, slots, fresh: isNew ? slots : [], dust: isNew ? 0 : { commun: 1, rare: 3, epique: 6, legendaire: 10, jeu: 20 }[rarity] }, variant);
   };
+  $('#bx-main')?.addEventListener('click', (e) => {
+    const art = e.target.closest('.bx-slide-art[data-variant]');
+    if (art) window.bxDemo(art.dataset.variant, 'japon', 'N', true, art.dataset.variant);
+  });
+  // Panneau « Sons des coffres » (en local seulement) : écouter chaque son, ou lancer une ouverture de démo
+  const names = { commun: 'Commun', rare: 'Rare', epique: 'Épique', legendaire: 'Légendaire' };
+  const panel = document.createElement('section');
+  panel.className = 'bx-section bx-devsfx';
+  panel.innerHTML = `<h2>Sons des coffres <small class="muted">(en local seulement)</small></h2>
+    <div class="bx-devsfx-grid">${Object.entries(names).map(([v, n]) => `<div class="bx-devsfx-row" style="--c:${v === 'commun' ? '#3cf2a3' : RARITY[v].color}">
+      <b>${n}</b>
+      <button class="btn btn-ghost small" type="button" data-sfx="${v}:hit">Coup</button>
+      <button class="btn btn-ghost small" type="button" data-sfx="${v}:unlock">Serrure</button>
+      <button class="btn btn-ghost small" type="button" data-sfx="${v}:open">Couvercle</button>
+      <button class="btn btn-ghost small" type="button" data-sfx="${v}:reveal">Révélation</button>
+      <button class="btn btn-ghost small" type="button" data-sfx="${v}:calm">♪ Musique d’attente</button>
+      <button class="btn btn-ghost small" type="button" data-sfx="${v}:battle">♪ Musique de combat</button>
+      <button class="btn btn-primary small" type="button" data-sfx="${v}:demo">Ouverture complète</button>
+    </div>`).join('')}
+    <p><button class="btn btn-ghost small" type="button" data-sfx="x:stop">■ Couper la musique</button></p></div>`;
+  $('#bx-main')?.after(panel);
+  panel.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-sfx]');
+    if (!b) return;
+    unlockAudio();
+    const [v, what] = b.dataset.sfx.split(':');
+    const tier = v === 'commun' ? 'rare' : v;
+    if (what === 'demo') return window.bxDemo(tier, 'japon', 'N', true, v);
+    if (what === 'stop') return boxMusic.stop(0.4);
+    if (what === 'calm' || what === 'battle') {
+      // la musique du coffre (combat : au niveau épique, pour l'entendre bien chargée)
+      boxMusic.stop(0.05);
+      return setTimeout(() => {
+        boxMusic.start(v);
+        if (what === 'battle') {
+          boxMusic.setLevel(2);
+          boxMusic.battle();
+        }
+      }, 80);
+    }
+    boxSfx.chest(v);
+    if (what === 'hit') [0, 1, 2].forEach((k) => setTimeout(() => boxSfx.hit(k), k * 420));
+    else if (what === 'unlock') boxSfx.unlock();
+    else if (what === 'open') boxSfx.open(tier);
+    else boxSfx.reveal(tier, true);
+  });
 }
-// box.html?demo=legendaire,ocean,N : la lance au chargement
+// box.html?demo=legendaire,ocean,N,new,legendaire : la lance au chargement (5e valeur : le coffre)
 const demoArg = location.hostname === 'localhost' && new URLSearchParams(location.search).get('demo');
 if (demoArg) {
-  const [r, p, sl, n] = demoArg.split(',');
-  setTimeout(() => window.bxDemo(r, p, sl, n !== 'old'), 300);
+  const [r, p, sl, n, v] = demoArg.split(',');
+  setTimeout(() => window.bxDemo(r, p, sl, n !== 'old', v || 'commun'), 300);
 }
 
 // Le son et la musique se préparent quand la page est calme (pas au moment d'ouvrir)

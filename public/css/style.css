@@ -2429,6 +2429,92 @@ body { overflow-x: clip; position: relative; }
 .bx-staff { margin: 12px 0 0 !important; font-size: 0.85rem; }
 @media (max-width: 700px) { .bx-card { grid-template-columns: 1fr; text-align: center; } .bx-card-art { max-width: 200px; margin: 0 auto; } .bx-actions { justify-content: center; } }
 
+/* Le carrousel des coffres : une carte par coffre, celle du centre en grand, les voisines qui dépassent sur les côtés */
+.bx-carousel { position: relative; --slide: min(760px, 82vw); }
+/* Toutes les cartes sont empilées au même endroit ; le JS les décale (translateX) : le carrousel boucle sans fin */
+.bx-car-track {
+  display: grid; justify-items: center; padding: 28px 0; margin-block: -20px; overflow-x: clip; overflow-y: visible;
+  /* le carrousel va jusqu'aux bords de l'écran, et les cartes voisines s'y fondent (pas de coupure nette) */
+  margin-inline: calc(50% - 50vw);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
+  touch-action: pan-y; outline: none; cursor: grab; -webkit-user-select: none; user-select: none;
+}
+.bx-car-track:active { cursor: grabbing; }
+.bx-car-track:focus-visible .bx-slide.is-active { outline: 2px solid var(--c); outline-offset: 3px; }
+.bx-slide {
+  grid-area: 1 / 1; width: var(--slide); transition: opacity 0.35s, transform 0.45s cubic-bezier(.2, .8, .3, 1), box-shadow 0.3s;
+  position: relative; display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: center;
+  min-height: 280px; padding: 16px 28px 16px 12px; border-radius: 22px; overflow: hidden;
+  background: radial-gradient(70% 90% at 22% 45%, color-mix(in srgb, var(--c) 18%, transparent), transparent 70%), var(--bg-2);
+  border: 1px solid color-mix(in srgb, var(--c) 34%, var(--line));
+  opacity: 0.45;
+}
+.bx-slide.is-active { opacity: 1; box-shadow: 0 0 44px color-mix(in srgb, var(--c) 14%, transparent); }
+.bx-slide.has { border-color: color-mix(in srgb, var(--c) 60%, transparent); }
+.bx-slide-art { position: relative; height: 250px; }
+.bx-slide-art .chest3d.chest-card { height: 100%; }
+.bx-slide-art .cube { --s: 100px; }
+.bx-slide-body .bx-title { margin: 2px 0 12px; font-size: 1.6rem; }
+.bx-chest-rarity { font: 800 0.74rem var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--c); }
+.bx-slide-body .bx-have { margin: 0 0 12px; }
+.bx-slide-body .bx-have b { color: var(--c); }
+.bx-slide-body .bx-actions { margin: 0; }
+.bx-slide-soon { display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 7px 14px; border-radius: 99px; font-weight: 700; color: var(--muted); background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line); }
+.bx-slide-soon .ui-ico { width: 18px; height: 18px; }
+/* Le ⓘ retourne la carte : ses infos viennent par-dessus */
+.bx-slide-info {
+  position: absolute; inset: 0; z-index: 3; overflow: auto; padding: 22px 26px; text-align: left;
+  background: color-mix(in srgb, var(--bg-2) 94%, var(--c)); border-radius: inherit; animation: bx-flip-in 0.28s ease-out;
+}
+.bx-slide-info { display: none; }
+.bx-slide.flipped .bx-slide-info { display: block; }
+/* Ordinateur : le ⓘ s'ouvre au survol, et reste ouvert tant que la souris est sur les infos */
+@media (hover: hover) and (pointer: fine) {
+  .bx-slide:has(.bx-info:hover) .bx-slide-info, .bx-slide-info:hover { display: block; }
+  .bx-slide-close { display: none; }
+  .bx-slide .bx-info { cursor: help; }
+}
+.bx-slide-info h3 { margin: 0 0 10px; color: var(--c); }
+.bx-slide-info p { margin: 0 0 10px; }
+.bx-slide-info .bx-rates li { grid-template-columns: 118px 58px 1fr; padding: 7px 12px; }
+.bx-slide-info .bx-rates small { font-size: 0.78rem; }
+.bx-info-how { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.bx-info-how .ui-ico { width: 24px; height: 24px; }
+.bx-slide-close { position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.05); color: var(--text); cursor: pointer; }
+@keyframes bx-flip-in { from { opacity: 0; transform: perspective(900px) rotateY(-12deg); } }
+.bx-car-nav {
+  position: absolute; top: 50%; z-index: 4; width: 42px; height: 42px; translate: 0 -50%; border-radius: 50%; cursor: pointer;
+  font: 700 1.6rem/1 var(--font); color: var(--text); background: rgba(14, 11, 28, 0.85); border: 1px solid var(--line);
+}
+/* les flèches sont posées sur les bords de la carte du centre */
+.bx-car-nav.prev { left: calc(50% - var(--slide) / 2 - 21px); }
+.bx-car-nav.next { right: calc(50% - var(--slide) / 2 - 21px); }
+.bx-car-nav { box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5); transition: border-color 0.15s, transform 0.15s; }
+.bx-car-nav:hover { border-color: var(--accent, #8f6bff); transform: scale(1.08); }
+body.page-box { overflow-x: clip; } /* le carrousel déborde jusqu'aux bords : pas de défilement horizontal */
+.bx-car-dots { position: relative; display: flex; justify-content: center; gap: 8px; margin: 12px 0 16px; }
+.bx-car-dot { width: 10px; height: 10px; padding: 0; border-radius: 99px; border: 0; cursor: pointer; background: color-mix(in srgb, var(--c) 35%, transparent); transition: width 0.25s, background 0.25s; }
+.bx-car-dot.on { width: 26px; background: var(--c); }
+.bx-under { display: grid; gap: 10px; }
+@media (max-width: 700px) {
+  .bx-carousel { --slide: 84vw; }
+  .bx-car-track { -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
+  .bx-slide { grid-template-columns: 1fr; gap: 4px; min-height: 0; padding: 4px 16px 18px; text-align: center; }
+  .bx-slide-art { height: 190px; }
+  .bx-slide-body .bx-title { justify-content: center; font-size: 1.35rem; margin-bottom: 10px; }
+  .bx-slide-body .bx-actions { justify-content: center; }
+  .bx-slide-info { padding: 18px 16px; }
+  .bx-slide-info .bx-rates li { grid-template-columns: 1fr auto; }
+  .bx-car-nav { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .bx-slide, .bx-slide-info { transition: none; animation: none; } }
+
+/* Panneau de test des sons (en local seulement) */
+.bx-devsfx-grid { display: grid; gap: 8px; }
+.bx-devsfx-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 12px; border-radius: 12px; border: 1px dashed color-mix(in srgb, var(--c) 45%, var(--line)); }
+.bx-devsfx-row b { min-width: 90px; color: var(--c); }
+
 .bx-section h2 { margin: 0 0 4px; }
 .bx-section > p { margin: 0 0 14px; }
 .bx-rates { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
@@ -2596,7 +2682,15 @@ body { overflow-x: clip; position: relative; }
 .chest3d { position: relative; }
 .chest3d-canvas { display: block; width: 100%; height: 100%; }
 .chest3d.chest-card { width: 100%; height: 210px; }
-.chest3d.chest-stage { width: min(600px, 96vw); height: min(480px, 62vh); }
+.chest3d.chest-stage { width: min(640px, 96vw); height: min(560px, 66vh); }
+/* Les bords du cadre 3D se fondent dans la scène (sinon l'aura du coffre légendaire s'y coupe net). Seulement les
+   bords : le coffre lui-même (couvercle ouvert compris) reste bien opaque. */
+.chest3d.chest-stage .chest3d-canvas, .bx-slide-art .chest3d-canvas {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent), linear-gradient(transparent, #000 8%, #000 92%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent), linear-gradient(transparent, #000 8%, #000 92%, transparent);
+  mask-composite: intersect;
+}
 .chest3d .cube { position: absolute; left: 50%; top: 50%; translate: -50% -50%; }
 /* Coffre de la page : il flotte, et brille quand il y en a à ouvrir */
 .bx-card-art .cube { --s: 100px; }

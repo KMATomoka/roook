@@ -158,6 +158,12 @@ const CHESTS = [
   { id: 'legendaire', name: 'Coffre légendaire', rarity: 'Légendaire', how: 'Pas encore disponible.', icon: 'lock' },
 ].map((c) => ({ ...c, color: c.color || RARITY[c.id].color }));
 
+/** « Tu as N coffres à ouvrir » et le bouton Ouvrir (grisés quand on n'en a pas). */
+const haveHTML = (n, canOpen) => `<p class="bx-have${n ? '' : ' none'}">Tu as <b>${n} coffre${n > 1 ? 's' : ''}</b> à ouvrir.</p>
+    <div class="bx-actions">
+      <button class="btn btn-primary bx-open-btn" type="button"${canOpen ? ' data-open' : ''} ${n && canOpen ? '' : 'disabled'}>${ico('key')} Ouvrir</button>
+    </div>`;
+
 /** Une carte du carrousel. */
 const slideHTML = (c) => {
   const isCommun = c.id === 'commun';
@@ -166,7 +172,7 @@ const slideHTML = (c) => {
     <div class="bx-slide-body">
       <span class="bx-chest-rarity">${c.rarity}</span>
       <h2 class="bx-title">${c.name} <button class="bx-info" type="button" data-info aria-label="Infos sur le ${c.name.toLowerCase()}" aria-expanded="false">i</button></h2>
-      <div class="bx-slide-dyn"${isCommun ? ' id="bx-commun-body"' : ''}>${isCommun ? '' : `<p class="bx-slide-soon">${ico('lock')} Bientôt</p>`}</div>
+      <div class="bx-slide-dyn"${isCommun ? ' id="bx-commun-body"' : ''}>${isCommun ? '' : haveHTML(0, false)}</div>
     </div>
   </article>`;
 };
@@ -370,10 +376,7 @@ function renderMain() {
   slide.classList.toggle('has', n > 0);
   art.querySelector('.bx-count')?.remove();
   art.insertAdjacentHTML('beforeend', `<span class="bx-count${n ? '' : ' zero'}">×${n}</span>`);
-  body.innerHTML = `${n ? `<p class="bx-have">Tu as <b>${n} coffre${n > 1 ? 's' : ''}</b> à ouvrir.</p>` : ''}
-    <div class="bx-actions">
-      <button class="btn btn-primary bx-open-btn" type="button" data-open ${n && !banned ? '' : 'disabled'}>${ico('key')} Ouvrir</button>
-    </div>
+  body.innerHTML = `${haveHTML(n, !banned)}
     <div class="bx-dust">
       <span>${ico('dust')} Poussière d’étoile : <b>${state.dust}</b> / ${DUST_PER_BOX}</span>
       <div class="bx-dust-bar"><i style="width:${Math.min(100, (state.dust / DUST_PER_BOX) * 100)}%"></i></div>

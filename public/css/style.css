@@ -2466,6 +2466,9 @@ body { overflow-x: clip; position: relative; }
 .bx-chest-rarity { font: 800 0.74rem var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--c); }
 .bx-slide-body .bx-have { margin: 0 0 12px; }
 .bx-slide-body .bx-have b { color: var(--c); }
+/* aucun coffre de ce type : le texte et le bouton sont un peu grisés */
+.bx-slide-body .bx-have.none { opacity: 0.55; }
+.bx-slide-body .bx-have.none + .bx-actions .bx-open-btn { opacity: 0.45; filter: grayscale(0.6); }
 .bx-slide-body .bx-actions { margin: 0; }
 /* Poussière d'étoile : dans la carte du coffre commun, sous les boutons */
 .bx-slide-body .bx-dust { margin-top: 14px; padding: 10px 12px; gap: 8px 12px; font-size: 0.92rem; }

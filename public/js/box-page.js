@@ -142,7 +142,7 @@ const ratesHTML = (rates) => `<span class="bx-rates-head">Taux de drop</span>
 const CHEST_RATES = {
   commun: RATES,
   rare: RARE_RATES,
-  epique: [{ id: 'jeu', pct: 1.5 }, { id: 'legendaire', pct: 18.5 }, { id: 'epique', pct: 45 }, { id: 'rare', pct: 35 }],
+  epique: [{ id: 'jeu', pct: 1.5 }, { id: 'legendaire', pct: 20 }, { id: 'epique', pct: 50 }, { id: 'rare', pct: 28.5 }],
   legendaire: [{ id: 'jeu', pct: 5 }, { id: 'legendaire', pct: 55 }, { id: 'epique', pct: 40 }],
 };
 // ---------------------------------------------------------------------------

@@ -13,7 +13,7 @@ import { scrollMoveIntoList, repetitions, rivalOf, faceUrl } from './common.js';
 import { session, avatarOf, profileUrl, badgeOf, badgeHtml, toast, rememberGame, markRematchDeclined, isRematchDeclined } from './compte.js';
 import { gameSocket, AWAY_LIMIT } from './online.js';
 import { serverNow } from './fb.js';
-import { rankOf, logoUrl, noRankHtml, fmt, applyResult, CATS, RANKS, divisions, PLACEMENT } from './rangs.js';
+import { rankOf, logoUrl, noRankHtml, fmt, applyResult, getRating, catOfCadence, CATS, RANKS, divisions, PLACEMENT } from './rangs.js';
 const account = await session;
 
 const params = new URLSearchParams(location.search);
@@ -33,6 +33,8 @@ let names = { w: 'Blancs', b: 'Noirs' };
 let pics = { w: null, b: null }; // photos de profil des joueurs (si elles existent)
 let badges = { w: null, b: null }; // badge affiché par chaque joueur (emoji à côté du pseudo)
 let picIds = '';
+let liveRanks = { w: null, b: null }; // Elo de chaque joueur dans la cadence de la partie (parties en ligne non classées)
+let rankKey = '';
 let over = null; // { result, reason } quand la partie est finie
 let gameId = mode === 'ami' ? onlineId + '-' + Date.now().toString(36) : mode + '-' + Date.now().toString(36);
 let savedThisGame = false;
@@ -264,13 +266,15 @@ function playerHtml(c) {
   let sub = '';
   if (mode === 'ia' && c !== myColor) sub = `<small>niveau ${level.n} · ${level.name}</small>`;
   if (mode === 'ami' && c === myColor) sub = '<small>Toi</small>';
+  // Partie non classée : rang du joueur dans cette cadence, s'il en a un (placement terminé)
+  const live = liveRanks[c];
+  if (mode === 'ami' && !online.ranked && live?.n && !rankOf(live).placement) sub = rankTip(live, CATS[liveRanks.cat]) + sub;
   // Partie classée : rang et Elo relevés au début de la partie
   if (mode === 'ami' && online.ranked && online.elo?.[c] != null) {
-    const rk = rankOf({ r: online.elo[c], n: PLACEMENT });
     const you = c === myColor ? ' · Toi' : '';
     sub = online.pl?.[c]
       ? `<small>Placement · ${fmt(online.elo[c])}${you}</small>`
-      : `<img class="rk-mini" src="${logoUrl(rk.rank.k)}" alt="${rk.name}" title="${rk.name}" width="20" height="20"><small>${fmt(online.elo[c])}${you}</small>`;
+      : `${rankTip({ r: online.elo[c], n: PLACEMENT }, CATS[online.cat] || '')}<small>${fmt(online.elo[c])}${you}</small>`;
   }
   const clock = clocks.base
     ? `<div class="clock ${isTurn && clocks.running ? 'running' : ''} ${liveClock(c) < 20000 ? 'low' : ''}" data-clock="${c}">${formatClock(liveClock(c))}</div>`
@@ -300,6 +304,53 @@ function playerFace(c) {
     ? `<img src="${pics[c]}" alt="Photo de ${escapeHtml(names[c] || '')}" draggable="false">`
     : escapeHtml((names[c] || '?')[0].toUpperCase());
   return `<div class="avatar who ${pics[c] ? 'has-pic' : ''}">${inner}${colorTag}</div>`;
+}
+
+/** Logo du rang, avec le rang, l'Elo et la cadence au survol (ou au toucher sur téléphone). */
+function rankTip(e, catName) {
+  const rk = rankOf(e);
+  return `<span class="rk-tip" tabindex="0" data-name="${rk.name}" data-col="${rk.rank.col}" data-elo="${fmt(e.r)}" data-cat="${catName}"><img class="rk-mini" src="${logoUrl(rk.rank.k)}" alt="${rk.name}" width="20" height="20"></span>`;
+}
+
+// Infobulle du rang : flottante (le pseudo coupe ce qui dépasse), au-dessus du logo, ou dessous s'il n'y a pas la place
+const rkFloat = Object.assign(document.createElement('div'), { className: 'rk-float', role: 'tooltip' });
+document.body.appendChild(rkFloat);
+function showRankTip(t) {
+  rkFloat.style.setProperty('--rk', t.dataset.col);
+  rkFloat.innerHTML = `<b>${t.dataset.name}</b> · ${t.dataset.elo} Elo en ${t.dataset.cat}`;
+  const r = t.getBoundingClientRect();
+  const w = rkFloat.offsetWidth;
+  const h = rkFloat.offsetHeight;
+  const x = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2));
+  const y = r.top - h - 8 >= 8 ? r.top - h - 8 : r.bottom + 8;
+  rkFloat.style.left = `${x}px`;
+  rkFloat.style.top = `${y}px`;
+  rkFloat.classList.add('on');
+}
+const hideRankTip = () => rkFloat.classList.remove('on');
+document.addEventListener('mouseover', (e) => {
+  const t = e.target.closest?.('.rk-tip');
+  if (t) showRankTip(t);
+  else hideRankTip();
+});
+document.addEventListener('focusin', (e) => (e.target.closest?.('.rk-tip') ? showRankTip(e.target.closest('.rk-tip')) : hideRankTip()));
+document.addEventListener('focusout', hideRankTip);
+window.addEventListener('scroll', hideRankTip, { passive: true });
+
+/** Rang des deux joueurs dans la cadence de la partie (Blitz 5 min, Rapide 10 min…). Rien pour une cadence sans classement. */
+function loadRanks() {
+  if (mode !== 'ami' || online.ranked || !online.time || !online.ids) return;
+  const cat = catOfCadence(`${online.time.base / 60000}+${online.time.inc / 1000}`);
+  const key = `${cat}|${online.ids.w}|${online.ids.b}`;
+  if (key === rankKey) return;
+  rankKey = key;
+  liveRanks = { w: null, b: null };
+  if (!cat) return;
+  Promise.all(['w', 'b'].map((c) => (online.ids[c] ? getRating(online.ids[c], cat).catch(() => null) : null))).then(([w, b]) => {
+    if (rankKey !== key) return;
+    liveRanks = { w, b, cat };
+    renderPlayers();
+  });
 }
 
 /** Charge les photos des deux joueurs (une seule fois par paire de joueurs). */
@@ -892,6 +943,7 @@ function startOnline() {
     online = s;
     names = s.names;
     if (s.ids) loadPics(s.ids);
+    loadRanks();
     gameId = `${onlineId}-${s.round}`;
     clocks.base = s.time.base;
     clocks.w = s.clock.w;

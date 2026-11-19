@@ -4,6 +4,10 @@ import { ico } from './icons.js'; // icônes dessinées (à la place des emojis)
 import { $, $$, getPref, setPref, loadGames, gameRow, escapeHtml, RIVALS, rivalOf, faceUrl } from './common.js';
 import { session, challenge, watchFriends, picHtml, profileUrl, CADENCES } from './compte.js';
 import { findOpponent } from './matchmaking.js';
+import { db, ref, get, query, orderByKey, limitToLast, limitToFirst } from './fb.js';
+import { RANKED_CADENCES, getRatings, rankOf, logoUrl, fmt, RANKS, PLACEMENT, MIN_GAMES } from './rangs.js';
+
+const params = new URLSearchParams(location.search);
 
 // --- Arrivée depuis l'accueil (jouer.html#ami ou #ia) : on met la carte en avant ----
 const wanted = $('#card-' + location.hash.slice(1));
@@ -73,6 +77,45 @@ const toMs = (c) => {
   return { base: m * 60000, inc: (s || 0) * 1000 };
 };
 
+// --- Partie classée : Elo par cadence, et 5 parties normales avant d'y avoir accès ---
+let ratings = null;
+let onlineGames = 0;
+let recentOpps = new Map(); // adversaires des dernières 24 h → nombre de parties
+async function loadRanked() {
+  if (!user) return;
+  const [r, first, last] = await Promise.all([
+    getRatings(user.id).catch(() => null),
+    get(query(ref(db, `history/${user.id}`), orderByKey(), limitToFirst(MIN_GAMES))).catch(() => null),
+    get(query(ref(db, `history/${user.id}`), orderByKey(), limitToLast(40))).catch(() => null),
+  ]);
+  ratings = r;
+  onlineGames = first?.size || 0;
+  recentOpps = new Map();
+  last?.forEach((s) => {
+    const g = s.val();
+    if (g?.opp && typeof g.date === 'number' && Date.now() - g.date < 86400000) recentOpps.set(g.opp, (recentOpps.get(g.opp) || 0) + 1);
+  });
+}
+const rankedCat = (c) => (RANKED_CADENCES.find(([k]) => k === c) || [])[1];
+const mmType = () => getPref('mm-type', 'normale');
+
+function rankPanel(cat) {
+  const e = ratings?.[cat];
+  const rk = rankOf(e);
+  const nextRank = RANKS[rk.i + 1];
+  const catName = { bullet: 'Bullet', blitz: 'Blitz', rapide: 'Rapide' }[cat];
+  if (rk.placement) {
+    return `<div class="rk-panel"><img src="${logoUrl('fer')}" alt="" width="64" height="64" class="rk-panel-logo dim">
+      <div><p class="rk-panel-cat">${catName} · placement</p><p class="rk-panel-name">${rk.games} / ${PLACEMENT} parties</p>
+      <p class="muted rk-panel-note">Elo de départ ${fmt(e?.r ?? 800)}. Ton rang s’affiche après ${PLACEMENT} parties classées.</p></div></div>`;
+  }
+  return `<div class="rk-panel" style="--rk: ${rk.rank.col}"><img src="${logoUrl(rk.rank.k)}" alt="" width="64" height="64" class="rk-panel-logo">
+    <div><p class="rk-panel-cat">Ton rang · ${catName}</p><p class="rk-panel-name">${rk.name}</p>
+    <p class="rk-panel-elo">${fmt(rk.r)}</p>
+    ${rk.next ? `<div class="rk-bar"><i style="width: ${Math.round(rk.progress * 100)}%"></i></div><p class="muted rk-panel-note">Encore ${rk.next - rk.r} pour ${rk.next >= (nextRank?.min ?? Infinity) ? nextRank.name : 'la division suivante'}</p>` : ''}
+    </div></div>`;
+}
+
 function renderMatchForm() {
   if (!user) {
     mmBox.innerHTML = `<p>Affronte un joueur en ligne que tu ne connais pas, à la même cadence que toi.</p>
@@ -82,29 +125,69 @@ function renderMatchForm() {
       </div>`;
     return;
   }
-  const saved = getPref('cadence-hasard', getPref('cadence', '10+0'));
-  mmBox.innerHTML = `<p>Affronte un joueur en ligne que tu ne connais pas, à la même cadence que toi.</p>
-    <form id="form-mm" class="mode-form">
-      <label>Temps pour chaque joueur
-        <select name="cadence">${CADENCES.map(([k, label]) => `<option value="${k}"${k === saved ? ' selected' : ''}>${label}</option>`).join('')}</select>
-      </label>
-      <button class="btn btn-primary">${ico('dice')} Trouver un adversaire</button>
-    </form>`;
-  $('#form-mm').addEventListener('submit', (e) => {
+  const type = mmType();
+  const seg = `<div class="seg mm-type" role="radiogroup" aria-label="Type de partie">
+      <label><input type="radio" name="mm-type" value="normale"${type === 'normale' ? ' checked' : ''}><span>Partie normale</span></label>
+      <label><input type="radio" name="mm-type" value="classee"${type === 'classee' ? ' checked' : ''}><span>${ico('trophy')} Partie classée</span></label>
+    </div>`;
+  if (type === 'classee') {
+    const saved = getPref('cadence-classee', '10+0');
+    const cad = RANKED_CADENCES.some(([k]) => k === saved) ? saved : '10+0';
+    const locked = onlineGames < MIN_GAMES;
+    mmBox.innerHTML = `${seg}
+      <p>Gagne de l’Elo et monte en rang contre un joueur de ton niveau. <a href="classe.html">Voir les rangs</a></p>
+      ${locked
+        ? `<p class="rk-locked">${ico('lock')} Joue encore ${MIN_GAMES - onlineGames} partie${MIN_GAMES - onlineGames > 1 ? 's' : ''} en ligne (normale ou entre amis) pour débloquer la partie classée.</p>`
+        : `<form id="form-mm" class="mode-form">
+          <div id="rk-panel">${ratings ? rankPanel(rankedCat(cad)) : ''}</div>
+          <label>Temps pour chaque joueur
+            <select name="cadence">${RANKED_CADENCES.map(([k, cat, label]) => `<option value="${k}"${k === cad ? ' selected' : ''}>${label} — ${fmt(ratings?.[cat]?.r ?? 800)}</option>`).join('')}</select>
+          </label>
+          <button class="btn btn-primary">${ico('trophy')} Chercher une partie classée</button>
+          <p class="muted rk-rule">En classé, abandonner ou quitter la partie compte comme une défaite.</p>
+        </form>`}`;
+  } else {
+    const saved = getPref('cadence-hasard', getPref('cadence', '10+0'));
+    mmBox.innerHTML = `${seg}
+      <p>Affronte un joueur en ligne que tu ne connais pas, à la même cadence que toi. Sans Elo, juste pour le plaisir.</p>
+      <form id="form-mm" class="mode-form">
+        <label>Temps pour chaque joueur
+          <select name="cadence">${CADENCES.map(([k, label]) => `<option value="${k}"${k === saved ? ' selected' : ''}>${label}</option>`).join('')}</select>
+        </label>
+        <button class="btn btn-primary">${ico('dice')} Trouver un adversaire</button>
+      </form>`;
+  }
+  for (const r of mmBox.querySelectorAll('input[name=mm-type]')) {
+    r.addEventListener('change', () => {
+      setPref('mm-type', r.value);
+      renderMatchForm();
+    });
+  }
+  const form = $('#form-mm');
+  if (!form) return;
+  if (type === 'classee') {
+    form.cadence.addEventListener('change', () => ($('#rk-panel').innerHTML = rankPanel(rankedCat(form.cadence.value))));
+  }
+  form.addEventListener('submit', (e) => {
     e.preventDefault();
     const c = e.target.cadence.value;
-    setPref('cadence-hasard', c);
-    startSearch(c);
+    setPref(type === 'classee' ? 'cadence-classee' : 'cadence-hasard', c);
+    startSearch(c, type === 'classee');
   });
 }
 
-function startSearch(c) {
+function startSearch(c, isRanked = false) {
   const t0 = Date.now();
   let waiting = 1;
+  let win = null;
+  const cat = isRanked ? rankedCat(c) : null;
+  const myElo = isRanked ? ratings?.[cat]?.r ?? 800 : null;
+  const label = isRanked ? (RANKED_CADENCES.find(([k]) => k === c) || [])[2] : cadenceName(c);
   mmBox.innerHTML = `<div class="mm-search" role="status">
-      <div class="mm-radar" aria-hidden="true"><span></span><span></span><span>${ico('dice')}</span></div>
-      <p class="mm-title">Recherche d’un adversaire…</p>
-      <p class="muted">${escapeHtml(cadenceName(c))} · <span id="mm-time">0:00</span></p>
+      <div class="mm-radar" aria-hidden="true"><span></span><span></span><span>${isRanked ? `<img src="${logoUrl(rankOf(ratings?.[cat]).rank.k)}" alt="" width="34" height="34">` : ico('dice')}</span></div>
+      <p class="mm-title">${isRanked ? 'Recherche d’un adversaire classé…' : 'Recherche d’un adversaire…'}</p>
+      <p class="muted">${escapeHtml(label)} · <span id="mm-time">0:00</span></p>
+      ${isRanked ? `<p class="mm-window" id="mm-window"></p>` : ''}
       <p class="muted mm-waiting" id="mm-waiting"></p>
       <button class="btn btn-ghost" type="button" id="mm-cancel">Annuler</button>
     </div>`;
@@ -113,17 +196,22 @@ function startSearch(c) {
     const t = $('#mm-time');
     if (t) t.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     const w = $('#mm-waiting');
-    if (w) w.textContent = waiting > 1 ? `${waiting} joueurs cherchent dans cette cadence` : s > 20 ? 'Personne d’autre ne cherche pour le moment. Essaie une autre cadence, ou invite un ami !' : '';
+    if (w) w.textContent = waiting > 1 ? `${waiting} joueurs cherchent dans cette cadence` : s > 20 ? (isRanked ? 'Personne d’autre ne cherche en classé pour le moment. Tu peux attendre, ou jouer une partie normale.' : 'Personne d’autre ne cherche pour le moment. Essaie une autre cadence, ou invite un ami !') : '';
+    const ww = $('#mm-window');
+    if (ww && win) ww.innerHTML = `Écart d’Elo accepté : <b>± ${win}</b> <span class="muted">(${fmt(myElo - win)} à ${fmt(myElo + win)})</span>`;
   };
   searchTimer = setInterval(tick, 500);
   tick();
   const { base, inc } = toMs(c);
+  const avoid = new Set([...recentOpps].filter(([, k]) => k >= 3).map(([id]) => id));
   cancelSearch = findOpponent({
     user,
     base,
     inc,
+    ranked: isRanked ? { cat, elo: myElo, avoid } : null,
     onStatus: (st) => {
       waiting = st.waiting;
+      win = st.window;
       tick();
     },
     onFound: (gameId) => {
@@ -148,6 +236,16 @@ function startSearch(c) {
   });
 }
 renderMatchForm();
+loadRanked().then(() => {
+  // « Rejouer en classé » depuis la fin d'une partie : jouer.html?classee=10%2B0 relance la recherche
+  const again = params.get('classee');
+  if (again) window.history.replaceState(null, '', location.pathname + location.hash);
+  if (again && user && onlineGames >= MIN_GAMES && RANKED_CADENCES.some(([k]) => k === again)) {
+    setPref('mm-type', 'classee');
+    setPref('cadence-classee', again);
+    startSearch(again, true);
+  } else if (!cancelSearch) renderMatchForm();
+});
 
 // --- Contre l'IA ---------------------------------------------------------------
 const formIa = $('#form-ia');

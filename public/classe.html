@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0e0b1c">
+  <title>Classé — ROOOK</title>
+  <meta name="description" content="Le mode classé de ROOOK : Elo, huit rangs de Pion de Cendre à Souverain Astral, et le classement des joueurs.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="page-ranked">
+  <header class="topbar">
+    <a class="logo" href="./"><span class="logo-mark">♜</span> ROOOK</a>
+    <nav class="topnav">
+      <a href="jouer.html">Jouer</a>
+      <a href="apprendre.html">Apprendre</a>
+      <a href="amis.html">Amis</a>
+      <a href="bilan.html">Analyser</a>
+      <a href="inventaire.html">Inventaire</a>
+    </nav>
+  </header>
+
+  <main class="rk-page">
+    <div class="rk-page-head">
+      <div class="page-head">
+        <p class="eyebrow">Classé</p>
+        <h1>Les rangs</h1>
+        <p class="lead">Ton rang dépend de ton Elo. Bullet, Blitz et Rapide ont chacun leur Elo, donc leur rang. Tout le monde commence à 800.</p>
+      </div>
+      <div class="seg rk-tabs" role="radiogroup" aria-label="Cadence">
+        <label><input type="radio" name="cat" value="bullet"><span>Bullet</span></label>
+        <label><input type="radio" name="cat" value="blitz"><span>Blitz</span></label>
+        <label><input type="radio" name="cat" value="rapide" checked><span>Rapide</span></label>
+      </div>
+    </div>
+
+    <section class="card rk-me" id="rk-me" hidden></section>
+
+    <section class="rk-ladder" id="rk-ladder" aria-label="Échelle des rangs"></section>
+
+    <section class="card rk-board">
+      <h2 class="section-title">Classement</h2>
+      <div id="rk-board"><p class="muted">Chargement…</p></div>
+    </section>
+
+    <section class="card rk-how">
+      <h2>Comment ça marche</h2>
+      <ul>
+        <li><b>Deux files.</b> Sur la page Jouer, « Partie normale » reste sans Elo ; « Partie classée » te fait gagner ou perdre de l’Elo.</li>
+        <li><b>L’Elo.</b> Tu commences à 800. Battre un joueur plus fort rapporte plus (jusqu’à +12 contre 200 de plus), perdre contre un plus faible coûte plus. Pendant tes 5 premières parties (placement), l’Elo bouge beaucoup plus vite.</li>
+        <li><b>L’adversaire.</b> On cherche d’abord un joueur à ±50 de ton Elo, puis l’écart s’élargit avec l’attente, jusqu’à ±200 au maximum.</li>
+        <li><b>Abandon, départ.</b> Abandonner compte comme une défaite. Si tu quittes la partie, tu as 60 s pour revenir. Pas de revanche en classé.</li>
+        <li><b>Bouclier.</b> Après une montée de rang, tu ne peux pas redescendre pendant 3 parties.</li>
+        <li><b>Accès.</b> Il faut avoir joué 5 parties en ligne. Au-delà de 3 parties contre la même personne en 24 h, on te propose un autre adversaire.</li>
+      </ul>
+    </section>
+  </main>
+
+  <script type="module" src="js/classement.js"></script>
+</body>
+</html>

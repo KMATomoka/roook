@@ -102,8 +102,10 @@ if (new URLSearchParams(location.search).get('debug') === 'largeur') {
   const bar = document.querySelector('.topbar');
   const nav = bar?.querySelector('.topnav');
   if (nav) {
-    const NAV_ICONS = { 'jouer.html': ICONS.knight, 'apprendre.html': ICONS.cap, 'amis.html': ICONS.friends, 'bilan.html': ICONS.chart, 'inventaire.html': ICONS.bag };
+    const NAV_ICONS = { 'jouer.html': ICONS.knight, 'classe.html': ICONS.trophy, 'apprendre.html': ICONS.cap, 'amis.html': ICONS.friends, 'bilan.html': ICONS.chart, 'inventaire.html': ICONS.bag };
     nav.id ||= 'topnav';
+    // Mode classé : un lien juste après « Jouer », sur toutes les pages
+    if (!nav.querySelector('a[href="classe.html"]')) nav.querySelector('a[href="jouer.html"]')?.insertAdjacentHTML('afterend', `<a href="classe.html"${location.pathname.endsWith('/classe.html') ? ' aria-current="page"' : ''}>Classé</a>`);
     nav.querySelectorAll('a').forEach((a) => {
       const ico = NAV_ICONS[a.getAttribute('href')];
       if (ico && !a.querySelector('.nav-ico')) a.insertAdjacentHTML('afterbegin', `<span class="nav-ico" aria-hidden="true">${ico}</span>`);

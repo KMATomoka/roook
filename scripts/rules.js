@@ -46,8 +46,9 @@ const NEW_CLOCK = `newData.parent().child('clock/' + ${SEAT}).val()`;
 // Pendule (vérifiée au moment du coup) : avant le départ, elle ne bouge pas ; ensuite, au plus le temps restant
 // + l'incrément (+ 2 s de marge pour le réseau), et on ne joue plus une fois tombé. L'heure de départ est celle de Firebase.
 const CLOCK_OK = `(${AT} === 0 ? ${NEW_CLOCK} === ${CLOCK(SEAT)} : (${LEFT(SEAT)} > -1000 && ${NEW_CLOCK} <= ${LEFT(SEAT)} + ${G('time/inc')}.val() + 2000)) && (newData.val() >= 2 ? newData.parent().child('clock/at').val() === now : newData.parent().child('clock/at').val() === 0)`;
-// Revanche acceptée par les deux : remise à zéro, numéro de manche + 1 (champs directement sous la partie)
-const RESET = `(${PLAYER} && ${G('status')}.val() === 'over' && ${G('rematch/w')}.val() === true && ${G('rematch/b')}.val() === true && newData.parent().child('round').val() === ${G('round')}.val() + 1)`;
+// Revanche acceptée par les deux : remise à zéro, numéro de manche + 1 (champs directement sous la partie).
+// Pas de revanche en partie classée.
+const RESET = `(${PLAYER} && !${G('ranked')}.exists() && ${G('status')}.val() === 'over' &&${G('rematch/w')}.val() === true && ${G('rematch/b')}.val() === true && newData.parent().child('round').val() === ${G('round')}.val() + 1)`;
 const R_ = "newData.parent().child('result').val()";
 const W_ = "newData.parent().child('reason').val()";
 const LOSS_ME = `(${SEAT} === 'w' ? '0-1' : '1-0')`;
@@ -69,6 +70,43 @@ const MM_PAIR = `(newData.child('mm').isString() && ${NEWG('white')} !== ${NEWG(
 // Depuis matchmaking/$key/$uid/match, la racine après l'écriture
 const MM_ROOT = 'newData.parent().parent().parent().parent()';
 const MM_GAME = (p) => `${MM_ROOT}.child('games/' + newData.val() + '/${p}').val()`;
+
+// ---------------------------------------------------------------------------
+// Mode classé (js/rangs.js). Files « r-<base>-<inc> » ; Elo par catégorie dans ratings/<cat>/<uid>.
+// ---------------------------------------------------------------------------
+const RANKED_KEY = '/^r-(60000-0|180000-2000|300000-0|600000-0|900000-10000)$/';
+const CAT_OF = (k) => `(${k} === 'r-60000-0' ? 'bullet' : (${k} === 'r-180000-2000' || ${k} === 'r-300000-0') ? 'blitz' : 'rapide')`;
+// Elo actuel d'un joueur dans une catégorie (800 s'il n'a jamais joué)
+const RATING = (uid, cat) => `(root.child('ratings/' + ${cat} + '/' + ${uid} + '/r').isNumber() ? root.child('ratings/' + ${cat} + '/' + ${uid} + '/r').val() : 800)`;
+// À la création d'une partie : classée si et seulement si elle vient d'une file classée, avec l'Elo des deux
+// joueurs relevé tel qu'il est, et au plus 200 points d'écart
+const RANKED_GAME = `(newData.child('mm').isString() && newData.child('mm').val().beginsWith('r-')
+  ? (newData.child('mm').val().matches(${RANKED_KEY}) && newData.child('ranked').val() === true && newData.child('cat').val() === ${CAT_OF("newData.child('mm').val()")}
+    && newData.child('elo/w').val() === ${RATING("newData.child('white').val()", "newData.child('cat').val()")}
+    && newData.child('elo/b').val() === ${RATING("newData.child('black').val()", "newData.child('cat').val()")}
+    && newData.child('elo/w').val() - newData.child('elo/b').val() <= 200 && newData.child('elo/b').val() - newData.child('elo/w').val() <= 200)
+  : (!newData.child('ranked').exists() && !newData.child('elo').exists() && !newData.child('cat').exists()))`.replace(/\n\s*/g, ' ');
+// Nouvelle fiche d'Elo : celle que donne la formule de js/rangs.js pour une partie classée terminée, jamais deux fois.
+//   coefficient K = 40 pendant les 5 parties de placement, puis 16 ; chances E = 0,5 + (moi − adversaire) / 800 ;
+//   nouvel Elo = Elo relevé au début de la partie + K × (score − E), arrondi.
+const RG = (p) => `root.child('games/' + newData.child('last').val() + '/${p}')`;
+const R_ME = `(${RG('white')}.val() === $uid ? ${RG('elo/w')}.val() : ${RG('elo/b')}.val())`;
+const R_OPP = `(${RG('white')}.val() === $uid ? ${RG('elo/b')}.val() : ${RG('elo/w')}.val())`;
+const R_N0 = "(data.child('n').isNumber() ? data.child('n').val() : 0)";
+const R_K = `(${R_N0} < 5 ? 40 : 16)`;
+const R_S = `(${RG('result')}.val() === '1/2-1/2' ? 0.5 : ((${RG('result')}.val() === '1-0') === (${RG('white')}.val() === $uid) ? 1 : 0))`;
+const R_DIFF = `(newData.child('r').val() - ${R_ME} - ${R_K} * (${R_S} - (0.5 + (${R_ME} - ${R_OPP}) / 800)))`;
+const RATING_OK = `(newData.hasChildren(['r', 'n', 'best', 'last', 'name', 'at']) && newData.child('last').isString()
+  && ${RG('ranked')}.val() === true && ${RG('status')}.val() === 'over' && ${RG('cat')}.val() === $cat && ${RG('result')}.val() !== '*'
+  && (${RG('white')}.val() === $uid || ${RG('black')}.val() === $uid) && (${RG('white')}.val() === auth.uid || ${RG('black')}.val() === auth.uid)
+  && data.child('last').val() !== newData.child('last').val()
+  && ${RG('createdAt')}.val() > (data.child('at').isNumber() ? data.child('at').val() : 0)
+  && (data.child('r').isNumber() ? data.child('r').val() : 800) === ${R_ME}
+  && newData.child('n').val() === ${R_N0} + 1
+  && newData.child('r').isNumber() && newData.child('r').val() % 1 === 0 && ${R_DIFF} <= 0.501 && ${R_DIFF} >= -0.501
+  && newData.child('best').val() === (data.child('best').isNumber() && data.child('best').val() > newData.child('r').val() ? data.child('best').val() : newData.child('r').val())
+  && newData.child('name').val() === root.child('users/' + $uid + '/username').val()
+  && newData.child('at').val() === now)`.replace(/\n\s*/g, ' ');
 
 // Historique : une partie entre amis n'y entre que si elle existe vraiment, est terminée, et avec le même résultat
 const GH = (p) => `root.child('games/' + newData.child('game').val() + '/${p}')`;
@@ -223,8 +261,9 @@ const rules = {
       $key: {
         '.read': ME,
         $uid: {
-          '.write': `${ME} && auth.uid === $uid && ${OK} && $key.matches(/^[0-9]{5,7}-[0-9]{1,5}$/) && (!newData.exists() || !newData.child('match').exists())`,
-          '.validate': "newData.hasChildren(['username', 'at']) && newData.child('username').isString() && newData.child('username').val().length <= 20 && (newData.child('at').val() === now || newData.child('at').val() === data.child('at').val())",
+          '.write': `${ME} && auth.uid === $uid && ${OK} && ($key.matches(/^[0-9]{5,7}-[0-9]{1,5}$/) || $key.matches(${RANKED_KEY})) && (!newData.exists() || !newData.child('match').exists())`,
+          // File classée : on y entre avec son Elo actuel dans la catégorie
+          '.validate': `newData.hasChildren(['username', 'at']) && newData.child('username').isString() && newData.child('username').val().length <= 20 && (newData.child('at').val() === now || newData.child('at').val() === data.child('at').val()) && (!$key.beginsWith('r-') || newData.child('elo').val() === ${RATING('$uid', CAT_OF('$key'))})`,
           match: {
             // Seulement en créant la partie dans la même écriture, entre deux joueurs inscrits dans cette file
             '.write': `${ME} && ${OK} && !data.exists() && newData.isString() && root.child('matchmaking/' + $key + '/' + $uid + '/at').exists() && root.child('matchmaking/' + $key + '/' + auth.uid + '/at').exists() && !root.child('games/' + newData.val()).exists() && ${MM_GAME('mm')} === $key && (${MM_GAME('white')} === $uid || ${MM_GAME('black')} === $uid) && (${MM_GAME('white')} === auth.uid || ${MM_GAME('black')} === auth.uid)`,
@@ -239,7 +278,7 @@ const rules = {
         // Création seulement (par l'un des deux joueurs, qui doivent être amis ou appariés par la file d'attente) ;
         // ensuite, chaque champ a sa règle
         '.write': `${ME} && ${OK} && !data.exists() && (newData.child('white').val() === auth.uid || newData.child('black').val() === auth.uid) && (root.child('friends/' + newData.child('white').val() + '/' + newData.child('black').val()).exists() || ${MM_PAIR})`,
-        '.validate': `newData.hasChildren(['white', 'black', 'names', 'time', 'status', 'round', 'ply']) && (data.exists() || (newData.child('status').val() === 'playing' && newData.child('round').val() === 1 && newData.child('ply').val() === 0 && !newData.child('moves').exists() && !newData.child('result').exists() && !newData.child('reason').exists() && newData.child('time/base').isNumber() && newData.child('time/base').val() >= 60000 && newData.child('time/inc').isNumber() && newData.child('clock/w').val() === newData.child('time/base').val() && newData.child('clock/b').val() === newData.child('time/base').val() && newData.child('clock/at').val() === 0 && (!newData.child('mm').exists() || newData.child('mm').val() === newData.child('time/base').val() + '-' + newData.child('time/inc').val())))`,
+        '.validate': `newData.hasChildren(['white', 'black', 'names', 'time', 'status', 'round', 'ply']) && (data.exists() || (newData.child('status').val() === 'playing' && newData.child('round').val() === 1 && newData.child('ply').val() === 0 && !newData.child('moves').exists() && !newData.child('result').exists() && !newData.child('reason').exists() && newData.child('time/base').isNumber() && newData.child('time/base').val() >= 60000 && newData.child('time/inc').isNumber() && newData.child('clock/w').val() === newData.child('time/base').val() && newData.child('clock/b').val() === newData.child('time/base').val() && newData.child('clock/at').val() === 0 && (!newData.child('mm').exists() || newData.child('mm').val() === newData.child('time/base').val() + '-' + newData.child('time/inc').val() || newData.child('mm').val() === 'r-' + newData.child('time/base').val() + '-' + newData.child('time/inc').val()) && ${RANKED_GAME}))`,
         // Revanche : couleurs inversées
         white: { '.write': RESET, '.validate': `!data.exists() || newData.val() === ${G('black')}.val()` },
         black: { '.write': RESET, '.validate': `!data.exists() || newData.val() === ${G('white')}.val()` },
@@ -342,6 +381,19 @@ const rules = {
       $uid: {
         '.read': `${ME} && (${OWNER('$uid')} || ${ADMIN})`,
         $g: { '.write': `${ME} && ${ADMIN} && !data.exists()`, '.validate': 'newData.val() === true' },
+      },
+    },
+    // Mode classé : Elo de chaque joueur par catégorie, lisible par tous les membres (classement)
+    ratings: {
+      $cat: {
+        '.read': ME,
+        '.indexOn': ['r'],
+        $uid: {
+          '.write': `${ME} && $cat.matches(/^(bullet|blitz|rapide)$/)`,
+          '.validate': RATING_OK,
+          floor: { '.validate': 'newData.isNumber() && newData.val() >= 0 && newData.val() <= 7' },
+          shield: { '.validate': 'newData.isNumber() && newData.val() >= 0 && newData.val() <= 3' },
+        },
       },
     },
     history: {

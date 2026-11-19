@@ -93,6 +93,9 @@ export function gameSocket(gameId, user) {
       },
       seated: { w: true, b: true },
       random: !!game.mm, // partie « Adversaire au hasard »
+      ranked: game.ranked === true, // partie classée (Elo relevé au début : elo.w, elo.b)
+      cat: game.cat || null,
+      elo: game.elo || null,
       status: game.status,
       result: game.result || null,
       reason: game.reason || '',
@@ -226,7 +229,7 @@ export function gameSocket(gameId, user) {
         refreshToken();
         markPlaying(gameId);
       }
-      ack({ color, chat: [], round: g.round, random: !!g.mm });
+      ack({ color, chat: [], round: g.round, random: !!g.mm, ranked: g.ranked === true });
 
       let seen = 0; // numéro du dernier état reçu
       onValue(gRef, (s) => {
@@ -315,7 +318,7 @@ export function gameSocket(gameId, user) {
     },
 
     async rematch() {
-      if (!g || !color || g.status !== 'over') return;
+      if (!g || !color || g.status !== 'over' || g.ranked) return; // pas de revanche en classé
       const res = await runTransaction(ref(db, `games/${gameId}/rematch`), (cur) => {
         cur = cur || { w: false, b: false };
         cur[color] = true;

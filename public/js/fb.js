@@ -30,6 +30,7 @@ import {
   limitToLast,
   limitToFirst,
   orderByKey,
+  orderByChild,
   startAt,
   endAt,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
@@ -64,6 +65,7 @@ export {
   limitToLast,
   limitToFirst,
   orderByKey,
+  orderByChild,
   startAt,
   endAt,
 };

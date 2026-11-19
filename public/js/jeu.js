@@ -13,6 +13,7 @@ import { scrollMoveIntoList, repetitions, rivalOf, faceUrl } from './common.js';
 import { session, avatarOf, profileUrl, badgeOf, badgeHtml, toast, rememberGame, markRematchDeclined, isRematchDeclined } from './compte.js';
 import { gameSocket, AWAY_LIMIT } from './online.js';
 import { serverNow } from './fb.js';
+import { rankOf, logoUrl, fmt, applyResult, CATS, RANKS, divisions, PLACEMENT } from './rangs.js';
 const account = await session;
 
 const params = new URLSearchParams(location.search);
@@ -263,6 +264,11 @@ function playerHtml(c) {
   let sub = '';
   if (mode === 'ia' && c !== myColor) sub = `<small>niveau ${level.n} · ${level.name}</small>`;
   if (mode === 'ami' && c === myColor) sub = '<small>Toi</small>';
+  // Partie classée : rang et Elo relevés au début de la partie
+  if (mode === 'ami' && online.ranked && online.elo?.[c] != null) {
+    const rk = rankOf({ r: online.elo[c], n: PLACEMENT });
+    sub = `<img class="rk-mini" src="${logoUrl(rk.rank.k)}" alt="${rk.name}" title="${rk.name}" width="20" height="20"><small>${fmt(online.elo[c])}${c === myColor ? ' · Toi' : ''}</small>`;
+  }
   const clock = clocks.base
     ? `<div class="clock ${isTurn && clocks.running ? 'running' : ''} ${liveClock(c) < 20000 ? 'low' : ''}" data-clock="${c}">${formatClock(liveClock(c))}</div>`
     : '';
@@ -547,10 +553,11 @@ function finish(end) {
     $('#end-sub').textContent += ` ${rival.name} : « ${noaWon ? rival.win : end.result === '1/2-1/2' ? rival.draw : rival.lose} »`;
   }
   $('#end-review').href = `bilan.html?partie=${encodeURIComponent(gameId)}`;
-  $('#end-rematch').textContent = mode === 'ami' ? 'Revanche' : 'Rejouer';
+  $('#end-rematch').textContent = mode === 'ami' ? (online.ranked ? 'Rejouer en classé' : 'Revanche') : 'Rejouer';
   $('#end-rematch').hidden = mode === 'ami' && !myColor;
   $('#end-rematch').disabled = false;
   showRematchOffer(false);
+  rankedEnd(end);
   const openEnd = () => !$('#end-dialog').open && $('#end-dialog').showModal();
   if (end.reason === 'mat') openAfterMateBanner(openEnd);
   else setTimeout(openEnd, 600);
@@ -582,6 +589,91 @@ function openAfterMateBanner(open) {
   // filet de sécurité si le bandeau n'arrive jamais
   const fallback = setTimeout(() => go(0), 5000);
   if (hasBanner()) go(READ);
+}
+
+// ---------------------------------------------------------------------------
+// Partie classée : l'Elo gagné ou perdu dans la fenêtre de fin, puis la montée de rang dans la même fenêtre
+// ---------------------------------------------------------------------------
+let rankedShownFor = null;
+function rankedEnd(end) {
+  const dlg = $('#end-dialog');
+  dlg.classList.remove('rankup');
+  $('#end-ranked')?.remove();
+  $('#end-rankup')?.remove();
+  if (!(mode === 'ami' && online.ranked && myColor && account.user)) return;
+  const cat = online.cat;
+  const box = document.createElement('div');
+  box.id = 'end-ranked';
+  box.className = 'rk-end';
+  box.innerHTML = `<div class="rk-end-head"><span class="rk-chip">Partie classée · ${CATS[cat] || ''}</span><span class="muted">Elo</span></div>
+    <p class="rk-end-msg muted">${end.result === '*' ? 'Partie annulée : l’Elo ne change pas.' : 'Calcul de ton nouvel Elo…'}</p>`;
+  $('#end-sub').after(box);
+  if (end.result === '*' || rankedShownFor === onlineId) return;
+  rankedShownFor = onlineId;
+  const game = { ranked: true, cat, elo: online.elo, status: 'over', result: end.result, white: online.ids.w, black: online.ids.b, names: online.names };
+  applyResult(onlineId, game, account.user.id).then((res) => {
+    if (!res?.after) {
+      box.querySelector('.rk-end-msg').textContent = 'L’Elo n’a pas pu être mis à jour (connexion ?). Il le sera par ton adversaire, ou à ta prochaine visite.';
+      return;
+    }
+    showEloChange(box, res);
+  });
+}
+
+function showEloChange(box, { before, after, myElo }) {
+  const from = myElo;
+  const to = after.r;
+  const d = to - from;
+  const rkBefore = rankOf({ r: from, n: Math.max(0, after.n - 1), floor: before.floor, shield: before.shield });
+  const rkAfter = rankOf(after);
+  const placing = after.n < PLACEMENT;
+  const nextRank = RANKS[rkAfter.i + 1];
+  box.innerHTML = `<div class="rk-end-head"><span class="rk-chip">Partie classée · ${CATS[after.cat || online.cat] || ''}</span><span class="muted">Elo</span></div>
+    <p class="rk-end-elo"><s class="muted">${fmt(from)}</s> <b class="rk-end-new">${fmt(from)}</b> <span class="rk-end-delta ${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : '−'}${Math.abs(d)}</span></p>
+    ${placing
+      ? `<p class="muted rk-end-msg">Placement ${after.n} / ${PLACEMENT} : ton rang s’affiche après ${PLACEMENT} parties classées.</p>`
+      : `<div class="rk-end-bar">
+          <img src="${logoUrl(rkBefore.rank.k)}" alt="${rkBefore.name}" title="${rkBefore.name}" width="30" height="30">
+          <div class="rk-bar"><i style="width: ${Math.round(rkBefore.progress * 100)}%"></i></div>
+          <img src="${logoUrl((nextRank || rkAfter.rank).k)}" alt="" width="30" height="30">
+        </div>
+        <p class="rk-end-msg">${rkAfter.name}${rkAfter.next ? ` · prochaine étape à ${fmt(rkAfter.next)}` : ''}</p>`}`;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const num = box.querySelector('.rk-end-new');
+  const bar = box.querySelector('.rk-bar i');
+  const t0 = performance.now();
+  const dur = reduce ? 0 : 900;
+  const step = (t) => {
+    const k = dur ? Math.min(1, (t - t0) / dur) : 1;
+    num.textContent = fmt(from + d * k);
+    if (k < 1) return requestAnimationFrame(step);
+    num.textContent = fmt(to);
+    if (bar) bar.style.width = Math.round((rkAfter.i === rkBefore.i ? rkAfter.progress : d > 0 ? 1 : 0) * 100) + '%';
+  };
+  requestAnimationFrame(step);
+  // Montée de rang (ou fin du placement) : la fenêtre se transforme
+  const promoted = !placing && (rkAfter.i > rkBefore.i || after.n === PLACEMENT);
+  if (promoted) setTimeout(() => showRankUp(rkBefore, rkAfter, after, d, after.n === PLACEMENT && rkAfter.i <= rkBefore.i), reduce ? 400 : 1800);
+}
+
+function showRankUp(before, after, entry, d, firstRank) {
+  const dlg = $('#end-dialog');
+  const div = divisions(after.i);
+  const nextDiv = after.next;
+  const up = document.createElement('div');
+  up.id = 'end-rankup';
+  up.className = 'rk-rankup';
+  up.innerHTML = `<div class="rk-rankup-logo" aria-hidden="true"><span class="rk-rays"></span><img src="${logoUrl(after.rank.k)}" alt="" width="150" height="150"></div>
+    <p class="eyebrow">${firstRank ? 'Ton premier rang' : 'Nouveau rang'}</p>
+    <h2>${after.name}</h2>
+    ${firstRank ? '' : `<p class="muted rk-rankup-path"><img src="${logoUrl(before.rank.k)}" alt="" width="20" height="20"> ${before.name} → <img src="${logoUrl(after.rank.k)}" alt="" width="20" height="20"> ${after.name}</p>`}
+    <div class="rk-end rk-rankup-info">
+      <span><span class="muted">Elo ${CATS[online.cat] || ''}</span><br><b class="rk-num">${fmt(entry.r)}</b> <span class="rk-end-delta ${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : '−'}${Math.abs(d)}</span></span>
+      ${nextDiv && div.length ? `<span class="rk-right"><span class="muted">Prochaine étape</span><br><b>${fmt(nextDiv)}</b></span>` : ''}
+    </div>
+    ${firstRank ? '' : '<p class="muted rk-rankup-shield">Bouclier : 3 parties sans redescendre de rang.</p>'}`;
+  $('#end-ranked').after(up);
+  dlg.classList.add('rankup');
 }
 
 /** L'adversaire propose la revanche : un encart bien visible et un bouton « Accepter » mis en avant. */
@@ -635,6 +727,12 @@ $('#end-review').addEventListener('click', (e) => {
 });
 $('#end-close').addEventListener('click', () => $('#end-dialog').close());
 $('#end-rematch').addEventListener('click', () => {
+  // Classée : pas de revanche, on relance une recherche classée à la même cadence
+  if (mode === 'ami' && online.ranked) {
+    const cad = `${online.time.base / 60000}+${online.time.inc / 1000}`;
+    location.href = `jouer.html?classee=${encodeURIComponent(cad)}#hasard`;
+    return;
+  }
   if (mode === 'ami') {
     socket.emit('rematch');
     $('#end-rematch').textContent = 'Revanche demandée…';
@@ -775,7 +873,7 @@ function startOnline() {
     if (res.random) {
       // Adversaire au hasard : pas de discussion avec un inconnu
       $('#chat').hidden = true;
-      $('#mode-label').textContent = 'Adversaire au hasard';
+      $('#mode-label').textContent = res.ranked ? 'Partie classée' : 'Adversaire au hasard';
     }
     render();
   });

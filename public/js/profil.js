@@ -7,6 +7,7 @@ import {
   setAvatar, removeAvatar, myEmail, changeEmail, setBio, BIO_MAX,
   BADGES, ROYAL_WINS, badgeHtml, badgeIcon, ownedBadges, winKeys, chooseBadge,
 } from './compte.js';
+import { getRatings, rankOf, logoUrl, fmt, CATS, PLACEMENT } from './rangs.js';
 
 const page = $('#profile-page');
 const { user, banned } = await session;
@@ -151,6 +152,8 @@ function render(p) {
       <div class="pf-actions">${actions(p)}</div>
     </section>
 
+    <section class="pf-ranked" id="pf-ranked" hidden></section>
+
     ${me ? badgeCard(p) + privacyCard(p) + accountCard() : ''}
 
     ${!p.visible ? `
@@ -168,6 +171,29 @@ function render(p) {
   `;
 
   wire(p);
+  rankedSection(p);
+}
+
+/** Mode classé : rang et Elo dans chaque cadence (Bullet, Blitz, Rapide). */
+async function rankedSection(p) {
+  const box = $('#pf-ranked');
+  const r = await getRatings(p.id).catch(() => null);
+  if (!r || !box) return;
+  const played = Object.values(r).some((e) => e.n > 0);
+  if (!played) return;
+  box.hidden = false;
+  box.innerHTML = `<div class="pf-ranked-head"><h2>Classé</h2><a href="classe.html">Voir les rangs</a></div>
+    <div class="pf-ranked-tiles">${Object.entries(CATS).map(([cat, label]) => {
+      const e = r[cat];
+      const rk = rankOf(e);
+      if (!e.n) return `<div class="card pf-rk dim"><img src="${logoUrl('fer')}" alt="" width="60" height="60"><div><p class="pf-rk-cat">${label}</p><p class="muted">Pas encore joué</p></div></div>`;
+      return `<div class="card pf-rk" style="--rk: ${rk.placement ? 'var(--muted)' : rk.rank.col}">
+        <img src="${logoUrl(rk.placement ? 'fer' : rk.rank.k)}" alt="" width="60" height="60"${rk.placement ? ' class="dim"' : ''}>
+        <div><p class="pf-rk-cat">${label}</p><p class="pf-rk-elo">${fmt(e.r)}</p>
+        <p class="pf-rk-name">${rk.placement ? `Placement ${rk.games} / ${PLACEMENT}` : rk.name}</p>
+        <p class="muted pf-rk-best">Meilleur : ${fmt(e.best || e.r)} · ${e.n} partie${e.n > 1 ? 's' : ''}</p></div>
+      </div>`;
+    }).join('')}</div>`;
 }
 
 /** Bio : affichée à tous ; sur son propre profil, un bouton pour l'écrire ou la modifier. */

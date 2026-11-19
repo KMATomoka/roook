@@ -7,7 +7,7 @@ import {
   setAvatar, removeAvatar, myEmail, changeEmail, setBio, BIO_MAX,
   BADGES, ROYAL_WINS, badgeHtml, badgeIcon, ownedBadges, winKeys, chooseBadge,
 } from './compte.js';
-import { getRatings, getLog, rankOf, logoUrl, noRankHtml, fmt, CATS, PLACEMENT, RANKS } from './rangs.js';
+import { getRatings, getLog, rankOf, logoUrl, noRankHtml, fmt, placeOf, CATS, PLACEMENT, RANKS } from './rangs.js';
 
 const page = $('#profile-page');
 const { user, banned } = await session;
@@ -174,13 +174,11 @@ function render(p) {
   rankedSection(p);
 }
 
-/** Mode classé : rang et Elo dans chaque cadence (Bullet, Blitz, Rapide). */
+/** Mode classé : rang et Elo dans chaque cadence (Blitz, Rapide, Classique, Long), même avant la première partie. */
 async function rankedSection(p) {
   const box = $('#pf-ranked');
   const r = await getRatings(p.id).catch(() => null);
   if (!r || !box) return;
-  const played = Object.values(r).some((e) => e.n > 0);
-  if (!played) return;
   const logs = {};
   await Promise.all(Object.keys(CATS).map(async (c) => (logs[c] = r[c].n ? await getLog(p.id, c, 30).catch(() => []) : [])));
   // Rang le plus haut (hors placement) : à côté du pseudo
@@ -193,9 +191,19 @@ async function rankedSection(p) {
     h1.firstChild.after(Object.assign(document.createElement('img'), { className: 'pf-hero-rank', src: logoUrl(rk.rank.k), alt: rk.name, title: `${rk.name} en ${CATS[top]}`, width: 40, height: 40 }));
   }
   const meta = page.querySelector('.pf-meta');
-  if (meta && !meta.querySelector('.pf-meta-ranked')) meta.insertAdjacentHTML('beforeend', `<span class="pf-meta-ranked">${totalGames} partie${totalGames > 1 ? 's' : ''} classée${totalGames > 1 ? 's' : ''}</span>`);
+  if (meta && totalGames && !meta.querySelector('.pf-meta-ranked')) meta.insertAdjacentHTML('beforeend', `<span class="pf-meta-ranked">${totalGames} partie${totalGames > 1 ? 's' : ''} classée${totalGames > 1 ? 's' : ''}</span>`);
+  // Meilleur rang (sous le pseudo) et place au classement dans cette cadence
+  if (top && meta && !page.querySelector('.pf-best-rank')) {
+    const rk = rankOf(r[top]);
+    meta.insertAdjacentHTML('afterend', `<p class="pf-best-rank">Meilleur rang : <b style="color: ${rk.rank.col}">${rk.name}</b> en ${CATS[top]}</p>`);
+    placeOf(top, r[top].r)
+      .then((n) => {
+        if (n && !meta.querySelector('.pf-meta-place')) meta.insertAdjacentHTML('beforeend', `<span class="pf-meta-place">${n}${n === 1 ? 'er' : 'e'} en ${CATS[top]}</span>`);
+      })
+      .catch(() => {});
+  }
   // Courbe : la catégorie la plus jouée
-  const chartCat = Object.keys(CATS).sort((a, b) => (r[b].n || 0) - (r[a].n || 0))[0];
+  const chartCat = totalGames ? Object.keys(CATS).sort((a, b) => (r[b].n || 0) - (r[a].n || 0))[0] : 'rapide';
   const recent = Object.values(logs).flat().sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 6);
   const LABELS = { blitz: 'Blitz · 5 min', rapide: 'Rapide · 10 min', classique: 'Classique · 30 min', long: 'Long · 60 min' };
   box.hidden = false;

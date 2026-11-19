@@ -8,6 +8,7 @@ import './theme.js'; // apparence choisie dans l'inventaire (plateau, pièces…
 import { watchBoxes } from './box.js'; // box gagnées (compteur dans la barre du haut)
 import { ICONS, ico, fillIcons } from './icons.js'; // icônes dessinées du menu (à la place des emojis)
 import { notifySound } from './sound.js'; // petit son des notifications (défi, demande d'ami, revanche)
+import { getRatings, rankOf, logoUrl, fmt, CATS } from './rangs.js'; // rang et Elo à côté du pseudo (barre du haut)
 import {
   auth, db, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   sendPasswordResetEmail, verifyBeforeUpdateEmail, deleteUser,
@@ -495,6 +496,34 @@ const SETTINGS_HTML = `<a class="icon-btn settings-link" href="parametres.html" 
 // Le compte affiché à la dernière visite : la barre et le menu s'affichent en entier tout de suite (sans attendre
 // la base), puis sont remis à jour quand la connexion est confirmée.
 const NAV_CACHE = 'roque:barre';
+// Rang à côté du pseudo : le plus haut des cadences classées (hors placement). Gardé en cache pour l'afficher tout
+// de suite sur la page suivante, puis remis à jour depuis la base.
+function paintRank(el, v) {
+  const s = el.querySelector('.account-rank');
+  if (!s) return;
+  s.hidden = !v;
+  s.innerHTML = v ? `<img src="${logoUrl(v.k)}" alt="" width="20" height="20"><b class="rk-num">${fmt(v.r)}</b>` : '';
+  const chip = el.querySelector('.account-chip');
+  if (chip) chip.title = v ? `Mon profil · ${v.name} en ${v.cat}` : 'Mon profil';
+}
+function showRankChip(el, uid) {
+  try {
+    paintRank(el, JSON.parse(localStorage.getItem(NAV_CACHE + ':rang') || 'null'));
+  } catch {}
+  if (!uid) return;
+  getRatings(uid)
+    .then((r) => {
+      const best = Object.keys(CATS).filter((c) => r[c].n && !rankOf(r[c]).placement).sort((a, b) => r[b].r - r[a].r)[0];
+      const rk = best && rankOf(r[best]);
+      const v = best ? { k: rk.rank.k, r: r[best].r, name: rk.name, cat: CATS[best] } : null;
+      try {
+        if (v) localStorage.setItem(NAV_CACHE + ':rang', JSON.stringify(v));
+        else localStorage.removeItem(NAV_CACHE + ':rang');
+      } catch {}
+      paintRank(el, v);
+    })
+    .catch(() => {});
+}
 function renderAccount(user, early = false) {
   const bar = document.querySelector('.topbar');
   if (!bar || document.body.classList.contains('page-auth')) return;
@@ -503,7 +532,10 @@ function renderAccount(user, early = false) {
   if (!early) {
     try {
       if (user) localStorage.setItem(NAV_CACHE, JSON.stringify({ username: user.username, role: user.role, avatar: (user.avatar || '').length < 80000 ? user.avatar : null }));
-      else localStorage.removeItem(NAV_CACHE);
+      else {
+        localStorage.removeItem(NAV_CACHE);
+        localStorage.removeItem(NAV_CACHE + ':rang');
+      }
     } catch {}
   }
   const el = document.createElement('div');
@@ -519,6 +551,7 @@ function renderAccount(user, early = false) {
       <a class="account-chip" href="profil.html" title="Mon profil">
         ${picHtml(user.username, user.avatar, 'account-initial')}
         <span class="account-name">${escapeHtml(user.username)}</span>
+        <span class="account-rank" hidden></span>
         <span class="account-badge" hidden></span>
       </a>
       ${SETTINGS_HTML}`;
@@ -533,6 +566,7 @@ function renderAccount(user, early = false) {
       c.classList.toggle('has', n > 0);
     }
   }
+  if (user) showRankChip(el, early ? null : user.id);
   if (user && !early) setupSearch(el.querySelector('.player-search'));
   // Compteur de box (en direct : une victoire en ligne en ajoute une, l'ouverture en retire une)
   if (user && !early) {

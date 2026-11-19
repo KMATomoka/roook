@@ -3399,3 +3399,10 @@ cg-board square.seq-to { background: radial-gradient(circle, rgba(60, 242, 163, 
 .mm-layout.ranked .mm-rank { min-height: 420px; }
 @keyframes mm-skel { to { opacity: 0.45; } }
 @media (max-width: 600px) { .mm-cads.n4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Mode classé : rang et Elo à côté du pseudo (barre du haut), meilleur rang sur le profil */
+.account-rank { display: inline-flex; align-items: center; gap: 4px; font-size: 0.86rem; color: var(--muted); }
+.account-rank[hidden] { display: none; }
+.account-rank img { width: 20px; height: 20px; }
+@media (max-width: 640px) { .account-rank b { display: none; } }
+.pf-best-rank { margin: 4px 0 0; font-size: 0.95rem; }

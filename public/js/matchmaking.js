@@ -79,7 +79,13 @@ export function findOpponent({ user, base, inc, ranked = null, onStatus, onFound
           rematch: { w: false, b: false },
           createdAt: serverTimestamp(),
           mm: key,
-          ...(ranked ? { ranked: true, cat: ranked.cat, elo: { w: white.id === user.id ? ranked.elo : opp.elo, b: black.id === user.id ? ranked.elo : opp.elo } } : {}),
+          ...(ranked ? {
+            ranked: true,
+            cat: ranked.cat,
+            elo: { w: white.id === user.id ? ranked.elo : opp.elo, b: black.id === user.id ? ranked.elo : opp.elo },
+            // en placement (pas encore de rang) : pas de logo de rang à côté du pseudo
+            pl: { w: white.id === user.id ? !!ranked.placement : !!opp.pl, b: black.id === user.id ? !!ranked.placement : !!opp.pl },
+          } : {}),
         },
         [`matchmaking/${key}/${opp.id}/match`]: gameId,
         [`matchmaking/${key}/${user.id}/match`]: gameId,
@@ -93,7 +99,7 @@ export function findOpponent({ user, base, inc, ranked = null, onStatus, onFound
 
   (async () => {
     try {
-      await set(meRef, { username: user.username, at: serverTimestamp(), ...(ranked ? { elo: ranked.elo } : {}) });
+      await set(meRef, { username: user.username, at: serverTimestamp(), ...(ranked ? { elo: ranked.elo, pl: !!ranked.placement } : {}) });
       await onDisconnect(meRef).remove(); // page fermée : on quitte la file
     } catch (err) {
       stop();

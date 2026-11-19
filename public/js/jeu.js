@@ -13,7 +13,7 @@ import { scrollMoveIntoList, repetitions, rivalOf, faceUrl } from './common.js';
 import { session, avatarOf, profileUrl, badgeOf, badgeHtml, toast, rememberGame, markRematchDeclined, isRematchDeclined } from './compte.js';
 import { gameSocket, AWAY_LIMIT } from './online.js';
 import { serverNow } from './fb.js';
-import { rankOf, logoUrl, fmt, applyResult, CATS, RANKS, divisions, PLACEMENT } from './rangs.js';
+import { rankOf, logoUrl, noRankHtml, fmt, applyResult, CATS, RANKS, divisions, PLACEMENT } from './rangs.js';
 const account = await session;
 
 const params = new URLSearchParams(location.search);
@@ -267,7 +267,10 @@ function playerHtml(c) {
   // Partie classée : rang et Elo relevés au début de la partie
   if (mode === 'ami' && online.ranked && online.elo?.[c] != null) {
     const rk = rankOf({ r: online.elo[c], n: PLACEMENT });
-    sub = `<img class="rk-mini" src="${logoUrl(rk.rank.k)}" alt="${rk.name}" title="${rk.name}" width="20" height="20"><small>${fmt(online.elo[c])}${c === myColor ? ' · Toi' : ''}</small>`;
+    const you = c === myColor ? ' · Toi' : '';
+    sub = online.pl?.[c]
+      ? `<small>Placement · ${fmt(online.elo[c])}${you}</small>`
+      : `<img class="rk-mini" src="${logoUrl(rk.rank.k)}" alt="${rk.name}" title="${rk.name}" width="20" height="20"><small>${fmt(online.elo[c])}${you}</small>`;
   }
   const clock = clocks.base
     ? `<div class="clock ${isTurn && clocks.running ? 'running' : ''} ${liveClock(c) < 20000 ? 'low' : ''}" data-clock="${c}">${formatClock(liveClock(c))}</div>`
@@ -633,7 +636,7 @@ function showEloChange(box, { before, after, myElo }) {
     ${placing
       ? `<p class="muted rk-end-msg">Placement ${after.n} / ${PLACEMENT} : ton rang s’affiche après ${PLACEMENT} parties classées.</p>`
       : `<div class="rk-end-bar">
-          <img src="${logoUrl(rkBefore.rank.k)}" alt="${rkBefore.name}" title="${rkBefore.name}" width="30" height="30">
+          ${after.n === PLACEMENT ? noRankHtml(30) : `<img src="${logoUrl(rkBefore.rank.k)}" alt="${rkBefore.name}" title="${rkBefore.name}" width="30" height="30">`}
           <div class="rk-bar"><i style="width: ${Math.round(rkBefore.progress * 100)}%"></i></div>
           <img src="${logoUrl((nextRank || rkAfter.rank).k)}" alt="" width="30" height="30">
         </div>

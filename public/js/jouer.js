@@ -5,7 +5,7 @@ import { $, $$, getPref, setPref, loadGames, gameRow, escapeHtml, RIVALS, rivalO
 import { session, challenge, watchFriends, picHtml, profileUrl, CADENCES } from './compte.js';
 import { findOpponent } from './matchmaking.js';
 import { db, ref, get, query, orderByKey, limitToLast, limitToFirst } from './fb.js';
-import { RANKED_CADENCES, getRatings, rankOf, logoUrl, fmt, RANKS, PLACEMENT, MIN_GAMES } from './rangs.js';
+import { RANKED_CADENCES, getRatings, rankOf, logoUrl, noRankHtml, fmt, RANKS, PLACEMENT, MIN_GAMES } from './rangs.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -107,7 +107,7 @@ function rankPanel(cat) {
   const nextRank = RANKS[rk.i + 1];
   const catName = { bullet: 'Bullet', blitz: 'Blitz', rapide: 'Rapide' }[cat];
   if (rk.placement) {
-    return `<div class="rk-panel"><img src="${logoUrl('fer')}" alt="" width="64" height="64" class="rk-panel-logo dim">
+    return `<div class="rk-panel">${noRankHtml(64)}
       <div><p class="rk-panel-cat">${catName} · placement</p><p class="rk-panel-name">${rk.games} / ${PLACEMENT} parties</p>
       <p class="muted rk-panel-note">Elo de départ ${fmt(e?.r ?? 800)}. Ton rang s’affiche après ${PLACEMENT} parties classées.</p></div></div>`;
   }
@@ -186,7 +186,7 @@ function startSearch(c, isRanked = false) {
   const myElo = isRanked ? ratings?.[cat]?.r ?? 800 : null;
   const label = isRanked ? (RANKED_CADENCES.find(([k]) => k === c) || [])[2] : cadenceName(c);
   mmBox.innerHTML = `<div class="mm-search" role="status">
-      <div class="mm-radar" aria-hidden="true"><span></span><span></span><span>${isRanked ? `<img src="${logoUrl(rankOf(ratings?.[cat]).rank.k)}" alt="" width="34" height="34">` : ico('dice')}</span></div>
+      <div class="mm-radar" aria-hidden="true"><span></span><span></span><span>${isRanked ? (rankOf(ratings?.[cat]).placement ? ico('trophy') : `<img src="${logoUrl(rankOf(ratings?.[cat]).rank.k)}" alt="" width="34" height="34">`) : ico('dice')}</span></div>
       <p class="mm-title">${isRanked ? 'Recherche d’un adversaire classé…' : 'Recherche d’un adversaire…'}</p>
       <p class="muted">${escapeHtml(label)} · <span id="mm-time">0:00</span></p>
       ${isRanked ? `<p class="mm-window" id="mm-window"></p>` : ''}
@@ -210,7 +210,7 @@ function startSearch(c, isRanked = false) {
     user,
     base,
     inc,
-    ranked: isRanked ? { cat, elo: myElo, avoid } : null,
+    ranked: isRanked ? { cat, elo: myElo, avoid, placement: rankOf(ratings?.[cat]).placement } : null,
     onStatus: (st) => {
       waiting = st.waiting;
       win = st.window;

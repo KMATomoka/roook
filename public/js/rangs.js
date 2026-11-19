@@ -33,6 +33,8 @@ export const RANKS = [
   { k: 'astral', name: 'Souverain Astral', min: 2400, col: '#8fe8ff' },
 ];
 export const logoUrl = (k) => `img/rangs/${k}.svg`;
+/** Pas encore de rang (placement, ou jamais joué) : un badge neutre, jamais le logo d'un rang. */
+export const noRankHtml = (size, label = 'Pas encore de rang') => `<span class="rk-none" style="width: ${size}px; height: ${size}px; font-size: ${Math.round(size * 0.42)}px" role="img" aria-label="${label}" title="${label}">?</span>`;
 export const fmt = (x) => String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
 /** Divisions d'un rang : [nom, min, max]. Pion de Cendre : III jusqu'à 399. */

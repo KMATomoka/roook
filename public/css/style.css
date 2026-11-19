@@ -3235,3 +3235,4 @@ cg-board square.seq-to { background: radial-gradient(circle, rgba(60, 242, 163, 
 .pf-rk-name { color: var(--rk); font-weight: 700; font-size: 0.9rem; }
 .pf-rk-best { font-size: 0.78rem; }
 @media (max-width: 760px) { .pf-ranked-tiles { grid-template-columns: 1fr; } }
+.rk-none { flex: none; display: inline-grid; place-items: center; border-radius: 50%; border: 2px dashed var(--line-strong); background: var(--bg-2); color: var(--muted); font-family: var(--serif); font-weight: 700; line-height: 1; }

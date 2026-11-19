@@ -7,7 +7,7 @@ import {
   setAvatar, removeAvatar, myEmail, changeEmail, setBio, BIO_MAX,
   BADGES, ROYAL_WINS, badgeHtml, badgeIcon, ownedBadges, winKeys, chooseBadge,
 } from './compte.js';
-import { getRatings, rankOf, logoUrl, fmt, CATS, PLACEMENT } from './rangs.js';
+import { getRatings, rankOf, logoUrl, noRankHtml, fmt, CATS, PLACEMENT } from './rangs.js';
 
 const page = $('#profile-page');
 const { user, banned } = await session;
@@ -186,9 +186,9 @@ async function rankedSection(p) {
     <div class="pf-ranked-tiles">${Object.entries(CATS).map(([cat, label]) => {
       const e = r[cat];
       const rk = rankOf(e);
-      if (!e.n) return `<div class="card pf-rk dim"><img src="${logoUrl('fer')}" alt="" width="60" height="60"><div><p class="pf-rk-cat">${label}</p><p class="muted">Pas encore joué</p></div></div>`;
+      if (!e.n) return `<div class="card pf-rk">${noRankHtml(60)}<div><p class="pf-rk-cat">${label}</p><p class="muted">Pas encore joué</p></div></div>`;
       return `<div class="card pf-rk" style="--rk: ${rk.placement ? 'var(--muted)' : rk.rank.col}">
-        <img src="${logoUrl(rk.placement ? 'fer' : rk.rank.k)}" alt="" width="60" height="60"${rk.placement ? ' class="dim"' : ''}>
+        ${rk.placement ? noRankHtml(60) : `<img src="${logoUrl(rk.rank.k)}" alt="${rk.name}" width="60" height="60">`}
         <div><p class="pf-rk-cat">${label}</p><p class="pf-rk-elo">${fmt(e.r)}</p>
         <p class="pf-rk-name">${rk.placement ? `Placement ${rk.games} / ${PLACEMENT}` : rk.name}</p>
         <p class="muted pf-rk-best">Meilleur : ${fmt(e.best || e.r)} · ${e.n} partie${e.n > 1 ? 's' : ''}</p></div>

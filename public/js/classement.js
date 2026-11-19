@@ -1,7 +1,7 @@
 // Page « Classé » : l'échelle des huit rangs, ton rang, et le classement de chaque cadence.
 import { $, $$, escapeHtml, getPref, setPref } from './common.js';
 import { session, profileUrl } from './compte.js';
-import { RANKS, CATS, divisions, rangeLabel, rankOf, logoUrl, fmt, getRatings, leaderboard, placeOf, PLACEMENT } from './rangs.js';
+import { RANKS, CATS, divisions, rangeLabel, rankOf, logoUrl, noRankHtml, fmt, getRatings, leaderboard, placeOf, PLACEMENT } from './rangs.js';
 
 const { user } = await session;
 let cat = getPref('rang-cat', 'rapide');
@@ -42,7 +42,7 @@ async function renderMe() {
   const rk = rankOf(e);
   box.hidden = false;
   if (rk.placement) {
-    box.innerHTML = `<img src="${logoUrl('fer')}" alt="" width="72" height="72" class="dim">
+    box.innerHTML = `${noRankHtml(72)}
       <div><p class="rk-panel-cat">${CATS[cat]} · placement</p><h2>${rk.games} / ${PLACEMENT} parties</h2>
       <p class="muted">Elo ${fmt(e.r)}. Ton rang s’affiche après ${PLACEMENT} parties classées en ${CATS[cat]}.</p></div>
       <a class="btn btn-primary" href="jouer.html#hasard">Jouer une partie classée</a>`;

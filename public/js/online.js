@@ -96,6 +96,7 @@ export function gameSocket(gameId, user) {
       ranked: game.ranked === true, // partie classée (Elo relevé au début : elo.w, elo.b)
       cat: game.cat || null,
       elo: game.elo || null,
+      pl: game.pl || null, // joueurs encore en placement (pas de rang)
       status: game.status,
       result: game.result || null,
       reason: game.reason || '',

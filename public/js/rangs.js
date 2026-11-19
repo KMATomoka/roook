@@ -24,7 +24,7 @@ export const rankedKey = (base, inc) => `r-${base}-${inc}`;
 
 /** Les huit rangs, du plus bas au plus haut (divisions III, II, I de 100 points, sauf le dernier). */
 export const RANKS = [
-  { k: 'cendre', name: 'Pion de Cendre', min: 0, col: '#b3abc6' },
+  { k: 'cendre', name: 'Pion de Cendre', min: 0, col: '#d9925a' },
   { k: 'fer', name: 'Écuyer de Fer', min: 600, col: '#c3cedc' },
   { k: 'marees', name: 'Cavalier des Marées', min: 900, col: '#52d4ff' },
   { k: 'emeraude', name: 'Fou d’Émeraude', min: 1200, col: '#3cf2a3' },

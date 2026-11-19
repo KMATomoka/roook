@@ -24,7 +24,7 @@ export const rankedKey = (base, inc) => `r-${base}-${inc}`;
 
 /** Les huit rangs, du plus bas au plus haut (divisions III, II, I de 100 points, sauf le dernier). */
 export const RANKS = [
-  { k: 'cendre', name: 'Pion de Cendre', min: 0, col: '#d9925a' },
+  { k: 'cendre', name: 'Pion de Cuivre', min: 0, col: '#d9925a' },
   { k: 'fer', name: 'Écuyer de Fer', min: 600, col: '#c3cedc' },
   { k: 'marees', name: 'Cavalier des Marées', min: 900, col: '#52d4ff' },
   { k: 'emeraude', name: 'Fou d’Émeraude', min: 1200, col: '#3cf2a3' },
@@ -38,7 +38,7 @@ export const logoUrl = (k) => `img/rangs/${k}.svg`;
 export const noRankHtml = (size, label = 'Pas encore de rang') => `<span class="rk-none" style="width: ${size}px; height: ${size}px; font-size: ${Math.round(size * 0.42)}px" role="img" aria-label="${label}" title="${label}">?</span>`;
 export const fmt = (x) => String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
-/** Divisions d'un rang : [nom, min, max]. Pion de Cendre : III jusqu'à 399. */
+/** Divisions d'un rang : [nom, min, max]. Pion de Cuivre : III jusqu'à 399. */
 export function divisions(i) {
   const r = RANKS[i];
   if (r.k === 'astral') return [];

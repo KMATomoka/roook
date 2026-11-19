@@ -1,4 +1,4 @@
-// Mode classé : Elo par cadence (Bullet, Blitz, Rapide), rangs, et mise à jour de l'Elo en fin de partie.
+// Mode classé : Elo par cadence (Blitz 5 min, Rapide 10 min, Classique 30 min, Long 60 min), rangs, et mise à jour de l'Elo en fin de partie.
 // Pas de serveur : les règles de la base (scripts/rules.js, « ratings ») vérifient que chaque nouvel Elo
 // est exactement celui que donne la formule ci-dessous, pour une vraie partie classée terminée.
 import { db, ref, get, update, query, orderByChild, orderByKey, limitToLast, startAt, serverTimestamp } from './fb.js';
@@ -8,15 +8,16 @@ export const PLACEMENT = 5; // parties de placement (coefficient fort, rang affi
 export const MAX_GAP = 200; // écart d'Elo maximal entre deux adversaires
 export const SHIELD = 3; // parties sans redescendre de rang après une montée
 
-export const CATS = { bullet: 'Bullet', blitz: 'Blitz', rapide: 'Rapide' };
+export const CATS = { blitz: 'Blitz', rapide: 'Rapide', classique: 'Classique', long: 'Long' };
 /** Cadences de la file classée (« min+s ») et leur catégorie d'Elo. Le 30 min reste en partie normale. */
 export const RANKED_CADENCES = [
-  ['1+0', 'bullet', 'Bullet · 1 min'],
-  ['3+2', 'blitz', 'Blitz · 3 min + 2 s'],
   ['5+0', 'blitz', 'Blitz · 5 min'],
   ['10+0', 'rapide', 'Rapide · 10 min'],
-  ['15+10', 'rapide', 'Rapide · 15 min + 10 s'],
+  ['30+0', 'classique', 'Classique · 30 min'],
+  ['60+0', 'long', 'Long · 60 min'],
 ];
+// Cadences de « Adversaire au hasard » en partie normale : les mêmes qu'en classée
+export const RANDOM_CADENCES = RANKED_CADENCES.map(([k, , label]) => [k, label]);
 export const catOfCadence = (c) => (RANKED_CADENCES.find(([k]) => k === c) || [])[1] || null;
 /** Clé de la file classée dans la base : « r-<base ms>-<inc ms> ». */
 export const rankedKey = (base, inc) => `r-${base}-${inc}`;

@@ -3226,7 +3226,8 @@ cg-board square.seq-to { background: radial-gradient(circle, rgba(60, 242, 163, 
 .pf-ranked-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
 .pf-ranked-head h2 { font: 700 1.3rem var(--serif); margin: 0; }
 .pf-ranked-head a { color: var(--accent-soft); font-weight: 600; text-decoration: none; }
-.pf-ranked-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.pf-ranked-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 1100px) { .pf-ranked-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .pf-rk { display: flex; align-items: center; gap: 12px; border-color: color-mix(in srgb, var(--rk, var(--line)) 45%, var(--line)); }
 .pf-rk img { width: 60px; height: 60px; flex: none; }
 .pf-rk p { margin: 0; }
@@ -3263,6 +3264,7 @@ cg-board square.seq-to { background: radial-gradient(circle, rgba(60, 242, 163, 
 .mm-cad-label { margin: 0; font-size: 0.92rem; }
 .mm-cads { display: grid; gap: 8px; grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .mm-cads.n7 { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
+.mm-cads.n4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .mm-cad { position: relative; cursor: pointer; }
 .mm-cad input { position: absolute; opacity: 0; pointer-events: none; }
 .mm-cad > span { display: flex; flex-direction: column; gap: 2px; min-height: 44px; height: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-2); transition: border-color 0.15s, background 0.15s; }
@@ -3396,3 +3398,4 @@ cg-board square.seq-to { background: radial-gradient(circle, rgba(60, 242, 163, 
 .mm-skel .btn[aria-disabled] { opacity: 0.6; pointer-events: none; }
 .mm-layout.ranked .mm-rank { min-height: 420px; }
 @keyframes mm-skel { to { opacity: 0.45; } }
+@media (max-width: 600px) { .mm-cads.n4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

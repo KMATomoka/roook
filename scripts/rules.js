@@ -74,8 +74,8 @@ const MM_GAME = (p) => `${MM_ROOT}.child('games/' + newData.val() + '/${p}').val
 // ---------------------------------------------------------------------------
 // Mode classé (js/rangs.js). Files « r-<base>-<inc> » ; Elo par catégorie dans ratings/<cat>/<uid>.
 // ---------------------------------------------------------------------------
-const RANKED_KEY = '/^r-(60000-0|180000-2000|300000-0|600000-0|900000-10000)$/';
-const CAT_OF = (k) => `(${k} === 'r-60000-0' ? 'bullet' : (${k} === 'r-180000-2000' || ${k} === 'r-300000-0') ? 'blitz' : 'rapide')`;
+const RANKED_KEY = '/^r-(300000-0|600000-0|1800000-0|3600000-0)$/';
+const CAT_OF = (k) => `(${k} === 'r-300000-0' ? 'blitz' : ${k} === 'r-600000-0' ? 'rapide' : ${k} === 'r-1800000-0' ? 'classique' : 'long')`;
 // Elo actuel d'un joueur dans une catégorie (800 s'il n'a jamais joué)
 const RATING = (uid, cat) => `(root.child('ratings/' + ${cat} + '/' + ${uid} + '/r').isNumber() ? root.child('ratings/' + ${cat} + '/' + ${uid} + '/r').val() : 800)`;
 // À la création d'une partie : classée si et seulement si elle vient d'une file classée, avec l'Elo des deux
@@ -402,7 +402,7 @@ const rules = {
         '.read': ME,
         '.indexOn': ['r'],
         $uid: {
-          '.write': `${ME} && $cat.matches(/^(bullet|blitz|rapide)$/)`,
+          '.write': `${ME} && $cat.matches(/^(bullet|blitz|rapide|classique|long)$/)`,
           '.validate': RATING_OK,
           floor: { '.validate': 'newData.isNumber() && newData.val() >= 0 && newData.val() <= 7' },
           shield: { '.validate': 'newData.isNumber() && newData.val() >= 0 && newData.val() <= 3' },
@@ -415,7 +415,7 @@ const rules = {
         $uid: {
           '.read': ME,
           $g: {
-            '.write': `${ME} && !data.exists() && $cat.matches(/^(bullet|blitz|rapide)$/)`,
+            '.write': `${ME} && !data.exists() && $cat.matches(/^(bullet|blitz|rapide|classique|long)$/)`,
             '.validate': LOG_OK,
           },
         },

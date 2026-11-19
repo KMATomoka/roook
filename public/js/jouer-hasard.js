@@ -3,11 +3,10 @@
 // avec ce que la partie peut rapporter, avant d'ouvrir la partie.
 import { ico } from './icons.js';
 import { $, getPref, setPref, escapeHtml } from './common.js';
-import { CADENCES } from './compte.js';
 import { findOpponent } from './matchmaking.js';
 import { db, ref, get, query, orderByKey, limitToLast, limitToFirst, onValue } from './fb.js';
 import {
-  RANKED_CADENCES, RANKS, CATS, PLACEMENT, MIN_GAMES, MAX_GAP, getRatings, getLog, rankOf, logoUrl, noRankHtml, fmt, delta,
+  RANKED_CADENCES, RANDOM_CADENCES, RANKS, CATS, PLACEMENT, MIN_GAMES, MAX_GAP, getRatings, getLog, rankOf, logoUrl, noRankHtml, fmt, delta,
   windowFor, rankedKey, placeOf,
 } from './rangs.js';
 
@@ -110,7 +109,7 @@ export function initRandom(user, params) {
     }
     const t = type();
     const ranked = t === 'classee';
-    const list = ranked ? RANKED_CADENCES.map(([k, cat, label]) => ({ k, cat, label })) : CADENCES.map(([k, label]) => ({ k, label }));
+    const list = ranked ? RANKED_CADENCES.map(([k, cat, label]) => ({ k, cat, label })) : RANDOM_CADENCES.map(([k, label]) => ({ k, label }));
     const saved = ranked ? getPref('cadence-classee', '10+0') : getPref('cadence-hasard', getPref('cadence', '10+0'));
     const cad = list.some((x) => x.k === saved) ? saved : '10+0';
     const locked = ranked && !rankedOpen();
@@ -130,7 +129,7 @@ export function initRandom(user, params) {
           ? `<p class="rk-locked">${ico('lock')} Joue encore ${MIN_GAMES - onlineGames} partie${MIN_GAMES - onlineGames > 1 ? 's' : ''} en ligne (normale ou entre amis) pour débloquer la partie classée.</p>`
           : `<form id="form-mm" class="mm-form">
             <p class="mm-cad-label"><b>Cadence</b>${ranked ? ' <span class="muted">· ton Elo dans chacune</span>' : ''}</p>
-            <div class="mm-cads ${ranked ? 'n5' : 'n7'}" role="radiogroup" aria-label="Cadence">
+            <div class="mm-cads n4" role="radiogroup" aria-label="Cadence">
               ${list.map((x) => {
                 const { fam, time } = splitLabel(x.label);
                 const e = ranked ? ratings?.[x.cat] : null;
@@ -179,7 +178,7 @@ export function initRandom(user, params) {
     stopCount?.();
     const { base, inc } = toMs(c);
     const key = ranked ? rankedKey(base, inc) : `${base}-${inc}`;
-    const label = (ranked ? RANKED_CADENCES.find(([k]) => k === c)?.[2] : CADENCES.find(([k]) => k === c)?.[1]) || c;
+    const label = (ranked ? RANKED_CADENCES.find(([k]) => k === c)?.[2] : RANDOM_CADENCES.find(([k]) => k === c)?.[1]) || c;
     stopCount = onValue(ref(db, `matchmaking/${key}`), (s) => {
       const n = s.size;
       const el = $('#mm-count');
@@ -336,7 +335,7 @@ export function initRandom(user, params) {
   function startNormalSearch(c) {
     const t0 = Date.now();
     let waiting = 1;
-    const label = CADENCES.find(([k]) => k === c)?.[1] || c;
+    const label = RANDOM_CADENCES.find(([k]) => k === c)?.[1] || c;
     box.innerHTML = `<div class="mm-search" role="status">
         <div class="mm-radar" aria-hidden="true"><span></span><span></span><span>${ico('dice')}</span></div>
         <p class="mm-title">Recherche d’un adversaire…</p>

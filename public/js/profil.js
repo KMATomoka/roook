@@ -197,7 +197,7 @@ async function rankedSection(p) {
   // Courbe : la catégorie la plus jouée
   const chartCat = Object.keys(CATS).sort((a, b) => (r[b].n || 0) - (r[a].n || 0))[0];
   const recent = Object.values(logs).flat().sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 6);
-  const LABELS = { bullet: 'Bullet · 1 min', blitz: 'Blitz · 3 et 5 min', rapide: 'Rapide · 10 et 15 min' };
+  const LABELS = { blitz: 'Blitz · 5 min', rapide: 'Rapide · 10 min', classique: 'Classique · 30 min', long: 'Long · 60 min' };
   box.hidden = false;
   box.innerHTML = `<div class="pf-ranked-head"><h2>Classé</h2><a href="classe.html">Voir les rangs</a></div>
     <div class="pf-ranked-tiles">${Object.keys(CATS).map((cat) => {

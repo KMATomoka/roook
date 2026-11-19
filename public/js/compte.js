@@ -152,7 +152,7 @@ export const CADENCES = [
 ];
 export function cadenceLabel(base, inc) {
   const key = `${base / 60000}+${inc / 1000}`;
-  return (CADENCES.find((c) => c[0] === key) || [key, `${base / 60000} min + ${inc / 1000} s`])[1];
+  return ([...CADENCES, ['60+0', 'Long · 60 min']].find((c) => c[0] === key) || [key, `${base / 60000} min + ${inc / 1000} s`])[1];
 }
 function parseCadence(txt) {
   const [m, i] = String(txt || '10+0').split(/[+ ]/).map(Number);

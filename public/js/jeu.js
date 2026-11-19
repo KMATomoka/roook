@@ -13,7 +13,8 @@ import { scrollMoveIntoList, repetitions, rivalOf, faceUrl } from './common.js';
 import { session, avatarOf, profileUrl, badgeOf, badgeHtml, toast, rememberGame, markRematchDeclined, isRematchDeclined } from './compte.js';
 import { gameSocket, AWAY_LIMIT } from './online.js';
 import { serverNow } from './fb.js';
-import { rankOf, logoUrl, noRankHtml, fmt, applyResult, getRating, catOfCadence, CATS, RANKS, divisions, PLACEMENT } from './rangs.js';
+import { rankOf, logoUrl, fmt, applyResult, getRating, catOfCadence, CATS, PLACEMENT } from './rangs.js';
+import { animateElo, showRankUp } from './rang-anim.js'; // Elo qui défile et montée de rang (avec les bruitages)
 const account = await session;
 
 const params = new URLSearchParams(location.search);
@@ -674,60 +675,8 @@ function rankedEnd(end) {
   });
 }
 
-function showEloChange(box, { before, after, myElo }) {
-  const from = myElo;
-  const to = after.r;
-  const d = to - from;
-  const rkBefore = rankOf({ r: from, n: Math.max(0, after.n - 1), floor: before.floor, shield: before.shield });
-  const rkAfter = rankOf(after);
-  const placing = after.n < PLACEMENT;
-  const nextRank = RANKS[rkAfter.i + 1];
-  box.innerHTML = `<div class="rk-end-head"><span class="rk-chip">Partie classée · ${CATS[after.cat || online.cat] || ''}</span><span class="muted">Elo</span></div>
-    <p class="rk-end-elo"><s class="muted">${fmt(from)}</s> <b class="rk-end-new">${fmt(from)}</b> <span class="rk-end-delta ${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : '−'}${Math.abs(d)}</span></p>
-    ${placing
-      ? `<p class="muted rk-end-msg">Placement ${after.n} / ${PLACEMENT} : ton rang s’affiche après ${PLACEMENT} parties classées.</p>`
-      : `<div class="rk-end-bar">
-          ${after.n === PLACEMENT ? noRankHtml(30) : `<img src="${logoUrl(rkBefore.rank.k)}" alt="${rkBefore.name}" title="${rkBefore.name}" width="30" height="30">`}
-          <div class="rk-bar"><i style="width: ${Math.round(rkBefore.progress * 100)}%"></i></div>
-          <img src="${logoUrl((nextRank || rkAfter.rank).k)}" alt="" width="30" height="30">
-        </div>
-        <p class="rk-end-msg">${rkAfter.name}${rkAfter.next ? ` · prochaine étape à ${fmt(rkAfter.next)}` : ''}</p>`}`;
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const num = box.querySelector('.rk-end-new');
-  const bar = box.querySelector('.rk-bar i');
-  const t0 = performance.now();
-  const dur = reduce ? 0 : 900;
-  const step = (t) => {
-    const k = dur ? Math.min(1, (t - t0) / dur) : 1;
-    num.textContent = fmt(from + d * k);
-    if (k < 1) return requestAnimationFrame(step);
-    num.textContent = fmt(to);
-    if (bar) bar.style.width = Math.round((rkAfter.i === rkBefore.i ? rkAfter.progress : d > 0 ? 1 : 0) * 100) + '%';
-  };
-  requestAnimationFrame(step);
-  // Montée de rang (ou fin du placement) : la fenêtre se transforme
-  const promoted = !placing && (rkAfter.i > rkBefore.i || after.n === PLACEMENT);
-  if (promoted) setTimeout(() => showRankUp(rkBefore, rkAfter, after, d, after.n === PLACEMENT && rkAfter.i <= rkBefore.i), reduce ? 400 : 1800);
-}
-
-function showRankUp(before, after, entry, d, firstRank) {
-  const dlg = $('#end-dialog');
-  const div = divisions(after.i);
-  const nextDiv = after.next;
-  const up = document.createElement('div');
-  up.id = 'end-rankup';
-  up.className = 'rk-rankup';
-  up.innerHTML = `<div class="rk-rankup-logo" aria-hidden="true"><span class="rk-rays"></span><img src="${logoUrl(after.rank.k)}" alt="" width="150" height="150"></div>
-    <p class="eyebrow">${firstRank ? 'Ton premier rang' : 'Nouveau rang'}</p>
-    <h2>${after.name}</h2>
-    ${firstRank ? '' : `<p class="muted rk-rankup-path"><img src="${logoUrl(before.rank.k)}" alt="" width="20" height="20"> ${before.name} → <img src="${logoUrl(after.rank.k)}" alt="" width="20" height="20"> ${after.name}</p>`}
-    <div class="rk-end rk-rankup-info">
-      <span><span class="muted">Elo ${CATS[online.cat] || ''}</span><br><b class="rk-num">${fmt(entry.r)}</b> <span class="rk-end-delta ${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : '−'}${Math.abs(d)}</span></span>
-      ${nextDiv && div.length ? `<span class="rk-right"><span class="muted">Prochaine étape</span><br><b>${fmt(nextDiv)}</b></span>` : ''}
-    </div>
-    ${firstRank ? '' : '<p class="muted rk-rankup-shield">Bouclier : 3 parties sans redescendre de rang.</p>'}`;
-  $('#end-ranked').after(up);
-  dlg.classList.add('rankup');
+function showEloChange(box, res) {
+  animateElo(box, res, online.cat, (before, after, entry, d, firstRank) => showRankUp($('#end-dialog'), $('#end-ranked'), before, after, entry, d, firstRank, online.cat));
 }
 
 /** L'adversaire propose la revanche : un encart bien visible et un bouton « Accepter » mis en avant. */

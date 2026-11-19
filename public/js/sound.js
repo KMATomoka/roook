@@ -2163,3 +2163,49 @@ export const boxMusic = {
     clearInterval(music.timer);
   },
 };
+
+/**
+ * Mode classé (fenêtre de fin de partie, js/rang-anim.js) : l'Elo qui défile, puis la montée de rang.
+ * Plus le rang est haut, plus la fanfare est aiguë et brillante.
+ */
+export const rankSfx = {
+  /** Cliquetis pendant que l'Elo défile (k : 0, 1, 2… un peu plus aigu à chaque fois). */
+  tick(k = 0, up = true) {
+    const f = up ? 1250 + Math.min(k, 14) * 45 : 1100 - Math.min(k, 14) * 30;
+    tone({ freq: f, type: 'triangle', dur: 0.035, vol: 0.014, attack: 0.002 });
+  },
+  /** L'Elo s'arrête : petit carillon s'il monte, note grave s'il descend. */
+  eloEnd(up = true) {
+    if (up) {
+      bell(1046.5, 0, 0.024);
+      bell(1568, 0.09, 0.02);
+    } else tone({ freq: 330, endFreq: 247, type: 'sine', dur: 0.55, vol: 0.05, attack: 0.01 });
+  },
+  /** La montée en tension avant l'éclat : grondement, souffle qui enfle, harpe qui monte, roulement de tambour. */
+  charge(dur = 1.5) {
+    rumbleLow(0, dur + 0.3, 0.2);
+    magicWhoosh(0.1, dur, 0.05, 0.9);
+    harpGliss(0.2, { n: 12, step: (dur - 0.35) / 12, vol: 0.02 });
+    let t = 0.25;
+    let gap = 0.12;
+    while (t < dur - 0.02) {
+      burst({ at: t, dur: 0.045, vol: 0.05 + 0.14 * (t / dur), type: 'bandpass', freq: 2300, q: 0.8 });
+      t += gap;
+      gap = Math.max(0.032, gap * 0.88);
+    }
+  },
+  /** L'éclat : coup de timbale, fanfare de cuivres, cloche, chœur et poussière d'étoiles. i : rang atteint (0 à 7). */
+  reveal(i = 0, first = false) {
+    const root = 261.63 * Math.pow(2, (Math.min(7, Math.max(0, i)) * 2) / 12);
+    timpani(0, 0.55);
+    goldClang(0, 0.55, 1.3);
+    noiseSweep({ at: 0, dur: 0.6, type: 'highpass', f: [2500, 9000, 6000], q: 0.6, vol: 0.05, peak: 0.15 });
+    [1, 1.26, 1.5, 2].forEach((m, k) => brass({ freq: root * m, at: 0.03 + k * 0.1, dur: 0.32, vol: 0.05 }));
+    [1, 1.26, 1.5].forEach((m) => brass({ freq: root * m, at: 0.48, dur: 1.5, vol: 0.04 }));
+    timpani(0.48, 0.35);
+    bell(root * 4, 0.5, 0.045);
+    choir([root / 2, (root * 1.26) / 2, (root * 1.5) / 2], 0.35, 2.4, 0.028);
+    fairyDust(0.45, 12, 1.4, 0.013);
+    if (first) [0, 4, 7, 12].forEach((s, k) => celesta(root * 2 * Math.pow(2, s / 12), 1.1 + k * 0.12, 0.028));
+  },
+};

@@ -3172,10 +3172,6 @@ cg-board square.seq-to { background: radial-gradient(circle, rgba(60, 242, 163, 
 #end-dialog { overflow: hidden; }
 .rk-rankup { display: flex; flex-direction: column; align-items: center; animation: rk-in 0.5s ease-out; }
 .rk-rankup .eyebrow { margin: 4px 0 0; }
-.modal .rk-rankup h2 { margin: 2px 0 4px; text-shadow: 0 0 20px rgba(196, 160, 255, 0.6); }
-.rk-rankup-logo { position: relative; width: 170px; height: 170px; display: grid; place-items: center; }
-.rk-rankup-logo img { position: relative; width: 150px; height: 150px; filter: drop-shadow(0 0 20px rgba(196, 160, 255, 0.8)); animation: rk-pop 0.7s cubic-bezier(.3, 1.6, .5, 1) both; }
-.rk-rays { position: absolute; inset: -60px; border-radius: 50%; background: radial-gradient(closest-side, rgba(185, 139, 255, 0.5), transparent 70%), repeating-conic-gradient(rgba(196, 160, 255, 0.28) 0 5deg, transparent 5deg 18deg); -webkit-mask: radial-gradient(closest-side, #000 30%, transparent 75%); mask: radial-gradient(closest-side, #000 30%, transparent 75%); animation: rk-spin 24s linear infinite; }
 .modal .rk-rankup-path { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; font-size: 0.86rem; margin: 0; }
 .rk-rankup-info { flex-direction: row; justify-content: space-between; align-items: center; width: 100%; }
 .rk-rankup-info .rk-num { font-size: 1.3rem; }
@@ -3184,7 +3180,6 @@ cg-board square.seq-to { background: radial-gradient(circle, rgba(60, 242, 163, 
 @keyframes rk-pop { 0% { transform: scale(0.2) rotate(-30deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
 @keyframes rk-spin { to { transform: rotate(360deg); } }
 @keyframes rk-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .rk-rays, .rk-rankup-logo img, .rk-rankup { animation: none; } }
 /* Page Classé */
 .rk-page { max-width: 1100px; margin: 0 auto; padding: 28px clamp(16px, 4vw, 40px) 60px; display: flex; flex-direction: column; gap: 16px; }
 .rk-page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
@@ -3417,3 +3412,48 @@ cg-board square.seq-to { background: radial-gradient(circle, rgba(60, 242, 163, 
 }
 .rk-float.on { opacity: 1; }
 .rk-float b { color: var(--rk, var(--text)); }
+
+/* Montée de rang (js/rang-anim.js) : l'ancien logo se charge de lumière et tremble (.charge), puis éclate : flash,
+   étincelles, rayons aux couleurs du rang, et le nouveau logo apparaît (.reveal). --rk : couleur du nouveau rang. */
+.rk-rankup { --rk: #b98bff; }
+.modal .rk-rankup h2 { margin: 2px 0 4px; color: var(--rk); text-shadow: 0 0 22px color-mix(in srgb, var(--rk) 70%, transparent); }
+.rk-rankup-logo { position: relative; width: 180px; height: 180px; display: grid; grid-template: 100% / 100%; place-items: center; margin-bottom: 6px; }
+.rk-old .rk-none { transition: border-color 1.2s, box-shadow 1.4s, color 1.2s; }
+.rk-rankup.charge .rk-old .rk-none { border-color: var(--rk); border-style: solid; color: #fff; box-shadow: 0 0 34px var(--rk), inset 0 0 22px var(--rk); }
+.rk-rankup-logo > * { grid-area: 1 / 1; }
+.rk-rays {
+  width: 300px; height: 300px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--rk) 55%, transparent), transparent 70%),
+    repeating-conic-gradient(color-mix(in srgb, var(--rk) 34%, transparent) 0 5deg, transparent 5deg 18deg);
+  -webkit-mask: radial-gradient(closest-side, #000 30%, transparent 75%); mask: radial-gradient(closest-side, #000 30%, transparent 75%);
+  opacity: 0.25; transform: scale(0.5); transition: opacity 0.6s, transform 0.8s cubic-bezier(.2, 1.4, .4, 1);
+  animation: rk-spin 24s linear infinite;
+}
+.rk-rankup.reveal .rk-rays { opacity: 1; transform: scale(1); animation-duration: 18s; }
+.rk-old { display: grid; place-items: center; transition: transform 0.22s ease-in, opacity 0.22s ease-in; }
+.rk-old img { width: 150px; height: 150px; }
+.rk-rankup.charge .rk-old { animation: rk-charge 1.5s ease-in both; }
+.rk-rankup.charge .rk-old > * { animation: rk-shake 0.09s linear infinite; animation-delay: 0.5s; }
+.rk-rankup.reveal .rk-old { transform: scale(1.5); opacity: 0; }
+.rk-new { width: 150px; height: 150px; opacity: 0; transform: scale(0.2); filter: drop-shadow(0 0 18px var(--rk)); }
+.rk-rankup.reveal .rk-new { animation: rk-pop 0.75s cubic-bezier(.3, 1.6, .5, 1) 0.05s both, rk-glow 2.4s ease-in-out 0.8s infinite; }
+.rk-flash { width: 120px; height: 120px; border-radius: 50%; pointer-events: none; opacity: 0; background: radial-gradient(closest-side, #fff, color-mix(in srgb, var(--rk) 60%, #fff) 45%, transparent 75%); }
+.rk-rankup.reveal .rk-flash { animation: rk-flash 0.7s ease-out both; }
+.rk-sparks { width: 0; height: 0; position: relative; }
+.rk-sparks i { position: absolute; left: calc(var(--s) / -2); top: calc(var(--s) / -2); width: var(--s); height: var(--s); border-radius: 50%; background: #fff; box-shadow: 0 0 10px 2px var(--rk); opacity: 0; }
+.rk-sparks i:nth-child(3n) { background: var(--rk); }
+.rk-rankup.reveal .rk-sparks i { animation: rk-spark 1s cubic-bezier(.15, .8, .3, 1) both; }
+.rk-rankup .rk-late { opacity: 0; transform: translateY(8px); transition: opacity 0.45s, transform 0.45s; }
+.rk-rankup.reveal .rk-late { opacity: 1; transform: none; transition-delay: calc(0.35s + var(--i, 0) * 0.12s); }
+@keyframes rk-charge {
+  0% { filter: drop-shadow(0 0 0 var(--rk)) brightness(1); transform: scale(1); }
+  100% { filter: drop-shadow(0 0 26px var(--rk)) brightness(1.7); transform: scale(1.08); }
+}
+@keyframes rk-shake { 0%, 100% { transform: translate(0, 0) rotate(0); } 25% { transform: translate(-2px, 1px) rotate(-1.5deg); } 50% { transform: translate(2px, -1px) rotate(1deg); } 75% { transform: translate(-1px, -2px) rotate(-0.5deg); } }
+@keyframes rk-flash { 0% { opacity: 1; transform: scale(0.3); } 100% { opacity: 0; transform: scale(2.6); } }
+@keyframes rk-spark { 0% { opacity: 1; transform: rotate(var(--a)) translateY(0) scale(1); } 100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(var(--d) * -1)) scale(0.3); } }
+@keyframes rk-glow { 0%, 100% { filter: drop-shadow(0 0 18px var(--rk)); } 50% { filter: drop-shadow(0 0 34px var(--rk)); } }
+@media (prefers-reduced-motion: reduce) {
+  .rk-rays, .rk-new, .rk-old, .rk-old > *, .rk-flash, .rk-sparks i, .rk-rankup { animation: none !important; }
+  .rk-rankup.reveal .rk-new { opacity: 1; transform: none; }
+}

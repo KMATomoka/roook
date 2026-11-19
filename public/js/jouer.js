@@ -96,6 +96,8 @@ async function loadRanked() {
     if (g?.opp && typeof g.date === 'number' && Date.now() - g.date < 86400000) recentOpps.set(g.opp, (recentOpps.get(g.opp) || 0) + 1);
   });
 }
+// Classée ouverte après 5 parties en ligne ; le fondateur et les admins y ont accès tout de suite
+const rankedOpen = () => onlineGames >= MIN_GAMES || user?.role === 'fondateur' || user?.role === 'admin';
 const rankedCat = (c) => (RANKED_CADENCES.find(([k]) => k === c) || [])[1];
 const mmType = () => getPref('mm-type', 'normale');
 
@@ -133,7 +135,7 @@ function renderMatchForm() {
   if (type === 'classee') {
     const saved = getPref('cadence-classee', '10+0');
     const cad = RANKED_CADENCES.some(([k]) => k === saved) ? saved : '10+0';
-    const locked = onlineGames < MIN_GAMES;
+    const locked = !rankedOpen();
     mmBox.innerHTML = `${seg}
       <p>Gagne de l’Elo et monte en rang contre un joueur de ton niveau. <a href="classe.html">Voir les rangs</a></p>
       ${locked
@@ -240,7 +242,7 @@ loadRanked().then(() => {
   // « Rejouer en classé » depuis la fin d'une partie : jouer.html?classee=10%2B0 relance la recherche
   const again = params.get('classee');
   if (again) window.history.replaceState(null, '', location.pathname + location.hash);
-  if (again && user && onlineGames >= MIN_GAMES && RANKED_CADENCES.some(([k]) => k === again)) {
+  if (again && user && rankedOpen() && RANKED_CADENCES.some(([k]) => k === again)) {
     setPref('mm-type', 'classee');
     setPref('cadence-classee', again);
     startSearch(again, true);

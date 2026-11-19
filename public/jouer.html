@@ -40,6 +40,37 @@
         <h3>Adversaire au hasard</h3>
         <div id="mm-content" class="mm-content"><p class="muted">Chargement…</p></div>
       </article>
+      <script>
+        // Connecté (d'après la barre en cache) : la carte prend tout de suite sa place finale (pleine largeur,
+        // mêmes blocs que js/jouer-hasard.js), pour que la page ne se réorganise pas une fois chargée.
+        (function () {
+          try {
+            if (!localStorage.getItem('roque:barre')) return;
+            var pref = function (k, d) { var v = localStorage.getItem('roque:' + k); return v ? JSON.parse(v) : d; };
+            var r = pref('mm-type', 'normale') === 'classee';
+            var cads = r
+              ? [['1+0', 'Bullet', '1 min'], ['3+2', 'Blitz', '3 min + 2 s'], ['5+0', 'Blitz', '5 min'], ['10+0', 'Rapide', '10 min'], ['15+10', 'Rapide', '15 min + 10 s']]
+              : [['1+0', 'Bullet', '1 min'], ['3+0', 'Blitz', '3 min'], ['3+2', 'Blitz', '3 min + 2 s'], ['5+0', 'Blitz', '5 min'], ['10+0', 'Rapide', '10 min'], ['15+10', 'Rapide', '15 min + 10 s'], ['30+0', 'Classique', '30 min']];
+            var cur = r ? pref('cadence-classee', '10+0') : pref('cadence-hasard', pref('cadence', '10+0'));
+            var opt = function (on, title, txt, extra) {
+              return '<span class="mm-opt' + (on ? ' on' : '') + '"><span class="mm-opt-box"><span class="mm-opt-top"><strong>' + title + '</strong><span class="mm-dot"></span></span>' + txt + extra + '</span></span>';
+            };
+            var logos = ['fer', 'marees', 'emeraude', 'amethyste', 'or', 'dragon', 'astral'].map(function (k) { return '<img src="img/rangs/' + k + '.svg" alt="" width="26" height="26">'; }).join('');
+            var chips = cads.map(function (c) {
+              return '<span class="mm-cad"><span' + (c[0] === cur ? ' class="on"' : '') + '><small>' + c[1] + '</small><b>' + c[2] + '</b>' + (r ? '<span class="mm-cad-elo mm-skel-line">&nbsp;</span>' : '') + '</span></span>';
+            }).join('');
+            var c = document.getElementById('card-hasard');
+            c.classList.add('mm-wide');
+            document.getElementById('mm-content').innerHTML = '<div class="mm-layout mm-skel' + (r ? ' ranked' : '') + '" aria-busy="true"><div class="mm-main"><div class="mm-types">'
+              + opt(!r, 'Partie normale', '<span class="muted">Pour le plaisir. Pas d’Elo en jeu, adversaire trouvé plus vite.</span>', '<span class="rk-chip">Aucun classement</span>')
+              + opt(r, 'Partie classée', '<span class="mm-opt-txt">Gagne de l’Elo et monte en rang, contre un joueur de ton niveau.</span>', '<span class="mm-opt-logos" aria-hidden="true">' + logos + '</span>')
+              + '</div><div class="mm-form"><p class="mm-cad-label"><b>Cadence</b>' + (r ? ' <span class="muted">· ton Elo dans chacune</span>' : '') + '</p><div class="mm-cads ' + (r ? 'n5' : 'n7') + '">' + chips + '</div>'
+              + '<div class="mm-go"><span class="btn btn-primary btn-lg" aria-disabled="true"><span class="ico" data-ico="' + (r ? 'trophy' : 'dice') + '" aria-hidden="true"></span> ' + (r ? 'Chercher une partie classée' : 'Trouver un adversaire') + '</span><span class="muted mm-count">' + (r ? 'Recherche des joueurs en ligne…' : 'Recherche des joueurs en ligne pour cette cadence…') + '</span></div>'
+              + (r ? '<p class="muted rk-rule">En classé, abandonner ou quitter la partie compte comme une défaite.</p>' : '') + '</div></div>'
+              + (r ? '<div><aside class="mm-rank"><p class="muted">Chargement de ton rang…</p></aside></div>' : '') + '</div>';
+          } catch (e) {}
+        })();
+      </script>
 
       <article class="mode-card" id="card-ami">
         <div class="mode-icon"><span class="ico" data-ico="swords" aria-hidden="true"></span></div>

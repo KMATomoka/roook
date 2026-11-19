@@ -3389,3 +3389,10 @@ cg-board square.seq-to { background: radial-gradient(circle, rgba(60, 242, 163, 
 .pf-rk-games li .dl.down { color: var(--danger); }
 .pf-hero-rank { width: 40px; height: 40px; vertical-align: middle; }
 @media (max-width: 760px) { .pf-ranked-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Page Jouer : carte « Adversaire au hasard » pendant le chargement (même disposition que la carte chargée) */
+.mm-skel .mm-cad > span.on { border-color: var(--accent); background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--accent); }
+.mm-skel .mm-skel-line { display: block; width: 60%; height: 21px; border-radius: 6px; background: var(--line); animation: mm-skel 1s ease-in-out infinite alternate; }
+.mm-skel .btn[aria-disabled] { opacity: 0.6; pointer-events: none; }
+.mm-layout.ranked .mm-rank { min-height: 420px; }
+@keyframes mm-skel { to { opacity: 0.45; } }

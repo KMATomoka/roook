@@ -108,6 +108,19 @@ const RATING_OK = `(newData.hasChildren(['r', 'n', 'best', 'last', 'name', 'at']
   && newData.child('name').val() === root.child('users/' + $uid + '/username').val()
   && newData.child('at').val() === now)`.replace(/\n\s*/g, ' ');
 
+// Historique classé : une ligne par partie, écrite en même temps que la nouvelle fiche d'Elo (même valeur)
+const LG = (p) => `root.child('games/' + $g + '/${p}')`;
+const NEW_ROOT = 'newData.parent().parent().parent().parent()';
+const LOG_OK = `(newData.hasChildren(['r', 'd', 'res', 'opp', 'on', 'oe', 'at'])
+  && ${LG('ranked')}.val() === true && ${LG('status')}.val() === 'over' && ${LG('cat')}.val() === $cat
+  && (${LG('white')}.val() === $uid || ${LG('black')}.val() === $uid) && (${LG('white')}.val() === auth.uid || ${LG('black')}.val() === auth.uid)
+  && ${NEW_ROOT}.child('ratings/' + $cat + '/' + $uid + '/last').val() === $g
+  && ${NEW_ROOT}.child('ratings/' + $cat + '/' + $uid + '/r').val() === newData.child('r').val()
+  && newData.child('d').val() === newData.child('r').val() - (${LG('white')}.val() === $uid ? ${LG('elo/w')}.val() : ${LG('elo/b')}.val())
+  && newData.child('opp').val() === (${LG('white')}.val() === $uid ? ${LG('black')}.val() : ${LG('white')}.val())
+  && newData.child('res').val().matches(/^[vnd]$/) && newData.child('on').isString() && newData.child('on').val().length <= 20
+  && newData.child('oe').isNumber() && newData.child('at').val() === now)`.replace(/\n\s*/g, ' ');
+
 // Historique : une partie entre amis n'y entre que si elle existe vraiment, est terminée, et avec le même résultat
 const GH = (p) => `root.child('games/' + newData.child('game').val() + '/${p}')`;
 const AMI_OK = `(newData.child('game').isString() && newData.child('round').isNumber() && $h === newData.child('game').val() + '-' + newData.child('round').val()
@@ -393,6 +406,18 @@ const rules = {
           '.validate': RATING_OK,
           floor: { '.validate': 'newData.isNumber() && newData.val() >= 0 && newData.val() <= 7' },
           shield: { '.validate': 'newData.isNumber() && newData.val() >= 0 && newData.val() <= 3' },
+        },
+      },
+    },
+    // Historique classé (derniers résultats, courbe d'Elo du profil) : lisible par les membres, jamais réécrit
+    ratingLog: {
+      $cat: {
+        $uid: {
+          '.read': ME,
+          $g: {
+            '.write': `${ME} && !data.exists() && $cat.matches(/^(bullet|blitz|rapide)$/)`,
+            '.validate': LOG_OK,
+          },
         },
       },
     },

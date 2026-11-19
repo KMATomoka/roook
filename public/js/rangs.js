@@ -1,7 +1,7 @@
 // Mode classé : Elo par cadence (Bullet, Blitz, Rapide), rangs, et mise à jour de l'Elo en fin de partie.
 // Pas de serveur : les règles de la base (scripts/rules.js, « ratings ») vérifient que chaque nouvel Elo
 // est exactement celui que donne la formule ci-dessous, pour une vraie partie classée terminée.
-import { db, ref, get, update, query, orderByChild, limitToLast, startAt, serverTimestamp } from './fb.js';
+import { db, ref, get, update, query, orderByChild, orderByKey, limitToLast, startAt, serverTimestamp } from './fb.js';
 
 export const START = 800; // Elo de départ
 export const PLACEMENT = 5; // parties de placement (coefficient fort, rang affiché après)
@@ -72,7 +72,7 @@ export function rankOf(e) {
   const progress = d ? Math.max(0, Math.min(1, (r - lo) / (d[2] + 1 - lo))) : 1;
   return {
     i, rank, div: d ? d[0] : null, name: rank.name + (d ? ` ${d[0]}` : ''),
-    placement: n < PLACEMENT, games: n, r, next, progress, shielded,
+    placement: n < PLACEMENT, games: n, r, next, lo, progress, shielded,
   };
 }
 
@@ -158,7 +158,12 @@ export async function applyResult(gameId, game, meId) {
     if (old?.last === gameId) continue; // déjà appliqué
     const other = c === 'w' ? 'b' : 'w';
     const e = nextEntry(old, game.elo[c], game.elo[other], score[c], gameId, game.names[c]);
-    await update(ref(db, `ratings/${cat}/${seats[c]}`), e).catch(() => {}); // refusé si l'autre l'a déjà fait
+    // Fiche d'Elo + ligne d'historique (derniers résultats, courbe du profil), en une seule écriture
+    const log = {
+      r: e.r, d: e.r - game.elo[c], res: score[c] === 1 ? 'v' : score[c] === 0 ? 'd' : 'n',
+      opp: seats[other], on: game.names[other], oe: game.elo[other], opl: !!game.pl?.[other], at: serverTimestamp(),
+    };
+    await update(ref(db), { [`ratings/${cat}/${seats[c]}`]: e, [`ratingLog/${cat}/${seats[c]}/${gameId}`]: log }).catch(() => {}); // refusé si l'autre l'a déjà fait
   }
   const after = await get(ref(db, `ratings/${cat}/${meId}`)).then((s) => s.val()).catch(() => null);
   const before = beforeMe?.last === gameId ? null : beforeMe;
@@ -173,3 +178,17 @@ export async function applyResult(gameId, game, meId) {
 
 /** Nombre de parties en ligne terminées (pour ouvrir la file classée : 5 parties normales d'abord). */
 export const MIN_GAMES = 5;
+
+/**
+ * Historique classé d'un joueur dans une catégorie, du plus ancien au plus récent :
+ * [{ id, r, d, res ('v'|'n'|'d'), opp, on (pseudo), oe (Elo adverse), opl (adversaire en placement), at }].
+ */
+export async function getLog(uid, cat, n = 30) {
+  const s = await get(query(ref(db, `ratingLog/${cat}/${uid}`), orderByKey(), limitToLast(n))).catch(() => null);
+  const out = [];
+  s?.forEach((c) => {
+    const v = c.val();
+    if (v && typeof v.r === 'number') out.push({ id: c.key, ...v, cat });
+  });
+  return out.sort((a, b) => (a.at || 0) - (b.at || 0));
+}

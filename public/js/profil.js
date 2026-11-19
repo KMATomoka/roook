@@ -7,7 +7,7 @@ import {
   setAvatar, removeAvatar, myEmail, changeEmail, setBio, BIO_MAX,
   BADGES, ROYAL_WINS, badgeHtml, badgeIcon, ownedBadges, winKeys, chooseBadge,
 } from './compte.js';
-import { getRatings, rankOf, logoUrl, noRankHtml, fmt, CATS, PLACEMENT } from './rangs.js';
+import { getRatings, getLog, rankOf, logoUrl, noRankHtml, fmt, CATS, PLACEMENT, RANKS } from './rangs.js';
 
 const page = $('#profile-page');
 const { user, banned } = await session;
@@ -181,19 +181,80 @@ async function rankedSection(p) {
   if (!r || !box) return;
   const played = Object.values(r).some((e) => e.n > 0);
   if (!played) return;
+  const logs = {};
+  await Promise.all(Object.keys(CATS).map(async (c) => (logs[c] = r[c].n ? await getLog(p.id, c, 30).catch(() => []) : [])));
+  // Rang le plus haut (hors placement) : à côté du pseudo
+  const ranked = Object.keys(CATS).filter((c) => r[c].n && !rankOf(r[c]).placement);
+  const top = ranked.sort((a, b) => r[b].r - r[a].r)[0];
+  const totalGames = Object.values(r).reduce((a, e) => a + (e.n || 0), 0);
+  const h1 = page.querySelector('.pf-id h1');
+  if (top && h1 && !h1.querySelector('.pf-hero-rank')) {
+    const rk = rankOf(r[top]);
+    h1.firstChild.after(Object.assign(document.createElement('img'), { className: 'pf-hero-rank', src: logoUrl(rk.rank.k), alt: rk.name, title: `${rk.name} en ${CATS[top]}`, width: 40, height: 40 }));
+  }
+  const meta = page.querySelector('.pf-meta');
+  if (meta && !meta.querySelector('.pf-meta-ranked')) meta.insertAdjacentHTML('beforeend', `<span class="pf-meta-ranked">${totalGames} partie${totalGames > 1 ? 's' : ''} classée${totalGames > 1 ? 's' : ''}</span>`);
+  // Courbe : la catégorie la plus jouée
+  const chartCat = Object.keys(CATS).sort((a, b) => (r[b].n || 0) - (r[a].n || 0))[0];
+  const recent = Object.values(logs).flat().sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 6);
+  const LABELS = { bullet: 'Bullet · 1 min', blitz: 'Blitz · 3 et 5 min', rapide: 'Rapide · 10 et 15 min' };
   box.hidden = false;
   box.innerHTML = `<div class="pf-ranked-head"><h2>Classé</h2><a href="classe.html">Voir les rangs</a></div>
-    <div class="pf-ranked-tiles">${Object.entries(CATS).map(([cat, label]) => {
+    <div class="pf-ranked-tiles">${Object.keys(CATS).map((cat) => {
       const e = r[cat];
       const rk = rankOf(e);
-      if (!e.n) return `<div class="card pf-rk">${noRankHtml(60)}<div><p class="pf-rk-cat">${label}</p><p class="muted">Pas encore joué</p></div></div>`;
-      return `<div class="card pf-rk" style="--rk: ${rk.placement ? 'var(--muted)' : rk.rank.col}">
+      if (!e.n) return `<div class="card pf-rk">${noRankHtml(60)}<div><p class="pf-rk-cat">${LABELS[cat]}</p><p class="muted">Pas encore joué</p></div></div>`;
+      return `<div class="card pf-rk${cat === top ? ' best' : ''}" style="--rk: ${rk.placement ? 'var(--muted)' : rk.rank.col}">
         ${rk.placement ? noRankHtml(60) : `<img src="${logoUrl(rk.rank.k)}" alt="${rk.name}" width="60" height="60">`}
-        <div><p class="pf-rk-cat">${label}</p><p class="pf-rk-elo">${fmt(e.r)}</p>
+        <div style="flex: 1; min-width: 0"><p class="pf-rk-cat">${LABELS[cat]}</p><p class="pf-rk-elo">${fmt(e.r)}</p>
         <p class="pf-rk-name">${rk.placement ? `Placement ${rk.games} / ${PLACEMENT}` : rk.name}</p>
+        ${rk.placement ? '' : `<div class="rk-bar" style="--rk: ${rk.rank.col}"><i style="width: ${Math.max(3, Math.round(rk.progress * 100))}%; background: ${rk.rank.col}"></i></div>`}
         <p class="muted pf-rk-best">Meilleur : ${fmt(e.best || e.r)} · ${e.n} partie${e.n > 1 ? 's' : ''}</p></div>
       </div>`;
-    }).join('')}</div>`;
+    }).join('')}</div>
+    <div class="pf-ranked-grid">
+      <section class="card pf-rk-chart">${chartHtml(logs[chartCat], CATS[chartCat])}</section>
+      <section class="card pf-rk-games"><h3>Dernières parties classées</h3>
+        ${recent.length ? `<ul>${recent.map((g) => {
+          const ork = rankOf({ r: g.oe, n: g.opl ? 0 : PLACEMENT });
+          return `<li><span class="rk-res ${g.res}">${g.res.toUpperCase()}</span>
+            ${g.opl ? noRankHtml(26) : `<img src="${logoUrl(ork.rank.k)}" alt="${ork.name}" title="${ork.name}" width="26" height="26">`}
+            <a href="${profileUrl(g.opp)}">${escapeHtml(g.on || '?')}</a> <span class="muted rk-num">${fmt(g.oe)}</span>
+            <span class="cat">${CATS[g.cat]}</span><span class="dl ${g.d >= 0 ? 'up' : 'down'}">${g.d >= 0 ? '+' : '−'}${Math.abs(g.d)}</span></li>`;
+        }).join('')}</ul>` : '<p class="muted">Les parties classées apparaîtront ici.</p>'}
+      </section>
+    </div>`;
+}
+
+/** Courbe d'Elo sur les 30 derniers jours (SVG), avec les rangs en fond et le bilan V / N / D. */
+function chartHtml(log = [], catName) {
+  const since = Date.now() - 30 * 86400000;
+  const pts = log.filter((g) => (g.at || 0) >= since);
+  const w = { v: 0, n: 0, d: 0 };
+  pts.forEach((g) => w[g.res]++);
+  const gain = pts.length ? pts[pts.length - 1].r - (pts[0].r - pts[0].d) : 0;
+  const head = `<h3>Elo ${catName} · 30 derniers jours ${pts.length ? `<span class="${gain >= 0 ? 'rk-up' : 'rk-down'} rk-num" style="color: var(${gain >= 0 ? '--mint' : '--danger'})">${gain >= 0 ? '+' : '−'}${Math.abs(gain)}</span>` : ''}</h3>`;
+  if (pts.length < 2) return `${head}<p class="muted">Joue encore quelques parties classées pour voir ta courbe.</p>`;
+  const values = [pts[0].r - pts[0].d, ...pts.map((g) => g.r)];
+  const lo = Math.floor((Math.min(...values) - 30) / 50) * 50;
+  const hi = Math.ceil((Math.max(...values) + 30) / 50) * 50;
+  const W = 600, H = 220;
+  const X = (i) => 44 + (i / (values.length - 1)) * (W - 56);
+  const Y = (v) => H - 20 - ((v - lo) / (hi - lo)) * (H - 36);
+  const step = hi - lo > 300 ? 100 : 50;
+  const grid = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) grid.push(v);
+  const bands = RANKS.map((rk, i) => ({ rk, a: rk.min, b: RANKS[i + 1]?.min ?? 9999 })).filter((x) => x.b > lo && x.a < hi);
+  const last = values[values.length - 1];
+  const lastRk = rankOf({ r: last, n: PLACEMENT });
+  return `${head}
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Elo ${catName} : de ${fmt(values[0])} à ${fmt(last)}">
+      ${bands.map((x) => `<rect x="44" width="${W - 56}" y="${Y(Math.min(x.b, hi)).toFixed(1)}" height="${(Y(Math.max(x.a, lo)) - Y(Math.min(x.b, hi))).toFixed(1)}" fill="${x.rk.col}" opacity=".07"></rect>`).join('')}
+      ${grid.map((v) => `<line x1="44" x2="${W - 12}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="${RANKS.some((r) => r.min === v) ? RANKS.find((r) => r.min === v).col : '#2f2950'}" stroke-dasharray="${RANKS.some((r) => r.min === v) ? '4 4' : '0'}" opacity="${RANKS.some((r) => r.min === v) ? 0.7 : 1}"></line><text x="0" y="${(Y(v) + 4).toFixed(1)}" fill="#9a94b2" font-size="12">${fmt(v)}</text>`).join('')}
+      <polyline points="${values.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="#3cf2a3" stroke-width="2.5" stroke-linejoin="round"></polyline>
+      <circle cx="${X(values.length - 1).toFixed(1)}" cy="${Y(last).toFixed(1)}" r="5" fill="${lastRk.rank.col}" stroke="#0c0a16" stroke-width="2"></circle>
+    </svg>
+    <div class="pf-rk-wdl"><div><b class="rk-num" style="color: var(--mint)">${w.v}</b><span>Victoires</span></div><div><b class="rk-num" style="color: #f2cf4d">${w.n}</b><span>Nulles</span></div><div><b class="rk-num" style="color: var(--danger)">${w.d}</b><span>Défaites</span></div></div>`;
 }
 
 /** Bio : affichée à tous ; sur son propre profil, un bouton pour l'écrire ou la modifier. */

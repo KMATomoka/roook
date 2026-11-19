@@ -259,6 +259,17 @@
         }
       }
     },
+    "ratingLog": {
+      "$cat": {
+        "$uid": {
+          ".read": "auth != null",
+          "$g": {
+            ".write": "auth != null && !data.exists() && $cat.matches(/^(bullet|blitz|rapide)$/)",
+            ".validate": "(newData.hasChildren(['r', 'd', 'res', 'opp', 'on', 'oe', 'at']) && root.child('games/' + $g + '/ranked').val() === true && root.child('games/' + $g + '/status').val() === 'over' && root.child('games/' + $g + '/cat').val() === $cat && (root.child('games/' + $g + '/white').val() === $uid || root.child('games/' + $g + '/black').val() === $uid) && (root.child('games/' + $g + '/white').val() === auth.uid || root.child('games/' + $g + '/black').val() === auth.uid) && newData.parent().parent().parent().parent().child('ratings/' + $cat + '/' + $uid + '/last').val() === $g && newData.parent().parent().parent().parent().child('ratings/' + $cat + '/' + $uid + '/r').val() === newData.child('r').val() && newData.child('d').val() === newData.child('r').val() - (root.child('games/' + $g + '/white').val() === $uid ? root.child('games/' + $g + '/elo/w').val() : root.child('games/' + $g + '/elo/b').val()) && newData.child('opp').val() === (root.child('games/' + $g + '/white').val() === $uid ? root.child('games/' + $g + '/black').val() : root.child('games/' + $g + '/white').val()) && newData.child('res').val().matches(/^[vnd]$/) && newData.child('on').isString() && newData.child('on').val().length <= 20 && newData.child('oe').isNumber() && newData.child('at').val() === now)"
+          }
+        }
+      }
+    },
     "history": {
       ".read": "auth != null && (root.child('roles/' + auth.uid).val() === 'admin' || root.child('roles/' + auth.uid).val() === 'fondateur')",
       "$uid": {

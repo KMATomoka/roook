@@ -613,7 +613,7 @@ function rankedEnd(end) {
   $('#end-sub').after(box);
   if (end.result === '*' || rankedShownFor === onlineId) return;
   rankedShownFor = onlineId;
-  const game = { ranked: true, cat, elo: online.elo, status: 'over', result: end.result, white: online.ids.w, black: online.ids.b, names: online.names };
+  const game = { ranked: true, cat, elo: online.elo, pl: online.pl, status: 'over', result: end.result, white: online.ids.w, black: online.ids.b, names: online.names };
   applyResult(onlineId, game, account.user.id).then((res) => {
     if (!res?.after) {
       box.querySelector('.rk-end-msg').textContent = 'L’Elo n’a pas pu être mis à jour (connexion ?). Il le sera par ton adversaire, ou à ta prochaine visite.';

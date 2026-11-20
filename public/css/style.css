@@ -3457,3 +3457,16 @@ cg-board square.seq-to { background: radial-gradient(circle, rgba(60, 242, 163, 
   .rk-rays, .rk-new, .rk-old, .rk-old > *, .rk-flash, .rk-sparks i, .rk-rankup { animation: none !important; }
   .rk-rankup.reveal .rk-new { opacity: 1; transform: none; }
 }
+
+/* Abandonner / quitter la partie : fenêtres du site, à la place de celles du navigateur (js/jeu.js) */
+.resign-dialog .resign-icon { color: var(--danger); }
+.leave-dialog p { margin: 6px 0 0; }
+.leave-dialog .resign-ranked { font-size: 0.9rem; }
+.leave-dialog .end-actions { margin-top: 20px; }
+.leave-dialog .end-actions .btn { flex: 1 1 140px; justify-content: center; }
+.btn-resign-go { background: var(--danger); color: #fff; border-color: var(--danger); }
+.btn-resign-go:hover:not(:disabled) { background: #ec7468; box-shadow: 0 0 20px rgba(224, 102, 90, 0.4); }
+@media (max-width: 480px) {
+  .leave-dialog .end-actions { flex-direction: column-reverse; }
+  .leave-dialog .end-actions .btn { flex: none; width: 100%; padding: 0.8em 1em; }
+}

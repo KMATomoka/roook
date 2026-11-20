@@ -85,9 +85,21 @@
     <div class="end-icon"><span class="ico" data-ico="warning" aria-hidden="true"></span></div>
     <h2>Quitter la partie ?</h2>
     <p>La partie est en cours : si tu quittes maintenant, tu <strong>perds par abandon</strong>.</p>
+    <p class="resign-ranked" id="leave-ranked" hidden>Partie classée : tu <strong>perds de l’Elo</strong>.</p>
     <div class="end-actions">
-      <button class="btn btn-primary" id="leave-stay">Rester et jouer</button>
-      <button class="btn btn-danger" id="leave-go">Quitter et abandonner</button>
+      <button class="btn btn-ghost" id="leave-stay" autofocus>Rester et jouer</button>
+      <button class="btn btn-resign-go" id="leave-go">Quitter et abandonner</button>
+    </div>
+  </dialog>
+
+  <dialog id="resign-dialog" class="modal leave-dialog resign-dialog">
+    <div class="end-icon resign-icon" aria-hidden="true">⚑</div>
+    <h2>Abandonner la partie ?</h2>
+    <p id="resign-text">Ça compte comme une <strong>défaite</strong>.</p>
+    <p class="resign-ranked" id="resign-ranked" hidden>Partie classée : tu <strong>perds de l’Elo</strong>.</p>
+    <div class="end-actions">
+      <button class="btn btn-ghost" id="resign-no" autofocus>Continuer</button>
+      <button class="btn btn-resign-go" id="resign-yes">⚑ Abandonner</button>
     </div>
   </dialog>
 

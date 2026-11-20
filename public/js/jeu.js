@@ -536,12 +536,35 @@ $('#btn-flip').addEventListener('click', () => {
   render();
 });
 
+// Abandon : fenêtre du site (pas le confirm() du navigateur). Échap ou clic à côté = Continuer.
 $('#btn-resign').addEventListener('click', () => {
-  if (!confirm('Abandonner la partie ?')) return;
+  if (over) return;
+  const t = chess.turn();
+  $('#resign-text').innerHTML =
+    mode === 'local'
+      ? `${t === 'w' ? 'Les Blancs abandonnent' : 'Les Noirs abandonnent'} : <strong>${t === 'w' ? 'les Noirs gagnent' : 'les Blancs gagnent'}</strong>.`
+      : 'Ça compte comme une <strong>défaite</strong>.';
+  $('#resign-ranked').hidden = !(mode === 'ami' && online.ranked);
+  $('#resign-yes').disabled = false;
+  $('#resign-dialog').showModal();
+});
+$('#resign-no').addEventListener('click', () => $('#resign-dialog').close());
+$('#resign-yes').addEventListener('click', () => {
+  $('#resign-yes').disabled = true;
+  $('#resign-dialog').close();
+  if (over) return;
   if (mode === 'ami') return socket.emit('resign');
   const loser = mode === 'local' ? chess.turn() : myColor;
   finish({ result: loser === 'w' ? '0-1' : '1-0', reason: 'abandon' });
 });
+// Clic à côté de la fenêtre (sur le fond) = la fermer, comme Échap
+for (const id of ['#resign-dialog', '#leave-dialog']) {
+  $(id).addEventListener('click', (e) => {
+    if (e.target !== e.currentTarget) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) e.currentTarget.close();
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Coup joué par l'utilisateur
@@ -579,6 +602,7 @@ function afterMove() {
 // Fin de partie
 // ---------------------------------------------------------------------------
 function finish(end) {
+  if ($('#resign-dialog').open) $('#resign-dialog').close(); // la partie s'est finie pendant qu'on hésitait
   freezeClock();
   over = end;
   viewPly = null;
@@ -979,15 +1003,43 @@ function startOnline() {
       if (!a || !socket?.live || a.target === '_blank' || a.hasAttribute('download') || a.getAttribute('href').startsWith('#')) return;
       if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return; // ouverture dans un nouvel onglet
       e.preventDefault();
-      leaveTo = a.href;
-      $('#leave-dialog').showModal();
+      openLeave(a.href);
     },
     true,
   );
+  function openLeave(to) {
+    leaveTo = to;
+    $('#leave-ranked').hidden = !online.ranked;
+    if (!$('#leave-dialog').open) $('#leave-dialog').showModal();
+  }
+  // Bouton Retour du navigateur ou du téléphone pendant la partie : la même fenêtre du site, pas celle du navigateur.
+  // Une entrée d'historique « piège » est posée tant que la partie est en cours ; revenir en arrière tombe dessus.
+  let backTrap = false;
+  let quitting = false;
+  const armBackTrap = () => {
+    if (backTrap || quitting || !socket.live) return;
+    backTrap = true;
+    history.pushState({ roookTrap: true }, '');
+  };
+  socket.on('state', armBackTrap);
+  addEventListener('pointerdown', armBackTrap, true); // Chrome saute les entrées posées sans geste de l'utilisateur
+  addEventListener('popstate', () => {
+    if (!backTrap) return;
+    backTrap = false;
+    if (!socket.live) return history.back(); // partie finie entre-temps : on part vraiment
+    openLeave('back');
+  });
+  // Rester (bouton, Échap ou clic à côté) après un Retour : on repose le piège
+  $('#leave-dialog').addEventListener('close', () => leaveTo === 'back' && !quitting && armBackTrap());
   $('#leave-stay').addEventListener('click', () => $('#leave-dialog').close());
   $('#leave-go').addEventListener('click', () => {
     $('#leave-go').disabled = true;
-    socket.emit('leave', null, () => (location.href = leaveTo || './'));
+    quitting = true;
+    socket.emit('leave', null, () => {
+      if (leaveTo !== 'back') return (location.href = leaveTo || './');
+      history.back();
+      setTimeout(() => (location.href = './'), 600); // pas de page précédente (lien ouvert directement)
+    });
   });
   // Compte à rebours quand l'adversaire est parti
   setInterval(() => awayInfo() && renderStatus(), 1000);

@@ -1,0 +1,922 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Pack Océan — maquette</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#0e0b1c">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="img/appli/apple-touch-icon.png?h=c739bfd4ab">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ROOOK">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --abyss: #020c18;
+      --deep: #04192c;
+      --sea: #0b3b5a;
+      --aqua: #6fe3ea;
+      --pearl: #f4f1f8;
+      --nacre: #f3c4d6;
+      --glow: #46e6d4;
+      --ink: #e6fbff;
+      --muted: #8fbfd0;
+      --line: rgba(120, 220, 240, 0.22);
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    html { overflow-x: clip; }
+    body {
+      margin: 0; color: var(--ink); background: var(--abyss); min-height: 100vh;
+      font: 400 1.06rem/1.65 'Outfit', system-ui, sans-serif;
+    }
+    body::before { /* la lumière qui tombe de la surface, fixe à l'écran */
+      content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background:
+        radial-gradient(900px 480px at 50% -12%, rgba(111, 227, 234, 0.25), transparent 70%),
+        repeating-linear-gradient(100deg, transparent 0 80px, rgba(140, 230, 255, 0.025) 80px 140px),
+        linear-gradient(180deg, #0a3a58 0%, #052239 40%, #020c18 100%);
+    }
+    main { max-width: 1120px; margin: 0 auto; padding: 44px 16px 80px; }
+    .eyebrow { font: 800 0.76rem 'Outfit', sans-serif; letter-spacing: 0.32em; color: var(--aqua); text-transform: uppercase; margin: 0; }
+    h1 { font: 900 clamp(2.4rem, 8vw, 4.6rem)/1.05 'Cinzel', serif; margin: 8px 0 16px; letter-spacing: 0.04em;
+      background: linear-gradient(180deg, #ffffff 0%, #d9f6ff 40%, #f3c4d6 70%, #6fe3ea 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+      filter: drop-shadow(0 0 22px rgba(70, 230, 212, 0.35)); }
+    h2 { font: 700 1.55rem 'Cinzel', serif; letter-spacing: 0.04em; color: var(--pearl); margin: 0 0 4px; }
+    .lead { max-width: 66ch; margin: 0; font-size: 1.14rem; }
+    .lead b { color: var(--aqua); font-weight: 700; }
+    .note { display: inline-block; margin-top: 16px; padding: 6px 14px; border: 1px solid var(--line); border-radius: 99px; color: var(--muted); font-size: 0.95rem; }
+    .rule { height: 1px; margin: 50px 0 26px; background: linear-gradient(90deg, transparent, rgba(111, 227, 234, 0.5), transparent); position: relative; }
+    .rule::after { content: ''; position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; border-radius: 50%; transform: translate(-50%, -50%);
+      background: radial-gradient(circle at 35% 30%, #fff, #f3c4d6 60%, #8fbfd0); box-shadow: 0 0 12px rgba(255, 255, 255, 0.6); }
+    section > p.sub { margin: 0 0 18px; color: var(--muted); max-width: 70ch; }
+    section > p.sub b { color: var(--ink); }
+
+    /* --- Damier « Grand Bleu » : eau claire traversée de reflets, eau profonde --- */
+    .boards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px; }
+    figure { margin: 0; }
+    figcaption { text-align: center; margin-top: 10px; color: var(--muted); font-style: italic; }
+    .frame {
+      --pad: clamp(16px, 3.4vw, 26px);
+      position: relative; padding: var(--pad); border-radius: 16px;
+      background: linear-gradient(160deg, #134d6b, #0a2e46 45%, #061c2e);
+      box-shadow: inset 0 0 0 1px rgba(140, 230, 255, 0.35), inset 0 0 0 5px #0a2b42, inset 0 0 0 6px rgba(243, 196, 214, 0.35), 0 26px 60px rgba(0, 0, 0, 0.6), 0 0 50px rgba(70, 230, 212, 0.08);
+    }
+    .rivet { position: absolute; width: 9px; height: 9px; border-radius: 50%; z-index: 3;
+      background: radial-gradient(circle at 35% 30%, #ffffff, #f3c4d6 45%, #7aa7bd 100%); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
+    .rivet.tl { left: 7px; top: 7px; } .rivet.tr { right: 7px; top: 7px; } .rivet.bl { left: 7px; bottom: 7px; } .rivet.br { right: 7px; bottom: 7px; }
+    .coords { position: absolute; display: flex; font: 700 clamp(8px, 1.4vw, 11px) 'Outfit', sans-serif; color: var(--aqua); opacity: 0.75; }
+    .coords.files { left: var(--pad); right: var(--pad); bottom: 0; height: var(--pad); }
+    .coords.files span { flex: 1; text-align: center; align-self: center; }
+    .coords.ranks { top: var(--pad); bottom: var(--pad); left: 0; width: var(--pad); flex-direction: column; }
+    .coords.ranks span { flex: 1; display: grid; place-items: center; }
+    .board { position: relative; display: grid; grid-template-columns: repeat(8, 1fr); aspect-ratio: 1; border-radius: 3px; overflow: hidden; isolation: isolate; }
+    .board::after { /* reflets qui ondulent sur tout le plateau */
+      /* motif raccordé sur ses bords ; on le décale d'exactement une tuile (20 % de l'élément), donc la boucle ne se voit pas */
+      content: ''; position: absolute; inset: -50%; z-index: 1; pointer-events: none; opacity: 0.32; mix-blend-mode: soft-light;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Cpath d='M0 30 Q15 18 32 32 T70 26 T120 30 M0 80 Q24 66 44 84 T88 76 T120 80 M30 0 Q20 22 34 42 T28 86 T30 120 M86 0 Q98 26 82 46 T92 90 T86 120' fill='none' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") 0 0 / 20% 20%;
+      animation: caustic 24s linear infinite;
+    }
+    @keyframes caustic { from { transform: translate(0, 0); } to { transform: translate(-20%, -20%); } }
+    @media (prefers-reduced-motion: reduce) { .board::after { animation: none; } }
+    .sq { position: relative; }
+    .sq.l { /* eau claire du lagon, avec un réseau de reflets */
+      background-color: #bfe9ee;
+      background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'%3E%3Cpath d='M0 18 Q12 10 26 20 T60 16 M0 44 Q16 36 30 46 T60 40 M18 0 Q10 14 22 28 T16 60 M44 0 Q50 16 40 30 T46 60' fill='none' stroke='white' stroke-opacity='.55' stroke-width='1.6'/%3E%3C/svg%3E"),
+        radial-gradient(130% 100% at 30% 15%, #e3f8f8, #b5e3ea 60%, #9dd3df);
+      background-size: 100% 100%, 100% 100%;
+    }
+    .sq.d { /* eau profonde */
+      background-color: #17648a;
+      background-image:
+        radial-gradient(circle at 22% 72%, rgba(200, 245, 255, 0.35) 0 1.2px, transparent 1.8px),
+        radial-gradient(circle at 74% 30%, rgba(200, 245, 255, 0.25) 0 1px, transparent 1.6px),
+        radial-gradient(130% 100% at 35% 10%, #2a83a8, #17648a 55%, #0f4c6c);
+    }
+    .sq.last { box-shadow: inset 0 0 0 100px rgba(120, 255, 230, 0.32), inset 0 0 0 2px rgba(200, 255, 245, 0.7); }
+    .pc { position: absolute; inset: 0; background-size: 100% 100%; z-index: 2; will-change: transform; }
+
+    /* --- Les 12 pièces --- */
+    .pieces { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+    .tile { border-radius: 14px; padding: 8px 6px 10px; text-align: center; border: 1px solid var(--line); }
+    .tile.on-l { background: radial-gradient(130% 100% at 30% 15%, #e3f8f8, #b5e3ea 60%, #9dd3df); color: #0b3b5a; }
+    .tile.on-d { background: radial-gradient(130% 100% at 35% 10%, #2a83a8, #17648a 55%, #0f4c6c); color: #e6fbff; }
+    .tile .pcbig { width: 100%; aspect-ratio: 1; background-size: 100% 100%; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.3)); }
+    .tile span { font: 800 0.7rem 'Outfit', sans-serif; letter-spacing: 0.08em; text-transform: uppercase; }
+    @media (max-width: 640px) { .pieces { grid-template-columns: repeat(3, 1fr); } }
+
+    /* --- Démonstrations --- */
+    .demo { display: grid; grid-template-columns: minmax(0, 440px) 1fr; gap: 30px; align-items: center; }
+    @media (max-width: 760px) { .demo { grid-template-columns: 1fr; } }
+    .btns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    button {
+      font: 800 0.9rem 'Outfit', sans-serif; color: #032233; cursor: pointer; padding: 11px 18px; border-radius: 99px;
+      border: 0; background: linear-gradient(180deg, #b8fff4, #46e6d4); box-shadow: 0 6px 20px rgba(70, 230, 212, 0.3);
+    }
+    button.ghost { background: rgba(255, 255, 255, 0.06); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+    button.dark { background: linear-gradient(180deg, #3b1f4f, #1d0c2a); color: #ffd9e8; box-shadow: inset 0 0 0 1px rgba(243, 196, 214, 0.35), 0 6px 20px rgba(120, 40, 120, 0.35); }
+    button:hover { filter: brightness(1.08); }
+    .fx { position: absolute; inset: 0; pointer-events: none; z-index: 5; overflow: hidden; }
+    .p { position: absolute; will-change: transform, opacity; }
+    .bub { border-radius: 50%; border: 1.5px solid rgba(235, 255, 255, 0.9);
+      background: radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.95) 0 12%, rgba(255, 255, 255, 0.18) 32%, rgba(160, 240, 255, 0.08) 70%); }
+    .speck { border-radius: 50%; background: #9ffcff; box-shadow: 0 0 6px 2px rgba(70, 230, 212, 0.8); }
+    ul.facts { margin: 0; padding-left: 1.1em; }
+    ul.facts li { margin: 5px 0; }
+    ul.facts b { color: var(--aqua); }
+    .demo p b { color: var(--aqua); font-weight: 700; }
+    .check-tag {
+      position: absolute; z-index: 8; transform: translate(-50%, -50%); white-space: nowrap; padding: 0.2em 0.75em; border-radius: 99px;
+      font: 900 1em 'Cinzel', serif; letter-spacing: 0.05em; color: #fff; background: linear-gradient(180deg, #e0466e, #8f1d45);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5), 0 6px 18px rgba(0, 0, 0, 0.45);
+    }
+    .end-banner { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%); z-index: 12; text-align: center; white-space: nowrap; }
+    .end-banner .t { font: 900 1em/1.05 'Cinzel', serif; letter-spacing: 0.04em; color: #fff;
+      text-shadow: 0 0 18px rgba(111, 227, 234, 0.9), 0 0 40px rgba(243, 196, 214, 0.6), 0 3px 0 rgba(4, 25, 44, 0.6); }
+    .end-banner .s { font: 800 0.3em 'Outfit', sans-serif; letter-spacing: 0.34em; text-transform: uppercase; color: #b8fff4; margin-top: 0.45em; }
+    .end-banner.loss .t { color: #ffd9e8; text-shadow: 0 0 18px rgba(224, 70, 110, 0.75), 0 0 46px rgba(120, 30, 90, 0.8), 0 3px 0 rgba(0, 0, 0, 0.7); }
+    .end-banner.loss .s { color: #f3a3bf; }
+
+    /* --- Inventaire et badge --- */
+    .inv { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+    .slot { padding: 14px 16px; border-radius: 16px; background: rgba(255, 255, 255, 0.04); box-shadow: inset 0 0 0 1px var(--line); }
+    .slot small { display: block; color: var(--muted); font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; font-size: 0.68rem; }
+    .slot b { font: 700 1.15rem 'Cinzel', serif; color: var(--pearl); }
+    .slot p { margin: 4px 0 0; font-size: 0.92rem; color: var(--muted); }
+    .badge-demo { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; padding: 6px 14px; border-radius: 99px; font-weight: 800;
+      color: #032233; background: linear-gradient(135deg, #f4f1f8, #6fe3ea); box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25), 0 0 18px rgba(70, 230, 212, 0.35); }
+    .ask { margin-top: 18px; padding: 16px 18px; border-radius: 16px; background: rgba(70, 230, 212, 0.07); box-shadow: inset 0 0 0 1px rgba(70, 230, 212, 0.35); }
+    .ask b { color: var(--aqua); }
+    .kgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+    .kopt { cursor: pointer; border-radius: 18px; padding: 10px 10px 14px; background: rgba(255, 255, 255, 0.04); box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow 0.2s, transform 0.2s; }
+    .kopt:hover { transform: translateY(-2px); }
+    .kopt:focus-visible { outline: 2px solid var(--aqua); outline-offset: 2px; }
+    .kopt.on { box-shadow: inset 0 0 0 2px var(--aqua), 0 0 24px rgba(70, 230, 212, 0.25); }
+    .kpair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .kpair .tile { padding: 6px; }
+    .kopt b { display: block; text-align: center; margin-top: 10px; font: 700 1rem 'Cinzel', serif; color: var(--pearl); }
+    .kopt small { display: block; text-align: center; margin-top: 2px; color: var(--muted); font-size: 0.86rem; line-height: 1.4; }
+    .kopt.on b::after { content: ' ✓'; color: var(--aqua); }
+    footer { margin-top: 50px; text-align: center; color: var(--muted); font-size: 0.92rem; }
+  </style>
+<script>
+(function () {
+  var v = 'f4cd128-mwquidh7';
+  // Après une mise à jour, on retire le petit paramètre « maj » de l'adresse
+  try {
+    var here = new URL(location.href);
+    if (here.searchParams.has('maj')) { here.searchParams.delete('maj'); history.replaceState(history.state, '', here.toString()); }
+  } catch (e) {}
+  fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d || d.v === v) return;
+    var key = 'roook-maj-' + d.v;
+    try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch (e) { return; }
+    // Recharge vers une adresse neuve (?maj=…) : le navigateur ne peut pas resservir l'ancienne page de son cache
+    try {
+      var u = new URL(location.href);
+      u.searchParams.set('maj', d.v);
+      location.replace(u.toString());
+    } catch (e) { location.reload(); }
+  }).catch(function () {});
+})();
+</script>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">ROOOK · Inventaire · Maquette</p>
+    <h1>Océan</h1>
+    <p class="lead">Une partie au fond de la mer. Le damier alterne <b>eau claire</b> traversée de reflets et <b>eau profonde</b>. Les Blancs sont en <b>nacre</b> irisée, les Noirs en <b>bleu des abysses</b> aux contours qui luisent comme des créatures des profondeurs. Une perle, un coquillage, un hippocampe, une couronne de perles… et le trident pour le roi.</p>
+    <span class="note">Maquette à valider : ce pack n’est pas encore dans l’inventaire.</span>
+
+    <div class="rule"></div>
+    <section>
+      <h2>Le plateau</h2>
+      <p class="sub">« Grand Bleu » : cases d’eau claire avec un réseau de reflets, cases d’eau profonde, et des reflets de lumière qui ondulent doucement sur tout le plateau. Cadre de coque bleu nuit cerclé de nacre.</p>
+      <div class="boards">
+        <figure><div class="frame" data-board="start"></div><figcaption>Position de départ</figcaption></figure>
+        <figure><div class="frame" data-board="middle"></div><figcaption>En milieu de partie</figcaption></figure>
+      </div>
+    </section>
+
+    <div class="rule"></div>
+    <section>
+      <h2>Les douze pièces</h2>
+      <p class="sub">« Nacre et Abysses » : des silhouettes d’échecs classiques, faciles à reconnaître, avec un détail marin sur chaque pièce. <b>Pion</b> perle, <b>Tour</b> de corail à hublot, <b>Fou</b> coquillage, <b>Cavalier</b> hippocampe mythique, <b>Dame</b> couronne de perles, <b>Roi</b> trident.</p>
+      <div class="pieces" id="pieces"></div>
+    </section>
+
+    <div class="rule"></div>
+    <section>
+      <h2>Le cavalier : choisis ton style</h2>
+      <p class="sub">Six idées pour le cavalier, chacune en nacre et en abysses. <b>Clique sur une idée</b> : tous les échiquiers de la page la prennent, pour la voir en vrai. Le <b>E · Hippocampe mythique</b> est retenu : c’est lui qui est posé sur les échiquiers.</p>
+      <div class="kgrid" id="knights"></div>
+    </section>
+
+    <div class="rule"></div>
+    <section>
+      <h2>La prise : « Siphon »</h2>
+      <div class="demo">
+        <figure><div class="frame" id="demo-board"></div></figure>
+        <div>
+          <p>Quand une pièce est prise, <b>un petit siphon</b> s’ouvre sur la case : la pièce tourne de plus en plus vite et disparaît au fond, puis le tourbillon se referme et quelques bulles remontent. Court et net.</p>
+          <p>À l’échec, <b>un aileron de requin</b> tourne autour du roi menacé, avec l’étiquette « Échec ! ».</p>
+          <div class="btns">
+            <button id="demo-capture">🌀 Voir une prise</button>
+            <button id="demo-check" class="ghost">🦈 Voir un échec</button>
+          </div>
+          <ul class="facts" style="margin-top:18px">
+            <li><b>Coup</b> : un petit « bloup » sous l’eau.</li>
+            <li><b>Prise</b> : l’eau qui tourbillonne et s’engouffre, quelques bulles.</li>
+            <li><b>Échec</b> : deux battements graves, comme un cœur qui s’emballe.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <div class="rule"></div>
+    <section>
+      <h2>Fin de partie : « Les Abysses »</h2>
+      <div class="demo">
+        <figure><div class="frame" id="mate-board"></div></figure>
+        <div>
+          <p><b>Victoire</b> : des rayons de lumière descendent de la surface, une baleine passe au loin en chantant, un banc de poissons traverse le plateau. Le roi vaincu coule lentement au fond dans un nuage de bulles, et ton roi brille comme une perle.</p>
+          <p><b>Défaite</b> : la lumière s’éteint autour de ton roi, l’œil du kraken s’ouvre dans le noir, et ses tentacules entraînent ton roi dans les abysses.</p>
+          <div class="btns">
+            <button id="demo-win">🐋 Voir une victoire</button>
+            <button id="demo-loss" class="dark">🦑 Voir une défaite</button>
+          </div>
+          <ul class="facts" style="margin-top:18px">
+            <li><b>Victoire</b> : chant de baleine et notes cristallines.</li>
+            <li><b>Défaite</b> : grondement grave qui descend, bulles lentes.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <div class="rule"></div>
+    <section>
+      <h2>Dans l’inventaire</h2>
+      <div class="inv">
+        <div class="slot"><small>Plateau</small><b>Grand Bleu</b><p>Eau claire et eau profonde, reflets qui ondulent.</p></div>
+        <div class="slot"><small>Pièces</small><b>Nacre et Abysses</b><p>Nacre irisée contre bleu des abysses lumineux.</p></div>
+        <div class="slot"><small>Fin de partie</small><b>Les Abysses</b><p>Baleine et lumière à la victoire, kraken à la défaite.</p></div>
+        <div class="slot"><small>Prise et son</small><b>Siphon</b><p>Un tourbillon aspire la pièce prise ; aileron à l’échec.</p></div>
+      </div>
+      <p style="margin-top:18px">Le badge du pack : <span class="badge-demo">🌊 Océan</span></p>
+      <div class="ask">À toi de choisir : <b>le badge</b> (🌊 vague, 🐙 poulpe ou 🐋 baleine), et si le pack est <b>libre pour tous</b> ou <b>à débloquer</b>. Dis-moi ce que tu changerais : couleurs, pièces, animations.</div>
+    </section>
+
+    <footer>Maquette ROOOK : pièces et animations dessinées pour ROOOK.</footer>
+  </main>
+
+  <script type="module">
+    // ------------------------------------------------------------------
+    // Pièces « Nacre et Abysses » (SVG dessinés pour ROOOK)
+    // ------------------------------------------------------------------
+    const PAL = {
+      w: { top: '#ffffff', sheen: '#f7e4ef', mid: '#d9ecf3', bot: '#93b6cc', stroke: '#1f4259', acc: '#f3b4ca', acc2: '#3fb6c8', pearl: '#ffffff', dark: '#1f4259', glow: null },
+      b: { top: '#2f7da1', sheen: '#1d6288', mid: '#0e3955', bot: '#03111e', stroke: '#86f3ff', acc: '#46e6d4', acc2: '#7ff0ff', pearl: '#c9fbff', dark: '#021019', glow: '#3fe0ff' },
+    };
+    // trait épais cerclé (contour + dégradé), pour le trident et le corail
+    const dbl = (d, c, w = 4, col = 'url(#gu)') =>
+      `<path d="${d}" fill="none" stroke="${c.stroke}" stroke-width="${w + 3.4}" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    const base = (c) => `<path d="M23 88.5 Q23 81.5 31 81 H69 Q77 81.5 77 88.5 Q77 94 71 94 H29 Q23 94 23 88.5Z" fill="url(#g)"/>
+      <path d="M28.5 88 Q33.5 85 38.5 88 T48.5 88 T58.5 88 T68.5 88 T72 87.5" fill="none" stroke="${c.acc2}" stroke-width="1.7"/>`;
+    const SHAPES = {
+      // Pion : une perle posée dans un coquillage
+      p: (c) => `${base(c)}
+        <path d="M35 81 Q37 70 44 64 H56 Q63 70 65 81Z" fill="url(#g)"/>
+        <rect x="39" y="59.5" width="22" height="5.5" rx="2.75" fill="url(#g)"/>
+        <path d="M36.5 60 Q39 52.5 50 53 Q61 52.5 63.5 60 Q57 64 50 63 Q43 64 36.5 60Z" fill="${c.acc}" stroke-width="1.7"/>
+        <path d="M42.5 62 L44.5 55.5 M50 63 V54 M57.5 62 L55.5 55.5" stroke-width="1.1" opacity=".6"/>
+        <circle cx="50" cy="41.5" r="13" fill="url(#pr)"/>
+        <ellipse cx="45" cy="36.5" rx="4.2" ry="2.6" fill="#fff" opacity=".8" stroke="none" transform="rotate(-30 45 36.5)"/>`,
+      // Tour : tour de corail, avec un hublot
+      r: (c) => `${base(c)}
+        ${dbl('M33 79 C29.5 72 27 67 26.5 59 M28.5 70 C24.5 67 22.5 63.5 22.5 59.5', c, 2.4, c.acc)}
+        <path d="M31 81 L34.5 47 H65.5 L69 81Z" fill="url(#g)"/>
+        <path d="M29 48 V28.5 H37.5 V35 H45.5 V28.5 H54.5 V35 H62.5 V28.5 H71 V48Z" fill="url(#g)"/>
+        <path d="M33.5 52.5 Q39 48.5 44.5 52.5 T55.5 52.5 T66.5 52.5" fill="none" stroke="${c.acc2}" stroke-width="2.2"/>
+        <circle cx="50" cy="66" r="7" fill="${c.dark}" stroke-width="2.4"/>
+        <circle cx="50" cy="66" r="4.2" fill="${c.acc2}" opacity=".6" stroke="none"/>
+        <path d="M46.8 63.3 Q48.6 61.8 50.8 62.4" stroke="#fff" stroke-width="1.3" fill="none" opacity=".85"/>
+        <g fill="${c.acc}" stroke-width="1"><circle cx="64" cy="74" r="1.8"/><circle cx="60.5" cy="77.5" r="1.3"/><circle cx="38" cy="42" r="1.4"/></g>`,
+      // Cavalier : tête d'hippocampe sculptée sur un pied, comme les autres pièces
+      n: (c) => `${base(c)}
+        <path d="M34 81 Q37 69 43 63 H60 Q65 69 67 81Z" fill="url(#g)"/>
+        <path d="M66.5 20.5 Q74 19.5 73 26 Q79.5 27 76.5 33 Q82.5 35.5 77.5 41 Q82 45.5 76 49 Q78.5 54 71.5 55.5 L64.5 52Z" fill="${c.acc}" stroke-width="1.8"/>
+        <path d="M68.5 25.5 L72 25.5 M70 31.5 L75 32.5 M70.5 38.5 L76 40 M69.5 45 L74.5 47.5" stroke-width="1.1" opacity=".5"/>
+        <path d="M42 60.5 C41 53 42 48 45 44 C41 43.6 35.5 44 30.5 44.6 C28 44.9 26.8 46.2 25.2 45.6 C23.8 44.8 23.8 41.3 25.2 40.5 C26.5 39.8 27.8 41 29.8 40.6 C35 39.6 40 37.6 43 35 C43.5 26 49.5 18.3 57.5 17.5 C66.5 16.6 72.5 24 71.2 33 C70.6 38 67.8 41.2 66.3 45 C64.8 50 66.2 55 64.5 60.5Z" fill="url(#g)"/>
+        <path d="M54.5 18.2 C54.6 14.2 56.6 11.4 59.6 10.8 L60.4 13.3 L62.7 11.2 L63.4 14.3 L65.9 13.8 C66.1 16.2 65.2 18 63.6 19.2Z" fill="url(#g)" stroke-width="1.6"/>
+        <rect x="38" y="58.5" width="28" height="5.5" rx="2.75" fill="url(#g)"/>
+        <path d="M44 52.5 Q49 49.3 54 52.5 T64.2 52.5" fill="none" stroke="${c.acc2}" stroke-width="2"/>
+        <path d="M33 40 V44.4 M36.5 39.2 V44.1" stroke-width="1" opacity=".45"/>
+        <path d="M59.5 29 Q62 34.5 59 40" fill="none" stroke-width="1.2" opacity=".5"/>
+        <circle cx="52.5" cy="28.5" r="2.7" fill="${c.dark}" stroke="none"/>
+        <circle cx="51.6" cy="27.6" r=".9" fill="#fff" stroke="none"/>
+        <ellipse cx="49.5" cy="24" rx="2" ry="5.2" fill="#fff" opacity=".45" stroke="none" transform="rotate(40 49.5 24)"/>
+        <circle cx="51" cy="70.5" r="2.7" fill="url(#pr)" stroke-width="1.3"/>`,
+      // Fou : coquillage en spirale (turritelle), une perle au sommet
+      b: (c) => `${base(c)}
+        <path d="M38 81 Q41 69 45 63.5 H55 Q59 69 62 81Z" fill="url(#g)"/>
+        <rect x="39" y="58.5" width="22" height="5.5" rx="2.75" fill="url(#g)"/>
+        <path d="M50 12 C59 21 64.5 33.5 63 45.5 C62 54 57 59 50 59 C43 59 38 54 37 45.5 C35.5 33.5 41 21 50 12Z" fill="url(#g)"/>
+        <path d="M37.6 47 Q50 41 62.6 46.5 M39 36.5 Q50 30.5 61.6 36 M42.5 26.5 Q50 22 57.5 26 M46.3 18.5 Q50 16 53.8 18" fill="none" stroke="${c.acc2}" stroke-width="1.9"/>
+        <path d="M51 58 C46.5 53 46 46 49.5 41.5" fill="none" stroke-width="1.2" opacity=".5"/>
+        <ellipse cx="44" cy="33" rx="2.3" ry="6" fill="#fff" opacity=".45" stroke="none" transform="rotate(14 44 33)"/>
+        <circle cx="50" cy="9.5" r="3.4" fill="url(#pr)" stroke-width="1.5"/>`,
+      // Dame : couronne à pointes, une perle sur chaque pointe
+      q: (c) => `${base(c)}
+        <path d="M34 81 Q38 66 44 58.5 H56 Q62 66 66 81Z" fill="url(#g)"/>
+        <rect x="36" y="53" width="28" height="6" rx="3" fill="url(#g)"/>
+        <path d="M36.5 54 L30 29 L40.5 41.5 L41 24 L48 39 L50 18 L52 39 L59 24 L59.5 41.5 L70 29 L63.5 54Z" fill="url(#g)"/>
+        <path d="M36 49 Q43 45.5 50 49 T64 49" fill="none" stroke="${c.acc2}" stroke-width="1.9"/>
+        ${[[30, 27, 3.3], [41, 21.5, 3.3], [50, 15, 4], [59, 21.5, 3.3], [70, 27, 3.3]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="url(#pr)" stroke-width="1.5"/>`).join('')}
+        <circle cx="50" cy="43" r="2.7" fill="${c.acc}" stroke-width="1.3"/>
+        <path d="M46 70 Q50 66.5 54 70" fill="none" stroke="${c.acc2}" stroke-width="1.6" opacity=".8"/>`,
+      // Roi : couronne surmontée d'un trident
+      k: (c) => `${base(c)}
+        <path d="M33 81 Q37 67 43 59 H57 Q63 67 67 81Z" fill="url(#g)"/>
+        <rect x="35" y="54" width="30" height="6" rx="3" fill="url(#g)"/>
+        ${dbl('M50 42 V14', c, 3.6)}
+        ${dbl('M39 22 V28.5 Q39 35 50 35 Q61 35 61 28.5 V22', c, 3.2)}
+        <path d="M50 4 L55.5 14 H44.5Z" fill="url(#gu)"/><path d="M39 13 L43.2 22.5 H34.8Z" fill="url(#gu)"/><path d="M61 13 L65.2 22.5 H56.8Z" fill="url(#gu)"/>
+        <path d="M37 55 L35 42 Q50 37 65 42 L63 55Z" fill="url(#g)"/>
+        <path d="M37.5 49 Q43.8 45.5 50 49 T62.5 49" fill="none" stroke="${c.acc2}" stroke-width="1.9"/>
+        <circle cx="50" cy="35" r="3" fill="url(#pr)" stroke-width="1.3"/>
+        <path d="M46 70 Q50 66.5 54 70" fill="none" stroke="${c.acc2}" stroke-width="1.6" opacity=".8"/>`,
+    };
+
+    function pieceSvg(color, type, draw = SHAPES[type]) {
+      const c = PAL[color];
+      const glow = c.glow ? `<g class="gl" filter="url(#bl)" opacity=".75" stroke-width="3.6">${draw(c)}</g>` : '';
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="${c.top}"/><stop offset="0.3" stop-color="${c.sheen}"/><stop offset="0.6" stop-color="${c.mid}"/><stop offset="1" stop-color="${c.bot}"/></linearGradient>
+          <linearGradient id="gu" gradientUnits="userSpaceOnUse" x1="35" y1="4" x2="62" y2="60"><stop offset="0" stop-color="${c.top}"/><stop offset="0.4" stop-color="${c.sheen}"/><stop offset="1" stop-color="${c.mid}"/></linearGradient>
+          <radialGradient id="pr" cx=".36" cy=".32" r=".75"><stop offset="0" stop-color="${c.pearl}"/><stop offset=".45" stop-color="${c.sheen}"/><stop offset="1" stop-color="${c.bot}"/></radialGradient>
+          <filter id="bl" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.5"/></filter>
+          <style>.gl *{fill:none!important;stroke:${c.glow || 'none'}!important}</style>
+        </defs>
+        ${glow}<g stroke="${c.stroke}" stroke-width="2.3" stroke-linejoin="round">${draw(c)}</g></svg>`;
+      return `url("data:image/svg+xml,${encodeURIComponent(svg.replace(/\s+/g, ' '))}")`;
+    }
+    const IMG = {};
+    for (const col of ['w', 'b']) for (const t of 'pnbrqk') IMG[col + t] = pieceSvg(col, t);
+
+    // ------------------------------------------------------------------
+    // Échiquiers
+    // ------------------------------------------------------------------
+    const FILES = 'abcdefgh';
+    function drawBoard(frame, fen) {
+      frame.innerHTML = `${['tl', 'tr', 'bl', 'br'].map((k) => `<i class="rivet ${k}"></i>`).join('')}
+        <div class="coords files">${[...FILES].map((f) => `<span>${f}</span>`).join('')}</div>
+        <div class="coords ranks">${[8, 7, 6, 5, 4, 3, 2, 1].map((r) => `<span>${r}</span>`).join('')}</div>
+        <div class="board"></div>`;
+      const board = frame.querySelector('.board');
+      fen.split(' ')[0].split('/').forEach((row, ri) => {
+        let fi = 0;
+        for (const ch of row) {
+          if (/\d/.test(ch)) for (let k = 0; k < +ch; k++) addSq(board, ri, fi++, null);
+          else addSq(board, ri, fi++, ch);
+        }
+      });
+      const fx = document.createElement('div');
+      fx.className = 'fx';
+      board.appendChild(fx);
+      return board;
+    }
+    function addSq(board, ri, fi, ch) {
+      const sq = document.createElement('div');
+      sq.className = 'sq ' + ((ri + fi) % 2 ? 'd' : 'l');
+      sq.dataset.sq = FILES[fi] + (8 - ri);
+      if (ch) {
+        const p = document.createElement('div');
+        p.className = 'pc';
+        p.dataset.p = (ch === ch.toUpperCase() ? 'w' : 'b') + ch.toLowerCase();
+        p.style.backgroundImage = IMG[p.dataset.p];
+        sq.appendChild(p);
+      }
+      board.appendChild(sq);
+    }
+    const NAMES = { k: 'Roi', q: 'Dame', r: 'Tour', b: 'Fou', n: 'Cavalier', p: 'Pion' };
+    function renderBoards() {
+      drawBoard(document.querySelector('[data-board="start"]'), 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR');
+      drawBoard(document.querySelector('[data-board="middle"]'), 'r2q1rk1/pb1nbppp/1p2pn2/2pp4/2PP4/1PNBPN2/PB3PPP/R2Q1RK1');
+      document.getElementById('pieces').innerHTML = ['w', 'b']
+        .flatMap((col) => [...'kqrbnp'].map((t) => `<div class="tile ${col === 'w' ? 'on-d' : 'on-l'}"><div class="pcbig" style='background-image:${IMG[col + t]}'></div><span>${NAMES[t]} ${col === 'w' ? 'nacre' : 'abysses'}</span></div>`))
+        .join('');
+    }
+    renderBoards();
+
+    // ------------------------------------------------------------------
+    // Six idées de cavalier, au choix
+    // ------------------------------------------------------------------
+    const kPed = (c) => `${base(c)}<path d="M34 81 Q37 69 43 63 H60 Q65 69 67 81Z" fill="url(#g)"/>`;
+    const kTop = (c) => `<rect x="38" y="58.5" width="28" height="5.5" rx="2.75" fill="url(#g)"/><circle cx="51" cy="70.5" r="2.7" fill="url(#pr)" stroke-width="1.3"/>`;
+    const HORSE_EYE = (c) => `<path d="M38.5 28.8 Q41.2 26.4 44 28.6 Q41.2 30.6 38.5 28.8Z" fill="${c.dark}" stroke-width="1"/>
+      <circle cx="27" cy="41.5" r="1.1" fill="${c.dark}" stroke="none"/>
+      <path d="M25 44.8 Q27.5 45.4 29.5 44.4" fill="none" stroke-width="1.1" opacity=".7"/>`;
+    const SEA_HEAD = 'M42 60.5 C41 53 42 48 45 44 C41 43.6 35.5 44 30.5 44.6 C28 44.9 26.8 46.2 25.2 45.6 C23.8 44.8 23.8 41.3 25.2 40.5 C26.5 39.8 27.8 41 29.8 40.6 C35 39.6 40 37.6 43 35 C43.5 26 49.5 18.3 57.5 17.5 C66.5 16.6 72.5 24 71.2 33 C70.6 38 67.8 41.2 66.3 45 C64.8 50 66.2 55 64.5 60.5Z';
+    const leaf = (x, y, a, L, c) => `<g transform="translate(${x} ${y}) rotate(${a})"><path d="M0 0 C${L * 0.3} ${-L * 0.34} ${L * 0.7} ${-L * 0.34} ${L} 0 C${L * 0.7} ${L * 0.34} ${L * 0.3} ${L * 0.34} 0 0Z" fill="${c.acc}" stroke-width="1.3"/><path d="M${L * 0.12} 0 H${L * 0.82}" stroke-width=".8" opacity=".55"/></g>`;
+    const KNIGHTS = [
+      { name: 'Hippocampe sculpté', desc: 'Tête d’hippocampe sur un pied, crête en festons.', draw: SHAPES.n },
+      { name: 'Cheval des mers', desc: 'Le cavalier classique, crinière en vagues qui s’enroulent.', draw: (c) => `${kPed(c)}
+        <path d="M64 18 C70 16 76 20 74.5 26 C73.5 23 70.5 22.5 69 24.5 C74.5 25.5 78 31 75.5 36 C74 33 71 32 69.5 34 C75 36 77.5 42 74.5 46.5 C73 43.5 70 43 68.5 45 C72.5 48 72.5 53 69.5 56 L65 53Z" fill="${c.acc}" stroke-width="1.7"/>
+        <path d="M42 60.5 C40 52 41 46 45 41 C40 42 34 45 29.5 46.5 C26 47.5 23 45.5 23.5 42 C24 38.5 27 36 31 33 C35 30 38 26 41 21.5 L41.5 14.5 L46.5 19 C52 15.5 60 15.5 65 19.5 C71 24.5 73 34 70 43 C68 49 66 54 65 60.5Z" fill="url(#g)"/>
+        ${kTop(c)}
+        <path d="M44.5 53 Q49.5 49.8 54.5 53 T64.5 53" fill="none" stroke="${c.acc2}" stroke-width="2"/>
+        ${HORSE_EYE(c)}
+        <path d="M44 40.5 C40.5 38 39.5 35 41 32" fill="none" stroke-width="1.1" opacity=".5"/>
+        <ellipse cx="54" cy="24" rx="2" ry="5" fill="#fff" opacity=".4" stroke="none" transform="rotate(60 54 24)"/>` },
+      { name: 'Art déco', desc: 'Formes géométriques, nageoire en éventail, lignes nettes.', draw: (c) => {
+        const rays = [-60, -30, 0, 30, 60].map((a) => { const r = (a * Math.PI) / 180; return `M67 41 L${(67 + Math.cos(r) * 16.5).toFixed(1)} ${(41 + Math.sin(r) * 16.5).toFixed(1)}`; }).join(' ');
+        return `${kPed(c)}
+        <path d="M67 24 A17 17 0 0 1 67 58Z" fill="${c.acc}" stroke-width="1.7"/>
+        <path d="${rays}" stroke-width="1.1" opacity=".55"/>
+        <path d="M67 30 A11 11 0 0 1 67 52" fill="none" stroke-width="1.2" opacity=".6"/>
+        <path d="M43 60.5 V46.5 L31 44.6 H24.5 V40 H31 L43 36.6 A12.4 12.4 0 0 1 67.5 34.5 V60.5Z" fill="url(#g)"/>
+        <path d="M49.5 24.2 L51 15 L54.6 20.6 L58 12.5 L61 20.4 L64.3 16.4 L64.6 25.6Z" fill="url(#g)" stroke-width="1.6"/>
+        ${kTop(c)}
+        <path d="M43.5 49.5 H67 M43.5 53.5 H67" stroke="${c.acc2}" stroke-width="1.8"/>
+        <path d="M28 40 V44.6 M31.5 40 V44.6 M35 39.5 V45.2 M38.5 38.5 V45.8" stroke-width="1" opacity=".45"/>
+        <circle cx="55" cy="33" r="4" fill="none" stroke="${c.acc2}" stroke-width="1.6"/>
+        <circle cx="55" cy="33" r="2" fill="${c.dark}" stroke="none"/>
+        <path d="M47 30 A9 9 0 0 1 56 25" fill="none" stroke="#fff" stroke-width="1.4" opacity=".55"/>`;
+      } },
+      { name: 'Vague', desc: 'Une vague qui déferle et prend la forme d’une tête de cheval.', draw: (c) => `${kPed(c)}
+        <path d="M42 60.5 C40 50 44 42 50 36 C44 37 36 40 27 44 C24 45.5 21.5 43.5 23.5 41 C30 33 38 22 50 18 C62 14 72 20 72 32 C72 44 64 50 66 60.5Z" fill="url(#g)"/>
+        <path d="M56 17 L58 9.5 L60.5 15.5 L63.5 10 L64.8 17.5Z" fill="url(#g)" stroke-width="1.4"/>
+        <path d="M60.5 33.5 C60.5 27.5 54.5 25.5 51.2 29.5 C48.6 33 51.8 36.6 54.8 35.2 C56.8 34.2 56.4 31.6 54.4 31.6" fill="none" stroke="${c.acc2}" stroke-width="2.2"/>
+        <path d="M44 23 C50 19.5 58 19 63 22" fill="none" stroke="#fff" stroke-width="1.6" opacity=".6"/>
+        <path d="M29 41.5 Q32 39.2 34.5 41 M35.5 38.6 Q38.5 36.2 41 38.2 M41.5 35.6 Q44.5 33.4 47 35.2" fill="none" stroke="${c.acc2}" stroke-width="1.4"/>
+        <path d="M46 50 Q52 44.5 61 44.5 M45 56 Q53 50.5 63 51.5" fill="none" stroke="${c.acc2}" stroke-width="1.6" opacity=".85"/>
+        <g fill="#fff" stroke-width=".8"><circle cx="30" cy="36.5" r="1.4"/><circle cx="35.5" cy="31" r="1.2"/><circle cx="41" cy="25.5" r="1.4"/><circle cx="25.5" cy="38.5" r="1"/><circle cx="69" cy="18" r="1.3"/><circle cx="73.5" cy="24" r="1.1"/></g>
+        ${kTop(c)}` },
+      { name: 'Hippocampe mythique', desc: 'Le cheval marin des légendes : oreilles en nageoires, écailles, crinière membraneuse.', draw: (c) => `${kPed(c)}
+        <path d="M62 18 C72.5 17 80.5 25.5 79.5 36 C79 46 74 54 67 58.5 L65.5 50 C68.5 42 69.5 30 61 22Z" fill="${c.acc}" stroke-width="1.6"/>
+        <path d="M64 21 L75 24 M66.5 27 L79 32 M68 34 L79.5 39 M68.3 41 L77.5 47 M67.6 47.5 L73.5 54" stroke-width="1" opacity=".55"/>
+        <path d="M40 22 L34.5 10.5 L40.5 14 L42.5 7 L46.5 14 L51.5 10 L50.5 18.5Z" fill="${c.acc}" stroke-width="1.5"/>
+        <path d="M42 60.5 C40 52 41 46 45 41 C40 42 34 45 29.5 46.5 C26 47.5 23 45.5 23.5 42 C24 38.5 27 36 31 33 C35 30 38 26 41 21.5 C46 17 56 15 63 18.5 C70 22.5 72.5 33 70 43 C68 49 66 54 65 60.5Z" fill="url(#g)"/>
+        ${kTop(c)}
+        <path d="M47 46 a2.8 2.8 0 0 0 5.6 0 a2.8 2.8 0 0 0 5.6 0 a2.8 2.8 0 0 0 5.6 0 M44.5 50.5 a2.8 2.8 0 0 0 5.6 0 a2.8 2.8 0 0 0 5.6 0 a2.8 2.8 0 0 0 5.6 0 a2.8 2.8 0 0 0 5.6 0 M46 55 a2.8 2.8 0 0 0 5.6 0 a2.8 2.8 0 0 0 5.6 0 a2.8 2.8 0 0 0 5.6 0" fill="none" stroke="${c.acc2}" stroke-width="1.3"/>
+        ${HORSE_EYE(c)}
+        <path d="M30 46.5 C29 50 31 52 33.5 52.5" fill="none" stroke="${c.acc}" stroke-width="1.4"/>
+        <ellipse cx="54" cy="24" rx="2" ry="5" fill="#fff" opacity=".4" stroke="none" transform="rotate(60 54 24)"/>` },
+      { name: 'Dragon de mer', desc: 'L’hippocampe feuillu : des feuilles d’algue lui poussent sur la tête et le dos.', draw: (c) => `${kPed(c)}
+        ${leaf(59, 19, -100, 11, c)}${leaf(66, 20.5, -55, 12, c)}${leaf(71, 29, -15, 12, c)}${leaf(71, 39, 12, 11, c)}${leaf(67.5, 49, 30, 10, c)}${leaf(36, 44, 115, 8, c)}${leaf(45, 44.5, 140, 7, c)}
+        <path d="${SEA_HEAD}" fill="url(#g)"/>
+        ${kTop(c)}
+        <path d="M44 52.5 Q49 49.3 54 52.5 T64.2 52.5" fill="none" stroke="${c.acc2}" stroke-width="2"/>
+        <path d="M33 40 V44.4 M36.5 39.2 V44.1" stroke-width="1" opacity=".45"/>
+        <g fill="${c.acc2}" stroke="none"><circle cx="48" cy="46" r="1"/><circle cx="56" cy="44" r="1"/><circle cx="62" cy="47" r="1"/><circle cx="60" cy="37.5" r=".9"/></g>
+        <circle cx="52.5" cy="28.5" r="2.7" fill="${c.dark}" stroke="none"/>
+        <circle cx="51.6" cy="27.6" r=".9" fill="#fff" stroke="none"/>
+        <ellipse cx="49.5" cy="24" rx="2" ry="5.2" fill="#fff" opacity=".45" stroke="none" transform="rotate(40 49.5 24)"/>` },
+    ];
+    let knightSel = 0;
+    function renderKnights() {
+      document.getElementById('knights').innerHTML = KNIGHTS.map((k, i) => `<div class="kopt${i === knightSel ? ' on' : ''}" role="button" tabindex="0" data-i="${i}">
+        <div class="kpair"><div class="tile on-d"><div class="pcbig" style='background-image:${pieceSvg('w', 'n', k.draw)}'></div></div><div class="tile on-l"><div class="pcbig" style='background-image:${pieceSvg('b', 'n', k.draw)}'></div></div></div>
+        <b>${String.fromCharCode(65 + i)} · ${k.name}</b><small>${k.desc}</small></div>`).join('');
+    }
+    function useKnight(i) {
+      knightSel = i;
+      SHAPES.n = KNIGHTS[i].draw;
+      IMG.wn = pieceSvg('w', 'n');
+      IMG.bn = pieceSvg('b', 'n');
+      renderBoards();
+      renderKnights();
+    }
+    useKnight(4); // E · Hippocampe mythique
+    const kGrid = document.getElementById('knights');
+    kGrid.addEventListener('click', (e) => { const o = e.target.closest('.kopt'); if (o) useKnight(+o.dataset.i); });
+    kGrid.addEventListener('keydown', (e) => { const o = e.target.closest('.kopt'); if (o && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); useKnight(+o.dataset.i); } });
+
+    // ------------------------------------------------------------------
+    // Sons (synthétisés), avec un écho « sous l'eau »
+    // ------------------------------------------------------------------
+    let ac = null, out = null;
+    function audio() {
+      if (ac) return ac;
+      ac = new AudioContext();
+      out = ac.createGain();
+      const lp = ac.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 2600;
+      const delay = ac.createDelay(), fb = ac.createGain(), wet = ac.createGain();
+      delay.delayTime.value = 0.22;
+      fb.gain.value = 0.38;
+      wet.gain.value = 0.35;
+      out.connect(lp);
+      lp.connect(ac.destination);
+      lp.connect(delay);
+      delay.connect(fb).connect(delay);
+      delay.connect(wet).connect(ac.destination);
+      return ac;
+    }
+    function env(g, t, vol, attack, dur) {
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + attack);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    }
+    function noise(dur) {
+      const a = audio();
+      const b = a.createBuffer(1, a.sampleRate * dur, a.sampleRate);
+      const d = b.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      const s = a.createBufferSource();
+      s.buffer = b;
+      return s;
+    }
+    function tone(type, f0, f1, at, dur, vol, attack = 0.01) {
+      const a = audio(), t = a.currentTime + at;
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(f0, t);
+      if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.9);
+      env(g, t, vol, attack, dur);
+      o.connect(g).connect(out);
+      o.start(t);
+      o.stop(t + dur + 0.05);
+    }
+    const bubble = (at, f = 500, vol = 0.12) => tone('sine', f, f * 2.4, at, 0.09, vol, 0.005);
+    const bubbles = (at, n = 8, span = 0.8, vol = 0.1) => { for (let i = 0; i < n; i++) bubble(at + Math.random() * span, rand(380, 1100), vol * rand(0.5, 1)); };
+    const bloop = (at = 0) => { tone('sine', 260, 120, at, 0.16, 0.3, 0.005); bubble(at + 0.05, 700, 0.06); };
+    function whoosh(at = 0, dur = 0.9, vol = 0.45) {
+      const a = audio(), t = a.currentTime + at;
+      const s = noise(dur), f = a.createBiquadFilter(), g = a.createGain();
+      f.type = 'lowpass';
+      f.frequency.setValueAtTime(140, t);
+      f.frequency.exponentialRampToValueAtTime(900, t + dur * 0.35);
+      f.frequency.exponentialRampToValueAtTime(120, t + dur);
+      env(g, t, vol, dur * 0.3, dur);
+      s.connect(f).connect(g).connect(out);
+      s.start(t);
+    }
+    const thump = (at = 0, vol = 0.55) => tone('sine', 90, 38, at, 0.45, vol, 0.005);
+    const heartbeat = (at = 0) => { thump(at, 0.5); thump(at + 0.24, 0.38); };
+    function whale(at = 0, vol = 0.16) {
+      const a = audio();
+      for (const [d, f0, f1, f2, len] of [[0, 220, 470, 300, 2.4], [1.9, 330, 260, 410, 2]]) {
+        const t = a.currentTime + at + d;
+        const o = a.createOscillator(), g = a.createGain(), lfo = a.createOscillator(), lg = a.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(f0, t);
+        o.frequency.exponentialRampToValueAtTime(f1, t + len * 0.45);
+        o.frequency.exponentialRampToValueAtTime(f2, t + len);
+        lfo.frequency.value = 5.5;
+        lg.gain.value = 7;
+        lfo.connect(lg).connect(o.frequency);
+        env(g, t, vol, len * 0.35, len);
+        o.connect(g).connect(out);
+        o.start(t); lfo.start(t);
+        o.stop(t + len + 0.05); lfo.stop(t + len + 0.05);
+      }
+    }
+    const chimes = (at = 0) => [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98].forEach((f, i) => { tone('sine', f, f, at + i * 0.11, 1.6, 0.07, 0.005); tone('triangle', f * 2, f * 2, at + i * 0.11, 0.6, 0.02, 0.005); });
+    function drone(at = 0, dur = 3.5, vol = 0.2) {
+      const a = audio(), t = a.currentTime + at;
+      for (const det of [0, 7]) {
+        const o = a.createOscillator(), f = a.createBiquadFilter(), g = a.createGain();
+        o.type = 'sawtooth';
+        o.detune.value = det;
+        o.frequency.setValueAtTime(98, t);
+        o.frequency.exponentialRampToValueAtTime(41, t + dur);
+        f.type = 'lowpass';
+        f.frequency.value = 320;
+        env(g, t, vol, 0.6, dur);
+        o.connect(f).connect(g).connect(out);
+        o.start(t);
+        o.stop(t + dur + 0.05);
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // Outils d'animation
+    // ------------------------------------------------------------------
+    const rand = (a, b) => a + Math.random() * (b - a);
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const center = (board, sq) => { const s = board.clientWidth / 8; return { x: (FILES.indexOf(sq[0]) + 0.5) * s, y: (8 - +sq[1] + 0.5) * s, s }; };
+    const once = (node, frames, opts) => node.animate(frames, opts).finished.then(() => node.remove(), () => node.remove());
+    function el(parent, cls, style, html = '') {
+      const e = document.createElement('div');
+      e.className = cls;
+      Object.assign(e.style, style);
+      e.innerHTML = html;
+      parent.appendChild(e);
+      return e;
+    }
+    function slide(board, from, to, dur = 230) {
+      const a = center(board, from), b = center(board, to);
+      const p = board.querySelector(`[data-sq="${from}"] .pc`);
+      p.style.zIndex = 4;
+      return p.animate([{ transform: 'none' }, { transform: `translate(${b.x - a.x}px, ${b.y - a.y}px)` }], { duration: dur, easing: 'cubic-bezier(.3,.6,.4,1)', fill: 'forwards' });
+    }
+    const mark = (board, ...sqs) => sqs.forEach((q) => board.querySelector(`[data-sq="${q}"]`).classList.add('last'));
+    // des bulles qui remontent en ondulant
+    function bubbleFx(fx, x, y, s, n, { delay = 0, spread = 0.6, rise = 1.6, spanMs = 400, size = 1 } = {}) {
+      for (let i = 0; i < n; i++) {
+        const r = s * rand(0.06, 0.16) * size;
+        const b = el(fx, 'p bub', { left: `${x + rand(-spread, spread) * s}px`, top: `${y + rand(-0.2, 0.2) * s}px`, width: `${r}px`, height: `${r}px` });
+        const h = s * rand(rise * 0.6, rise), wob = s * rand(0.06, 0.18);
+        once(b, [
+          { transform: 'translate(-50%,-50%) scale(.3)', opacity: 0 },
+          { transform: `translate(calc(-50% + ${wob}px), calc(-50% - ${h * 0.35}px)) scale(1)`, opacity: 1, offset: 0.3 },
+          { transform: `translate(calc(-50% - ${wob}px), calc(-50% - ${h * 0.7}px)) scale(1)`, opacity: 0.9, offset: 0.65 },
+          { transform: `translate(-50%, calc(-50% - ${h}px)) scale(1.15)`, opacity: 0 },
+        ], { duration: rand(1000, 1600), delay: delay + rand(0, spanMs), easing: 'ease-out', fill: 'backwards' });
+      }
+    }
+    // tentacule : pointe enroulée vers la droite (flip = vers la gauche)
+    const TENTACLE = (flip = false, dark = false) => `<svg viewBox="0 0 40 120" width="100%" height="100%" preserveAspectRatio="none" style="display:block;transform:scaleX(${flip ? -1 : 1})">
+      <defs><linearGradient id="tg${dark ? 'd' : ''}" x1="0" x2="1"><stop offset="0" stop-color="${dark ? '#2a0b2c' : '#7a2456'}"/><stop offset=".5" stop-color="${dark ? '#5c1a4f' : '#c9558a'}"/><stop offset="1" stop-color="${dark ? '#1f0820' : '#6a1d4a'}"/></linearGradient></defs>
+      <path d="M9 122 C5 92 23 74 16.5 50 C10.5 30 18 11 30 6.5 C36.5 4.5 38.5 11 33.5 13 C25.5 17 21 31 27 48 C35 72 24 94 26.5 122Z" fill="url(#tg${dark ? 'd' : ''})" stroke="${dark ? '#0d0310' : '#3a0d28'}" stroke-width="1.6"/>
+      <g fill="${dark ? '#c86fa8' : '#ffd0e0'}" stroke="${dark ? '#3a0d38' : '#8a3060'}" stroke-width=".8">
+        <circle cx="30.5" cy="17" r="1.2"/><circle cx="26.5" cy="26" r="1.5"/><circle cx="25.5" cy="36" r="1.8"/><circle cx="27.5" cy="47" r="2"/>
+        <circle cx="30" cy="59" r="2.2"/><circle cx="30.5" cy="72" r="2.3"/><circle cx="28.5" cy="85" r="2.4"/><circle cx="27" cy="99" r="2.5"/><circle cx="26.8" cy="112" r="2.6"/></g></svg>`;
+    const FIN = `<svg viewBox="0 0 40 32" width="100%" height="100%" style="display:block;overflow:visible">
+      <path d="M6 27 C12 22.5 16 14 16 3 C23 6.5 31 15 34 27Z" fill="#35576b" stroke="#0b1d29" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M18 7 C21 11 25 17 27 24" fill="none" stroke="#7ea9bf" stroke-width="1.4" opacity=".7"/>
+      <path d="M-4 28 Q4 25 12 28 T28 28 T44 28" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" opacity=".9"/></svg>`;
+    const WHALE = `<svg viewBox="0 0 200 90" width="100%" height="100%"><g fill="rgba(3,26,46,.8)">
+      <path d="M196 46 C194 34 176 24 150 21 C112 16 66 22 46 40 C40 44 34 46 24 46 L10 32 C7 38 9 44 14 49 C9 54 6 60 9 66 L24 53 C34 53 42 56 50 60 C72 70 120 72 150 68 C176 64 196 58 196 46Z"/>
+      <path d="M128 66 C126 76 118 84 106 86 C112 78 114 72 114 67Z"/></g>
+      <path d="M150 56 C165 58 180 56 192 52 M146 61 C162 63.5 178 61.5 189 57" stroke="rgba(150,220,255,.3)" stroke-width="1.6" fill="none"/>
+      <circle cx="172" cy="41" r="2.2" fill="rgba(170,235,255,.6)"/></svg>`;
+    const FISH = (col) => `<svg viewBox="0 0 30 14" width="100%" height="100%"><path d="M2 7 C7 1 17 1 23 7 C17 13 7 13 2 7Z M22 7 L29 2 L27.5 7 L29 12Z" fill="${col}"/><circle cx="7" cy="6" r="1.1" fill="#04192c"/></svg>`;
+    const EYE = `<svg viewBox="0 0 120 60" width="100%" height="100%" style="display:block;overflow:visible">
+      <defs><radialGradient id="iris" cx=".5" cy=".5" r=".55"><stop offset="0" stop-color="#fff4a8"/><stop offset=".5" stop-color="#ffaa2a"/><stop offset="1" stop-color="#8f2a0c"/></radialGradient></defs>
+      <path d="M4 30 Q60 -6 116 30 Q60 66 4 30Z" fill="url(#iris)" stroke="#2b0716" stroke-width="3"/>
+      <path d="M30 22 Q60 30 90 22 M28 38 Q60 31 92 38" fill="none" stroke="#7a2510" stroke-width="1.2" opacity=".6"/>
+      <ellipse cx="60" cy="30" rx="5" ry="21" fill="#0c0206"/>
+      <ellipse cx="51" cy="21" rx="5" ry="2.6" fill="#fff" opacity=".7"/>
+      <path d="M0 30 Q60 -12 120 30" fill="none" stroke="#3a0f2a" stroke-width="6" stroke-linecap="round"/></svg>`;
+
+    // ------------------------------------------------------------------
+    // Prise « Siphon » : un tourbillon s'ouvre sur la case et aspire la pièce prise
+    // ------------------------------------------------------------------
+    const WHIRL = (() => {
+      const arm = (a0, w, col, op) => {
+        const pts = [];
+        for (let i = 0; i <= 44; i++) {
+          const t = i / 44, r = 47 - 42 * t, a = a0 + t * Math.PI * 1.7;
+          pts.push(`${(Math.cos(a) * r).toFixed(1)} ${(Math.sin(a) * r).toFixed(1)}`);
+        }
+        return `<path d="M${pts.join(' L')}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" opacity="${op}"/>`;
+      };
+      const arms = [0, 1, 2, 3].map((k) => arm((k * Math.PI) / 2, 3, '#e6fbff', 0.8)).join('') + [0, 1, 2, 3].map((k) => arm((k * Math.PI) / 2 + 0.7, 1.5, '#6fe3ea', 0.75)).join('');
+      return `<svg viewBox="-50 -50 100 100" width="100%" height="100%" style="display:block">
+        <defs><radialGradient id="wp" r=".5"><stop offset="0" stop-color="#01070f" stop-opacity=".95"/><stop offset=".28" stop-color="#05223a" stop-opacity=".8"/><stop offset=".7" stop-color="#1d6f8f" stop-opacity=".35"/><stop offset="1" stop-color="#6fe3ea" stop-opacity="0"/></radialGradient></defs>
+        <circle r="49" fill="url(#wp)"/>${arms}</svg>`;
+    })();
+    // son : l'eau qui tourbillonne et s'engouffre
+    function swirl(at = 0, dur = 1.1, vol = 0.35) {
+      const a = audio(), t = a.currentTime + at;
+      const src = noise(dur), f = a.createBiquadFilter(), g = a.createGain();
+      f.type = 'bandpass';
+      f.Q.value = 2.2;
+      f.frequency.setValueAtTime(1500, t);
+      f.frequency.exponentialRampToValueAtTime(200, t + dur);
+      env(g, t, vol, dur * 0.25, dur);
+      src.connect(f).connect(g).connect(out);
+      src.start(t);
+    }
+    const capBoard = document.getElementById('demo-board');
+    const CAP_FEN = 'r1b1k2r/ppp2ppp/2n5/3q4/8/2N5/PPP2PPP/R1BQK2R';
+    function capture(sound) {
+      const board = drawBoard(capBoard, CAP_FEN);
+      const fx = board.querySelector('.fx');
+      const victim = board.querySelector('[data-sq="d5"] .pc');
+      const { x, y, s } = center(board, 'd5');
+      setTimeout(() => {
+        if (sound) { swirl(0, 1.1); bubbles(0.3, 6, 0.7, 0.07); bloop(0.6); }
+        if (reduce) {
+          victim.remove();
+          slide(board, 'c3', 'd5');
+          setTimeout(() => mark(board, 'c3', 'd5'), 230);
+          return;
+        }
+        // le siphon s'ouvre, tourne, puis se referme
+        const wp = el(fx, 'p', { left: `${x}px`, top: `${y}px`, width: `${s * 1.45}px`, height: `${s * 1.45}px` }, WHIRL);
+        once(wp, [
+          { transform: 'translate(-50%,-50%) rotate(0deg) scale(.2)', opacity: 0 },
+          { transform: 'translate(-50%,-50%) rotate(-160deg) scale(1)', opacity: 1, offset: 0.3 },
+          { transform: 'translate(-50%,-50%) rotate(-480deg) scale(.95)', opacity: 0.9, offset: 0.72 },
+          { transform: 'translate(-50%,-50%) rotate(-680deg) scale(.25)', opacity: 0 },
+        ], { duration: 1150, easing: 'linear' });
+        // la pièce prise tourne de plus en plus vite et disparaît au centre
+        victim.style.zIndex = 6;
+        victim.animate([
+          { transform: 'rotate(0deg) scale(1)', filter: 'none', opacity: 1 },
+          { transform: 'rotate(-80deg) scale(.88)', filter: 'none', opacity: 1, offset: 0.3 },
+          { transform: 'rotate(-460deg) scale(0)', filter: 'brightness(.35)', opacity: 0 },
+        ], { duration: 820, delay: 120, easing: 'cubic-bezier(.5,0,.85,.55)', fill: 'forwards' });
+        // puis la pièce qui prend arrive sur la case
+        setTimeout(() => {
+          slide(board, 'c3', 'd5');
+          board.querySelector('[data-sq="c3"] .pc').style.zIndex = 7;
+          if (sound) bloop();
+          setTimeout(() => mark(board, 'c3', 'd5'), 230);
+        }, 640);
+        bubbleFx(fx, x, y, s, 6, { delay: 650, spread: 0.3, rise: 1.3, spanMs: 300, size: 0.9 });
+      }, 300);
+    }
+
+    // ------------------------------------------------------------------
+    // Échec : un aileron tourne autour du roi menacé
+    // ------------------------------------------------------------------
+    function check(sound) {
+      const board = drawBoard(capBoard, '8/8/4k3/8/8/8/8/2Q1K3');
+      const fx = board.querySelector('.fx');
+      setTimeout(() => {
+        slide(board, 'c1', 'c4');
+        if (sound) { bloop(); heartbeat(0.25); heartbeat(1.1); }
+        setTimeout(() => {
+          mark(board, 'c1', 'c4');
+          const { x, y, s } = center(board, 'e6');
+          const tag = el(fx, 'check-tag', { left: `${x}px`, top: `${y - s * 0.95}px`, fontSize: `${Math.max(12, s * 0.28)}px` }, 'Échec !');
+          once(tag, [{ transform: 'translate(-50%,-50%) scale(.4)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1.1)', opacity: 1, offset: 0.12 }, { transform: 'translate(-50%,-50%) scale(1)', opacity: 1, offset: 0.85 }, { transform: 'translate(-50%,-80%) scale(1)', opacity: 0 }], { duration: 2000 });
+          if (reduce) return;
+          // ondes autour du roi
+          for (let i = 0; i < 3; i++) {
+            const ring = el(fx, 'p', { left: `${x}px`, top: `${y + s * 0.3}px`, width: `${s}px`, height: `${s * 0.5}px`, borderRadius: '50%', border: '2px solid rgba(230,255,255,.8)' });
+            once(ring, [{ transform: 'translate(-50%,-50%) scale(.4)', opacity: 0.9 }, { transform: 'translate(-50%,-50%) scale(2.2)', opacity: 0 }], { duration: 1200, delay: i * 380, easing: 'ease-out', fill: 'backwards' });
+          }
+          // l'aileron fait un tour et demi autour du roi, puis plonge
+          const fin = el(fx, 'p', { left: `${x}px`, top: `${y + s * 0.35}px`, width: `${s * 0.62}px`, height: `${s * 0.5}px`, zIndex: 6 }, FIN);
+          const R = s * 1.1, N = 48, turns = 1.4;
+          const frames = [];
+          for (let i = 0; i <= N; i++) {
+            const th = Math.PI / 2 + (i / N) * turns * Math.PI * 2;
+            const dx = Math.cos(th) * R, dy = Math.sin(th) * R * 0.45;
+            const v = -Math.sin(th);
+            const sx = (v >= 0 ? 1 : -1) * Math.max(0.3, Math.abs(v));
+            const rise = i < 4 ? i / 4 : i > N - 4 ? (N - i) / 4 : 1;
+            frames.push({ transform: `translate(${dx}px, ${dy}px) translate(-50%, -100%) scale(${sx}, ${rise})`, opacity: rise * (dy < 0 ? 0.55 : 1) });
+          }
+          once(fin, frames, { duration: 2300, easing: 'linear' });
+        }, 230);
+      }, 300);
+    }
+
+    // ------------------------------------------------------------------
+    // Fin de partie « Les Abysses »
+    // ------------------------------------------------------------------
+    const mateFrame = document.getElementById('mate-board');
+    const WIN_FEN = '6k1/5ppp/8/8/8/8/8/R5K1';
+    const LOSS_FEN = 'r5k1/8/8/8/8/8/5PPP/6K1';
+    let endTimers = [];
+    const later = (fn, ms) => endTimers.push(setTimeout(fn, ms));
+    function banner(fx, W, title, sub, loss) {
+      const b = el(fx, 'end-banner' + (loss ? ' loss' : ''), { fontSize: `${Math.max(26, W * 0.105)}px` }, `<div class="t">${title}</div><div class="s">${sub}</div>`);
+      b.animate([{ opacity: 0, transform: 'translate(-50%,-20%) scale(.85)', filter: 'blur(6px)' }, { opacity: 1, transform: 'translate(-50%,-50%) scale(1)', filter: 'blur(0)' }], { duration: 1100, easing: 'cubic-bezier(.2,.8,.3,1.1)', fill: 'forwards' });
+    }
+
+    // Victoire : lumière de la surface, baleine, banc de poissons ; le roi vaincu coule
+    function win(sound) {
+      endTimers.forEach(clearTimeout); endTimers = [];
+      const board = drawBoard(mateFrame, WIN_FEN);
+      const fx = board.querySelector('.fx');
+      later(() => {
+        slide(board, 'a1', 'a8', 320);
+        if (sound) { bloop(); chimes(0.5); whale(0.9); bubbles(1, 14, 2.5, 0.08); }
+        later(() => {
+          mark(board, 'a1', 'a8');
+          const W = board.clientWidth, s = W / 8;
+          const loser = board.querySelector('[data-sq="g8"] .pc');
+          const hero = board.querySelector('[data-sq="g1"] .pc');
+          if (reduce) { loser.style.opacity = 0.35; banner(fx, W, 'Échec et mat', 'Victoire'); return; }
+          // l'eau s'assombrit un peu, la lumière descend de la surface
+          el(fx, 'p', { inset: '0', background: 'linear-gradient(180deg, rgba(120,230,245,.18), rgba(6,50,85,.45) 55%, rgba(2,14,30,.7))' })
+            .animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1000, fill: 'forwards' });
+          for (let i = 0; i < 5; i++) {
+            const ray = el(fx, 'p', { left: `${W * (0.04 + i * 0.21)}px`, top: `${-W * 0.15}px`, width: `${W * rand(0.08, 0.14)}px`, height: `${W * 1.3}px`, transform: 'rotate(14deg)', transformOrigin: '50% 0',
+              background: 'linear-gradient(180deg, rgba(255,255,255,.6), rgba(200,250,255,.15) 55%, rgba(200,250,255,0))', filter: 'blur(5px)', mixBlendMode: 'screen' });
+            ray.animate([{ opacity: 0 }, { opacity: 0.85, offset: 0.25 }, { opacity: 0.35, offset: 0.6 }, { opacity: 0.7 }], { duration: 2600, delay: 200 + i * 140, fill: 'forwards', easing: 'ease-in-out' });
+          }
+          // la baleine passe au loin
+          const wh = el(fx, 'p', { left: `${-W * 0.75}px`, top: `${W * 0.08}px`, width: `${W * 0.7}px`, height: `${W * 0.315}px`, opacity: '.5', filter: 'blur(1px)' }, WHALE);
+          wh.animate([{ transform: 'translate(0,0) rotate(2deg)' }, { transform: `translate(${W * 0.9}px, ${-W * 0.03}px) rotate(-2deg)`, offset: 0.5 }, { transform: `translate(${W * 1.85}px, ${W * 0.01}px) rotate(2deg)` }], { duration: 7000, easing: 'linear', fill: 'forwards' });
+          // le roi vaincu coule lentement, dans ses bulles
+          loser.style.zIndex = 9;
+          loser.animate([
+            { transform: 'none', filter: 'none' },
+            { transform: 'translateY(-6%) rotate(-8deg)', filter: 'none', offset: 0.12 },
+            { transform: `translate(${-s * 0.25}px, ${W * 0.45}px) rotate(30deg)`, filter: 'brightness(.6) saturate(.6)', opacity: 0.8, offset: 0.65 },
+            { transform: `translate(${-s * 0.1}px, ${W * 0.8}px) rotate(55deg)`, filter: 'brightness(.35) blur(2px)', opacity: 0 },
+          ], { duration: 3800, delay: 300, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'forwards' });
+          for (let k = 0; k < 6; k++) later(() => { const p = center(board, 'g8'); bubbleFx(fx, p.x - s * 0.2, p.y + W * 0.1 * k, s, 5, { spread: 0.3, rise: 1.4 }); }, 400 + k * 420);
+          // ton roi brille comme une perle
+          const hp = center(board, 'g1');
+          const halo = el(fx, 'p', { left: `${hp.x}px`, top: `${hp.y}px`, width: `${s * 2.2}px`, height: `${s * 2.2}px`, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,.85) 0%, rgba(243,196,214,.55) 30%, rgba(111,227,234,.25) 55%, rgba(111,227,234,0) 70%)', mixBlendMode: 'screen' });
+          halo.animate([{ transform: 'translate(-50%,-50%) scale(.3)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1)', opacity: 1, offset: 0.4 }, { transform: 'translate(-50%,-50%) scale(.85)', opacity: 0.75 }], { duration: 1600, delay: 900, fill: 'forwards' });
+          hero.animate([{ transform: 'none' }, { transform: 'translateY(-10%) scale(1.08)' }], { duration: 900, delay: 900, easing: 'cubic-bezier(.3,1.4,.5,1)', fill: 'forwards' });
+          // un banc de poissons traverse le plateau
+          const cols = ['#e8fbff', '#bfeff6', '#f3c4d6', '#9fe7ef'];
+          for (let i = 0; i < 16; i++) {
+            const f = el(fx, 'p', { left: `${-s}px`, top: `${W * 0.55 + rand(-0.12, 0.12) * W}px`, width: `${s * 0.42}px`, height: `${s * 0.2}px`, zIndex: 8 }, FISH(cols[i % 4]));
+            const dy = rand(-0.08, 0.08) * W;
+            f.animate([
+              { transform: 'translate(0,0) scaleX(-1)' },
+              { transform: `translate(${W * 0.5}px, ${dy - W * 0.06}px) scaleX(-1)`, offset: 0.45 },
+              { transform: `translate(${W * 1.2}px, ${dy + W * 0.04}px) scaleX(-1)` },
+            ], { duration: rand(2600, 3200), delay: 1300 + i * rand(40, 90), easing: 'ease-in-out', fill: 'both' });
+          }
+          // des perles et des bulles remontent
+          for (let i = 0; i < 4; i++) later(() => bubbleFx(fx, W * rand(0.1, 0.9), W * 1.02, s, 7, { spread: 0.6, rise: 4.5, size: 1.1 }), 600 + i * 500);
+          later(() => banner(fx, W, 'Échec et mat', 'Victoire'), 1300);
+        }, 330);
+      }, 300);
+    }
+
+    // Défaite : la lumière s'éteint, l'œil du kraken s'ouvre, ses tentacules emportent ton roi
+    function loss(sound) {
+      endTimers.forEach(clearTimeout); endTimers = [];
+      const board = drawBoard(mateFrame, LOSS_FEN);
+      const fx = board.querySelector('.fx');
+      later(() => {
+        slide(board, 'a8', 'a1', 320);
+        if (sound) { bloop(); drone(0.3, 4.5); thump(0.4, 0.6); heartbeat(1.2); bubbles(2.4, 10, 2, 0.07); }
+        later(() => {
+          mark(board, 'a8', 'a1');
+          const W = board.clientWidth, s = W / 8;
+          const { x, y } = center(board, 'g1');
+          const mine = board.querySelector('[data-sq="g1"] .pc');
+          if (reduce) { mine.style.filter = 'grayscale(.8) brightness(.6)'; banner(fx, W, 'Échec et mat', 'Défaite', true); return; }
+          // le noir se referme autour de ton roi
+          const dark = el(fx, 'p', { left: `${x}px`, top: `${y}px`, width: `${s * 1.7}px`, height: `${s * 1.7}px`, borderRadius: '50%',
+            boxShadow: `0 0 0 ${W * 2.2}px rgba(1,6,14,.9), inset 0 0 ${s * 0.5}px ${s * 0.35}px rgba(1,6,14,.9)` });
+          dark.animate([{ transform: 'translate(-50%,-50%) scale(7)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 }], { duration: 1500, easing: 'cubic-bezier(.3,0,.3,1)', fill: 'forwards' });
+          // des lueurs des profondeurs qui dérivent
+          for (let i = 0; i < 20; i++) {
+            const r = rand(2, 4.5);
+            const sp = el(fx, 'p speck', { left: `${rand(0.03, 0.97) * W}px`, top: `${rand(0.1, 1) * W}px`, width: `${r}px`, height: `${r}px` });
+            sp.animate([{ opacity: 0, transform: 'translate(0,0)' }, { opacity: rand(0.5, 1), offset: 0.3 }, { opacity: 0, transform: `translate(${rand(-0.3, 0.3) * s}px, ${-rand(0.5, 1.5) * s}px)` }], { duration: rand(2500, 4000), delay: 700 + rand(0, 1200), fill: 'both' });
+          }
+          // l'œil du kraken s'ouvre au milieu du noir, cligne, puis fixe ton roi
+          const eye = el(fx, 'p', { left: `${W * 0.3}px`, top: `${W * 0.62}px`, width: `${W * 0.36}px`, height: `${W * 0.18}px`, filter: 'drop-shadow(0 0 14px rgba(255,150,40,.7))', zIndex: 7 }, EYE);
+          eye.animate([
+            { transform: 'translate(-50%,-50%) scaleY(0)', opacity: 0 },
+            { transform: 'translate(-50%,-50%) scaleY(0)', opacity: 1, offset: 0.2 },
+            { transform: 'translate(-50%,-50%) scaleY(1)', opacity: 1, offset: 0.36 },
+            { transform: 'translate(-50%,-50%) scaleY(1)', opacity: 1, offset: 0.55 },
+            { transform: 'translate(-50%,-50%) scaleY(.08)', opacity: 1, offset: 0.6 },
+            { transform: 'translate(-50%,-50%) scaleY(1)', opacity: 1, offset: 0.66 },
+            { transform: 'translate(-50%,-50%) scaleY(1)', opacity: 0.85 },
+          ], { duration: 3600, delay: 500, easing: 'ease-in-out', fill: 'forwards' });
+          const pupil = eye.querySelector('ellipse');
+          pupil.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(0)', offset: 0.7 }, { transform: 'translateX(16px) translateY(5px)' }], { duration: 3600, delay: 500, fill: 'forwards' });
+          // les tentacules sortent du bas du plateau et entraînent ton roi
+          const T = 1900;
+          [[-1.25, 2.3, false], [-0.55, 1.9, false], [0.35, 2.1, true], [1.05, 2.5, true]].forEach(([off, h, flip], i) => {
+            const t = el(fx, 'p', { left: `${x + off * s - s * 0.27}px`, top: `${W - h * s}px`, width: `${s * 0.6}px`, height: `${h * s}px`, transformOrigin: '50% 100%', zIndex: 8 }, TENTACLE(flip, true));
+            t.animate([
+              { transform: 'translateY(100%) rotate(0deg)' },
+              { transform: `translateY(8%) rotate(${flip ? 6 : -6}deg)`, offset: 0.35 },
+              { transform: `translateY(0) rotate(${flip ? -5 : 5}deg)`, offset: 0.55 },
+              { transform: `translateY(4%) rotate(${flip ? 3 : -3}deg)`, offset: 0.7 },
+              { transform: 'translateY(100%) rotate(0deg)' },
+            ], { duration: 2900, delay: T - 900 + i * 90, easing: 'cubic-bezier(.45,0,.55,1)', fill: 'both' });
+          });
+          mine.style.zIndex = 9;
+          mine.animate([
+            { transform: 'none', filter: 'none' },
+            { transform: 'translateX(-4%) rotate(-5deg)', offset: 0.18 },
+            { transform: 'translateX(4%) rotate(5deg)', offset: 0.3 },
+            { transform: 'translateX(-3%) rotate(-3deg)', filter: 'brightness(.8)', offset: 0.42 },
+            { transform: 'translateY(0)', filter: 'brightness(.7)', offset: 0.52 },
+            { transform: 'translateY(160%) rotate(-25deg)', filter: 'brightness(.3) blur(1px)' },
+          ], { duration: 2400, delay: T - 300, easing: 'cubic-bezier(.5,0,.7,1)', fill: 'forwards' });
+          later(() => bubbleFx(fx, x, y + s * 0.2, s, 22, { spread: 0.5, rise: 2.6, spanMs: 900 }), T + 900);
+          later(() => banner(fx, W, 'Échec et mat', 'Défaite', true), T + 1500);
+        }, 330);
+      }, 300);
+    }
+
+    // Boucle de démonstration (sans son) ; boutons avec le son
+    let loopTimer = null;
+    let turn = 0;
+    function loop() {
+      (turn++ % 2 ? check : capture)(false);
+      loopTimer = setTimeout(loop, 3600);
+    }
+    drawBoard(capBoard, CAP_FEN);
+    drawBoard(mateFrame, WIN_FEN);
+    loopTimer = setTimeout(loop, 700);
+    setTimeout(() => win(false), 1200);
+    document.getElementById('demo-capture').addEventListener('click', () => { clearTimeout(loopTimer); capture(true); });
+    document.getElementById('demo-check').addEventListener('click', () => { clearTimeout(loopTimer); check(true); });
+    document.getElementById('demo-win').addEventListener('click', () => win(true));
+    document.getElementById('demo-loss').addEventListener('click', () => loss(true));
+  </script>
+</body>
+</html>

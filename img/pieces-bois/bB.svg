@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+<defs>
+  <linearGradient id="g" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#120702"/><stop offset=".3" stop-color="#6e4024"/><stop offset=".55" stop-color="#3d200e"/><stop offset="1" stop-color="#120702"/>
+  </linearGradient>
+  <radialGradient id="gr" cx=".38" cy=".34" r=".75">
+    <stop offset="0" stop-color="#b07a50"/><stop offset=".35" stop-color="#6e4024"/><stop offset=".75" stop-color="#3d200e"/><stop offset="1" stop-color="#120702"/>
+  </radialGradient>
+  <filter id="wood" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.22 0.012" numOctaves="2" seed="9" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.06  0 0 0 0 0.025  0 0 0 0 0.005  0 0 0 -2.6 1.45" result="gr"/>
+    <feComposite in="gr" in2="SourceAlpha" operator="in" result="gi"/>
+    <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="gi"/></feMerge>
+  </filter>
+  <style>.gv{fill:none;stroke:#0f0602;stroke-width:1.4;stroke-linecap:round}.eye{fill:#0a0402;stroke:none}</style>
+</defs>
+<g filter="url(#wood)" stroke="#0a0402" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round">
+<path d="M23 89 Q23 82.5 30.5 81.5 H69.5 Q77 82.5 77 89 Q77 94 71.5 94 H28.5 Q23 94 23 89Z" fill="url(#g)"/>
+  <path d="M27 88.5 H73" class="gv"/>
+  <path d="M36 82 Q38 71 44.5 63.5 H55.5 Q62 71 64 82Z" fill="url(#g)"/>
+  <rect x="38" y="57.5" width="24" height="6" rx="3" fill="url(#g)"/><path d="M40 60.5 H60" class="gv"/>
+  <path d="M50 21.5 C61 30 64.5 42 59 53.5 H41 C35.5 42 39 30 50 21.5Z" fill="url(#g)"/>
+  <path d="M55 31.5 L45.5 42.5" style="stroke-width:3.2"/>
+  <path d="M41.5 53.5 H58.5" class="gv"/>
+  <circle cx="50" cy="17.5" r="4" fill="url(#gr)"/>
+</g>
+</svg>

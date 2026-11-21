@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0e0b1c">
+  <title>Mes coffres — ROOOK</title>
+  <meta name="description" content="Gagne un coffre à chaque victoire en ligne et débloque des plateaux, des pièces et des animations.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="img/appli/apple-touch-icon.png?h=c739bfd4ab">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ROOOK">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="vendor/chessground-assets/chessground.base.css?v=f4cd128-mwquidh7">
+  <link rel="stylesheet" href="css/style.css?v=f4cd128-mwquidh7">
+  <link rel="stylesheet" href="vendor/chessground-assets/chessground.cburnett.css?v=f4cd128-mwquidh7">
+<script>
+(function () {
+  var v = 'f4cd128-mwquidh7';
+  // Après une mise à jour, on retire le petit paramètre « maj » de l'adresse
+  try {
+    var here = new URL(location.href);
+    if (here.searchParams.has('maj')) { here.searchParams.delete('maj'); history.replaceState(history.state, '', here.toString()); }
+  } catch (e) {}
+  fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d || d.v === v) return;
+    var key = 'roook-maj-' + d.v;
+    try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch (e) { return; }
+    // Recharge vers une adresse neuve (?maj=…) : le navigateur ne peut pas resservir l'ancienne page de son cache
+    try {
+      var u = new URL(location.href);
+      u.searchParams.set('maj', d.v);
+      location.replace(u.toString());
+    } catch (e) { location.reload(); }
+  }).catch(function () {});
+})();
+</script>
+</head>
+<body class="page-box">
+  <header class="topbar">
+    <a class="logo" href="./"><span class="logo-mark">♜</span> ROOOK</a>
+    <nav class="topnav">
+      <a href="jouer.html">Jouer</a>
+      <a href="apprendre.html">Apprendre</a>
+      <a href="amis.html">Amis</a>
+      <a href="bilan.html">Analyser</a>
+      <a href="inventaire.html">Inventaire</a>
+    </nav>
+  </header>
+
+  <main class="bx-page">
+    <div class="bx-head">
+      <p class="eyebrow">Récompenses</p>
+      <h1>Mes coffres</h1>
+    </div>
+
+    <section class="bx-main" id="bx-main">
+      <p class="muted">Chargement…</p>
+    </section>
+
+    <section class="bx-section">
+      <h2>Ta collection</h2>
+      <p class="muted">Les éléments à trouver dans les coffres. Un élément trouvé se débloque tout de suite dans ton <a href="inventaire.html">inventaire</a>.</p>
+      <div class="bx-collection" id="bx-collection"></div>
+    </section>
+  </main>
+
+  <!-- Ouverture d'un coffre (js/box-page.js) -->
+  <div class="bx-stage" id="bx-stage" hidden>
+    <div class="bx-rays" aria-hidden="true"></div>
+    <div class="bx-inner" id="bx-inner">
+      <div class="bx-scene" id="bx-scene"></div>
+      <p class="bx-tier" id="bx-tier" aria-hidden="true"></p>
+      <p class="bx-hint" id="bx-hint" hidden>Touche le coffre !</p>
+      <div class="bx-result" id="bx-result" hidden aria-live="polite"></div>
+    </div>
+    <canvas class="bx-fx" id="bx-fx" aria-hidden="true"></canvas>
+    <div class="bx-flash" id="bx-flash" aria-hidden="true"></div>
+  </div>
+
+  <script type="module" src="js/box-page.js?v=f4cd128-mwquidh7"></script>
+</body>
+</html>

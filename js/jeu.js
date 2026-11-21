@@ -1,0 +1,1137 @@
+// Page de partie : contre un ami en ligne, contre l'IA, ou à deux sur le même écran.
+import { Chessground } from '../vendor/chessground/chessground.min.js?v=f4cd128-mwquidh7';
+import { ico } from './icons.js?v=f4cd128-mwquidh7'; // icônes dessinées (à la place des emojis)
+import { Engine, LEVELS } from './engine.js?v=f4cd128-mwquidh7';
+import {
+  $, $$, Chess, colorName, legalDests, castleDest, isPromotion, askPromotion, saveGame, getPref, setPref,
+  resultText, localGameOver, formatClock, escapeHtml, material, frSan,
+} from './common.js?v=f4cd128-mwquidh7';
+import { isMuted, setMuted, lowTimeBeep, notifySound } from './sound.js?v=f4cd128-mwquidh7';
+import { createFx } from './fx.js?v=f4cd128-mwquidh7';
+import { attachArrows } from './arrows.js?v=f4cd128-mwquidh7';
+import { scrollMoveIntoList, repetitions, rivalOf, faceUrl } from './common.js?v=f4cd128-mwquidh7';
+import { session, avatarOf, profileUrl, badgeOf, badgeHtml, toast, rememberGame, markRematchDeclined, isRematchDeclined } from './compte.js?v=f4cd128-mwquidh7';
+import { gameSocket, AWAY_LIMIT } from './online.js?v=f4cd128-mwquidh7';
+import { serverNow } from './fb.js?v=f4cd128-mwquidh7';
+import { rankOf, logoUrl, fmt, applyResult, getRating, catOfCadence, CATS, PLACEMENT } from './rangs.js?v=f4cd128-mwquidh7';
+import { animateElo, showRankUp } from './rang-anim.js?v=f4cd128-mwquidh7'; // Elo qui défile et montée de rang (avec les bruitages)
+const account = await session;
+
+const params = new URLSearchParams(location.search);
+const onlineId = params.get('partie');
+const mode = onlineId ? 'ami' : params.has('ia') ? 'ia' : 'local';
+// Contre l'ordinateur : Noa, Adriz ou Astrea (même moteur, chacun sa tête et ses répliques)
+const rival = rivalOf(params.get('adv'));
+
+// ---------------------------------------------------------------------------
+// État commun
+// ---------------------------------------------------------------------------
+let chess = new Chess();
+let myColor = 'w'; // pour 'local', c'est seulement l'orientation de départ
+let orientation = 'w';
+let viewPly = null; // null = position actuelle ; sinon on revoit un coup passé
+let names = { w: 'Blancs', b: 'Noirs' };
+let pics = { w: null, b: null }; // photos de profil des joueurs (si elles existent)
+let badges = { w: null, b: null }; // badge affiché par chaque joueur (emoji à côté du pseudo)
+let picIds = '';
+let liveRanks = { w: null, b: null }; // Elo de chaque joueur dans la cadence de la partie (parties en ligne non classées)
+let rankKey = '';
+let over = null; // { result, reason } quand la partie est finie
+let gameId = mode === 'ami' ? onlineId + '-' + Date.now().toString(36) : mode + '-' + Date.now().toString(36);
+let savedThisGame = false;
+
+const ground = Chessground($('#board'), {
+  coordinates: getPref('coords', true), // réglage de la page Paramètres
+  animation: { enabled: true, duration: 180 },
+  highlight: { lastMove: true, check: true },
+  movable: { free: false, showDests: getPref('coups', true), events: { after: onUserMove } },
+  premovable: { enabled: false },
+  draggable: { showGhost: true },
+  drawable: { enabled: false }, // les flèches au clic droit sont gérées par arrows.js
+  trustAllEvents: true, // pour le clic « sans Maj » qu'on renvoie (prémove avec Maj, voir plus bas)
+});
+// Prémove avec Maj : l'échiquier réserve Maj+clic au dessin de flèches et refuserait de prendre la pièce. On
+// arrête ce clic avant lui et on lui renvoie le même, sans Maj (on a noté que Maj était enfoncée).
+$('#board').addEventListener(
+  'mousedown',
+  (e) => {
+    if (!e.shiftKey || !e.isTrusted || e.button !== 0) return;
+    e.stopPropagation();
+    e.preventDefault();
+    shiftDown = true;
+    e.target.dispatchEvent(new MouseEvent('mousedown', {
+      bubbles: true, cancelable: true, view: window, clientX: e.clientX, clientY: e.clientY, screenX: e.screenX, screenY: e.screenY,
+      button: 0, buttons: e.buttons, ctrlKey: e.ctrlKey, altKey: e.altKey, metaKey: e.metaKey, shiftKey: false,
+    }));
+  },
+  true,
+);
+const marks = attachArrows($('.board-frame'), ground, () => orientation);
+const fx = createFx($('.board-frame'), () => orientation);
+// Effets visuels seulement si on regarde la position actuelle
+const fxOpts = () => ({ visual: viewPly === null, me: mode === 'local' ? null : myColor });
+
+// Bouton pour couper / remettre le son
+const soundBtn = $('#sound-toggle');
+const showSound = () => {
+  soundBtn.innerHTML = isMuted() ? ico('mute') : ico('sound');
+  soundBtn.title = isMuted() ? 'Remettre le son' : 'Couper le son';
+};
+soundBtn.addEventListener('click', () => {
+  setMuted(!isMuted());
+  showSound();
+});
+showSound();
+
+function history() {
+  return chess.history({ verbose: true });
+}
+
+/** Position affichée (actuelle, ou passée si on revoit la partie). */
+function shownChess() {
+  if (viewPly === null) return chess;
+  const c = new Chess();
+  for (const m of history().slice(0, viewPly)) c.move(m);
+  return c;
+}
+
+/** Quel camp peut bouger les pièces en ce moment ? */
+function movableColor() {
+  if (over || viewPly !== null) return undefined;
+  if (mode === 'local') return colorName(chess.turn());
+  if (mode === 'ia') return !aiThinking && chess.turn() === myColor ? colorName(myColor) : undefined;
+  if (mode === 'ami') return online.status === 'playing' && myColor && chess.turn() === myColor ? colorName(myColor) : undefined;
+}
+
+/**
+ * Pendant le tour de l'adversaire, on peut quand même prendre ses pièces, les promener et voir où elles pourraient
+ * aller (comme si c'était son tour) ; posée, la pièce revient à sa place : rien n'est joué.
+ */
+function practiceColor() {
+  if (over || viewPly !== null || !myColor || (mode !== 'ami' && mode !== 'ia')) return null;
+  if (mode === 'ami' && online.status !== 'playing') return null;
+  return chess.turn() !== myColor ? myColor : null;
+}
+/**
+ * Prémove (jouer à l'avance) : pendant le tour adverse, une pièce lâchée revient à sa place, SAUF si on l'a voulu
+ * (bouton ⚡ Prémove activé, ou touche Maj / Ctrl / Cmd enfoncée en lâchant la pièce) : le coup est alors mis en attente, et joué dès que c'est
+ * notre tour s'il est encore possible. Une autre pièce lâchée sans le vouloir annule le prémove.
+ */
+let premove = null; // { from, to }
+let premoveOn = getPref('premove', '0') === '1';
+// Maj (ou Ctrl / Cmd) : lue sur la souris elle-même au moment où on lâche la pièce
+var shiftDown = false;
+const PM_KEYS = ['Shift', 'Control', 'Meta'];
+const readMods = (e) => e.isTrusted && (shiftDown = !!(e.shiftKey || e.ctrlKey || e.metaKey));
+for (const t of ['mousemove', 'mouseup', 'pointerup']) addEventListener(t, readMods, true);
+addEventListener('keydown', (e) => PM_KEYS.includes(e.key) && (shiftDown = true));
+addEventListener('keyup', (e) => PM_KEYS.includes(e.key) && (shiftDown = false));
+addEventListener('blur', () => (shiftDown = false));
+/** Lâcher une pièce pendant le tour adverse : prémove ou retour à sa place. */
+async function practiceDrop(from, to) {
+  const armed = premoveOn || shiftDown;
+  premove = null;
+  syncBoard();
+  if (!armed) return;
+  // Promotion : on demande la pièce tout de suite, comme pour un coup normal (annulé = pas de prémove)
+  let promotion;
+  if (isPromotion(chess, from, to)) {
+    promotion = await askPromotion(myColor);
+    if (!promotion) return;
+  }
+  premove = { from, to, promotion };
+  syncBoard();
+}
+/** C'est à moi : on joue le prémove s'il est encore possible. */
+function playPremove() {
+  const p = premove;
+  premove = null;
+  if (!p || movableColor() !== colorName(myColor)) return;
+  const to = castleDest(chess, p.from, p.to);
+  let move = null;
+  try {
+    move = chess.move({ from: p.from, to, promotion: isPromotion(chess, p.from, to) ? p.promotion || 'q' : undefined });
+  } catch {}
+  if (!move) {
+    toast('Prémove annulé : ce coup n’est plus possible.', { cls: 'info', duration: 2200 });
+    return syncBoard();
+  }
+  fx.move(move, chess, fxOpts());
+  if (mode === 'ami') socket.emit('move', { from: move.from, to: move.to, promotion: move.promotion });
+  afterMove();
+}
+/** Coups possibles de mes pièces si c'était à moi de jouer. */
+function practiceDests(c) {
+  try {
+    const f = c.fen().split(' ');
+    f[1] = myColor;
+    f[3] = '-'; // pas de prise en passant possible pour moi maintenant
+    return legalDests(new Chess(f.join(' ')));
+  } catch {
+    return new Map();
+  }
+}
+
+function syncBoard() {
+  const c = shownChess();
+  const h = c.history({ verbose: true });
+  const last = h[h.length - 1];
+  const mc = movableColor();
+  const pc = mc ? null : practiceColor();
+  ground.set({
+    fen: c.fen(),
+    orientation: colorName(orientation),
+    // Tour de l'adversaire : le plateau croit que c'est à moi, pour que je puisse soulever mes pièces
+    turnColor: colorName(pc || c.turn()),
+    lastMove: last ? [last.from, last.to] : undefined,
+    check: c.inCheck() ? colorName(c.turn()) : false,
+    movable: { color: mc || (pc ? colorName(pc) : undefined), dests: mc ? legalDests(c) : pc ? practiceDests(c) : new Map() },
+    // Le prémove en attente : ses deux cases surlignées
+    highlight: { lastMove: true, check: true, custom: premove && pc ? new Map([[premove.from, 'premove-sq'], [premove.to, 'premove-sq']]) : new Map() },
+  });
+  // Mon tour arrive avec un prémove en attente : on le joue (juste après, pour finir l'affichage en cours)
+  if (premove && mc) setTimeout(playPremove, 60);
+  if (!mc && !pc) premove = null; // partie finie, ou on revoit un coup passé
+  marks.update(c.fen());
+  fx.setPaused(viewPly !== null);
+}
+
+function render() {
+  syncBoard();
+  renderPlayers();
+  renderMoves();
+  renderStatus();
+  renderActions();
+}
+
+// ---------------------------------------------------------------------------
+// Joueurs, pendules, pièces prises
+// ---------------------------------------------------------------------------
+const clocks = { w: 0, b: 0, base: 0, inc: 0, running: false, at: 0 };
+
+// Cadence choisie sur l'accueil, ex. « 10+0 » = 10 minutes chacun, 0 seconde ajoutée par coup.
+function parseCadence(txt) {
+  const [m, i] = String(txt || '10+0').split(/[+ ]/).map(Number); // « + » devient une espace dans une adresse
+  const base = Math.min(180, Math.max(1, m || 10));
+  const inc = Math.min(60, Math.max(0, i || 0));
+  return { base: base * 60000, inc: inc * 1000, label: `${base} min${inc ? ` + ${inc} s` : ''}` };
+}
+const cadence = parseCadence(params.get('cadence'));
+
+/** Pendule gérée dans le navigateur (contre l'IA et sur le même écran). */
+function resetLocalClock() {
+  clocks.base = cadence.base;
+  clocks.inc = cadence.inc;
+  clocks.w = clocks.b = cadence.base;
+  clocks.running = false;
+  clocks.at = 0;
+}
+
+// Comme sur chess.com, la pendule démarre quand chaque camp a joué son premier coup.
+function clockAfterMove(mover) {
+  if (!clocks.base) return;
+  if (clocks.running) clocks[mover] = Math.max(0, clocks[mover] - (Date.now() - clocks.at)) + clocks.inc;
+  clocks.running = history().length >= 2;
+  clocks.at = Date.now();
+}
+
+function freezeClock() {
+  if (!clocks.running) return;
+  const t = chess.turn();
+  clocks[t] = Math.max(0, liveClock(t));
+  clocks.running = false;
+}
+
+/** Temps écoulé : perdu, sauf si l'adversaire n'a plus que son roi (nulle). */
+function timeoutEnd(loser) {
+  const opp = loser === 'w' ? 'b' : 'w';
+  const hasMaterial = chess.board().flat().some((p) => p && p.color === opp && p.type !== 'k');
+  if (!hasMaterial) return { result: '1/2-1/2', reason: 'temps-materiel' };
+  return { result: opp === 'w' ? '1-0' : '0-1', reason: 'temps' };
+}
+
+function liveClock(c) {
+  if (!clocks.running || over) return clocks[c];
+  return c === chess.turn() ? clocks[c] - (Date.now() - clocks.at) : clocks[c];
+}
+
+function playerHtml(c) {
+  const mat = material(chess);
+  const caps = mat.captured[c];
+  const adv = c === 'w' ? mat.score : -mat.score;
+  const role = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen' };
+  const capHtml = caps.map((t) => `<piece class="${role[t]} ${colorName(c === 'w' ? 'b' : 'w')}"></piece>`).join('');
+  let dot = '';
+  if (mode === 'ami' && online.seated?.[c]) dot = `<span class="dot ${online.online?.[c] ? 'on' : 'off'}" title="${online.online?.[c] ? 'En ligne' : 'Hors ligne'}"></span>`;
+  const isTurn = !over && chess.turn() === c;
+  let sub = '';
+  if (mode === 'ia' && c !== myColor) sub = `<small>niveau ${level.n} · ${level.name}</small>`;
+  if (mode === 'ami' && c === myColor) sub = '<small>Toi</small>';
+  // Partie non classée : rang du joueur dans cette cadence, s'il en a un (placement terminé)
+  const live = liveRanks[c];
+  if (mode === 'ami' && !online.ranked && live?.n && !rankOf(live).placement) sub = rankTip(live, CATS[liveRanks.cat]) + sub;
+  // Partie classée : rang et Elo relevés au début de la partie
+  if (mode === 'ami' && online.ranked && online.elo?.[c] != null) {
+    const you = c === myColor ? ' · Toi' : '';
+    sub = online.pl?.[c]
+      ? `<small>Placement · ${fmt(online.elo[c])}${you}</small>`
+      : `${rankTip({ r: online.elo[c], n: PLACEMENT }, CATS[online.cat] || '')}<small>${fmt(online.elo[c])}${you}</small>`;
+  }
+  const clock = clocks.base
+    ? `<div class="clock ${isTurn && clocks.running ? 'running' : ''} ${liveClock(c) < 20000 ? 'low' : ''}" data-clock="${c}">${formatClock(liveClock(c))}</div>`
+    : '';
+  const face = playerFace(c);
+  return `${face}
+    <div class="pinfo"><div class="pname">${dot}${playerName(c)} ${sub}</div>
+    <div class="captured cg-wrap">${capHtml}${adv > 0 ? `<span class="adv">+${adv}</span>` : ''}</div></div>
+    ${clock}`;
+}
+
+/** Pseudo du joueur : lien vers son profil quand c'est un vrai compte. */
+function playerName(c) {
+  const name = escapeHtml(names[c] || '…');
+  const id = mode === 'ami' ? online.ids?.[c] : mode === 'ia' && c === myColor ? account.user?.id : null;
+  const badge = badgeHtml(badges[c], { name: false });
+  return (id ? `<a href="${profileUrl(id)}" target="_blank" rel="noopener" title="Voir le profil">${name}</a>` : name) + badge;
+}
+
+/** Visage du joueur : Noa, la photo de profil, l'initiale du pseudo, ou un simple carré de couleur. */
+function playerFace(c) {
+  if (mode === 'ia' && c !== myColor) return `<img class="avatar noa" data-noa src="${faceUrl(rival.id, noaMood)}" alt="${rival.name}" width="44" height="44">`;
+  const known = mode === 'ami' || (mode === 'ia' && account.user);
+  if (!known) return `<div class="avatar ${colorName(c)}"></div>`;
+  const colorTag = `<i class="avatar-color ${colorName(c)}" title="${c === 'w' ? 'Blancs' : 'Noirs'}"></i>`;
+  const inner = pics[c]
+    ? `<img src="${pics[c]}" alt="Photo de ${escapeHtml(names[c] || '')}" draggable="false">`
+    : escapeHtml((names[c] || '?')[0].toUpperCase());
+  return `<div class="avatar who ${pics[c] ? 'has-pic' : ''}">${inner}${colorTag}</div>`;
+}
+
+/** Logo du rang, avec le rang, l'Elo et la cadence au survol (ou au toucher sur téléphone). */
+function rankTip(e, catName) {
+  const rk = rankOf(e);
+  return `<span class="rk-tip" tabindex="0" data-name="${rk.name}" data-col="${rk.rank.col}" data-elo="${fmt(e.r)}" data-cat="${catName}"><img class="rk-mini" src="${logoUrl(rk.rank.k)}" alt="${rk.name}" width="20" height="20"></span>`;
+}
+
+// Infobulle du rang : flottante (le pseudo coupe ce qui dépasse), au-dessus du logo, ou dessous s'il n'y a pas la place
+const rkFloat = Object.assign(document.createElement('div'), { className: 'rk-float', role: 'tooltip' });
+document.body.appendChild(rkFloat);
+function showRankTip(t) {
+  rkFloat.style.setProperty('--rk', t.dataset.col);
+  rkFloat.innerHTML = `<b>${t.dataset.name}</b> · ${t.dataset.elo} Elo en ${t.dataset.cat}`;
+  const r = t.getBoundingClientRect();
+  const w = rkFloat.offsetWidth;
+  const h = rkFloat.offsetHeight;
+  const x = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2));
+  const y = r.top - h - 8 >= 8 ? r.top - h - 8 : r.bottom + 8;
+  rkFloat.style.left = `${x}px`;
+  rkFloat.style.top = `${y}px`;
+  rkFloat.classList.add('on');
+}
+const hideRankTip = () => rkFloat.classList.remove('on');
+document.addEventListener('mouseover', (e) => {
+  const t = e.target.closest?.('.rk-tip');
+  if (t) showRankTip(t);
+  else hideRankTip();
+});
+document.addEventListener('focusin', (e) => (e.target.closest?.('.rk-tip') ? showRankTip(e.target.closest('.rk-tip')) : hideRankTip()));
+document.addEventListener('focusout', hideRankTip);
+window.addEventListener('scroll', hideRankTip, { passive: true });
+
+/** Rang des deux joueurs dans la cadence de la partie (Blitz 5 min, Rapide 10 min…). Rien pour une cadence sans classement. */
+function loadRanks() {
+  if (mode !== 'ami' || online.ranked || !online.time || !online.ids) return;
+  const cat = catOfCadence(`${online.time.base / 60000}+${online.time.inc / 1000}`);
+  const key = `${cat}|${online.ids.w}|${online.ids.b}`;
+  if (key === rankKey) return;
+  rankKey = key;
+  liveRanks = { w: null, b: null };
+  if (!cat) return;
+  Promise.all(['w', 'b'].map((c) => (online.ids[c] ? getRating(online.ids[c], cat).catch(() => null) : null))).then(([w, b]) => {
+    if (rankKey !== key) return;
+    liveRanks = { w, b, cat };
+    renderPlayers();
+  });
+}
+
+/** Charge les photos des deux joueurs (une seule fois par paire de joueurs). */
+function loadPics(ids) {
+  const key = `${ids.w}|${ids.b}`;
+  if (key === picIds) return;
+  picIds = key;
+  Promise.all([avatarOf(ids.w), avatarOf(ids.b), badgeOf(ids.w), badgeOf(ids.b)]).then(([w, b, bw, bb]) => {
+    if (picIds !== key) return;
+    pics = { w, b };
+    badges = { w: bw, b: bb };
+    renderPlayers();
+  });
+}
+
+function renderPlayers() {
+  const top = orientation === 'w' ? 'b' : 'w';
+  const bottom = orientation;
+  $('#p-top').innerHTML = playerHtml(top);
+  $('#p-bottom').innerHTML = playerHtml(bottom);
+  $('#p-top').classList.toggle('turn', !over && chess.turn() === top);
+  $('#p-bottom').classList.toggle('turn', !over && chess.turn() === bottom);
+}
+
+const lowWarned = { w: false, b: false };
+setInterval(() => {
+  if (!clocks.base) return;
+  if (mode !== 'ami' && !over && clocks.running && liveClock(chess.turn()) <= 0) {
+    const loser = chess.turn();
+    clocks.running = false;
+    clocks[loser] = 0;
+    aiGen++; // l'IA arrête de réfléchir
+    aiThinking = false;
+    $('#thinking').hidden = true;
+    finish(timeoutEnd(loser));
+  }
+  const mine = mode === 'local' ? chess.turn() : myColor;
+  if (mine && !over && clocks.running && chess.turn() === mine) {
+    const left = liveClock(mine);
+    if (left < 10000 && !lowWarned[mine]) {
+      lowWarned[mine] = true;
+      lowTimeBeep();
+    }
+  }
+  // On ne touche à la page que si l'affichage change (sinon le navigateur recalcule la mise en page 10 fois par seconde)
+  for (const el of $$('[data-clock]')) {
+    const ms = liveClock(el.dataset.clock);
+    const txt = formatClock(ms);
+    if (el.textContent !== txt) el.textContent = txt;
+    const low = ms < 20000;
+    if (el.classList.contains('low') !== low) el.classList.toggle('low', low);
+  }
+}, 100);
+
+// ---------------------------------------------------------------------------
+// Liste des coups et navigation
+// ---------------------------------------------------------------------------
+function renderMoves() {
+  const h = history();
+  const cur = viewPly === null ? h.length : viewPly;
+  let html = '';
+  for (let i = 0; i < h.length; i += 2) {
+    const cell = (j) => (h[j] ? `<button class="mv ${cur === j + 1 ? 'active' : ''}" data-ply="${j + 1}">${frSan(h[j].san)}</button>` : '<span></span>');
+    html += `<li><span class="num">${i / 2 + 1}.</span>${cell(i)}${cell(i + 1)}</li>`;
+  }
+  if (over) html += `<li class="result">${over.result.replace('1/2', '½').replace('1/2', '½')}</li>`;
+  const ol = $('#moves');
+  ol.innerHTML = html || '<li class="empty">La partie n’a pas encore commencé.</li>';
+  const active = ol.querySelector('.active');
+  if (active) scrollMoveIntoList(ol, active);
+  else ol.scrollTop = ol.scrollHeight;
+}
+
+function goTo(ply) {
+  const n = history().length;
+  if (ply === null || ply >= n) viewPly = null;
+  else viewPly = Math.max(0, ply);
+  render();
+}
+
+$('#moves').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-ply]');
+  if (b) goTo(Number(b.dataset.ply));
+});
+$$('[data-nav]').forEach((b) =>
+  b.addEventListener('click', () => {
+    const n = history().length;
+    const cur = viewPly === null ? n : viewPly;
+    const nav = b.dataset.nav;
+    goTo(nav === 'first' ? 0 : nav === 'prev' ? cur - 1 : nav === 'next' ? cur + 1 : null);
+  }),
+);
+document.addEventListener('keydown', (e) => {
+  if (e.target.matches('input, textarea')) return;
+  const n = history().length;
+  const cur = viewPly === null ? n : viewPly;
+  if (e.key === 'ArrowLeft') goTo(cur - 1);
+  if (e.key === 'ArrowRight') goTo(cur + 1);
+  if (e.key === 'ArrowUp') goTo(0);
+  if (e.key === 'ArrowDown') goTo(null);
+});
+
+// ---------------------------------------------------------------------------
+// Statut et boutons
+// ---------------------------------------------------------------------------
+function renderStatus() {
+  const el = $('#status');
+  let txt = '';
+  if (over) {
+    const r = resultText(over.result, over.reason, names);
+    txt = `<strong>${r.title}</strong> ${r.sub}. <a href="#" id="status-review">Voir le bilan →</a>`;
+  } else if (mode === 'ami' && online.status === 'waiting') {
+    txt = myColor ? 'En attente de ton ami…' : 'Partie en attente d’un second joueur.';
+  } else if (mode === 'ami' && !myColor) {
+    txt = `Tu regardes la partie en spectateur. Au tour de <strong>${escapeHtml(names[chess.turn()])}</strong>.`;
+  } else if (mode === 'ami' && chess.isGameOver()) {
+    // L'arbitre attend que le joueur maté (ou les deux joueurs, pour une nulle) le confirme : c'est automatique
+    txt = `<strong>${chess.isCheckmate() ? 'Échec et mat !' : 'Partie nulle !'}</strong> <span class="muted">Validation en cours…</span>`;
+  } else if (mode === 'local') {
+    txt = `Au tour des <strong>${chess.turn() === 'w' ? 'Blancs' : 'Noirs'}</strong>.`;
+  } else if (aiThinking) {
+    txt = 'L’IA réfléchit…';
+  } else if (chess.turn() === myColor) {
+    txt = '<strong>À toi de jouer.</strong>';
+  } else {
+    txt = `Au tour de <strong>${escapeHtml(names[chess.turn()])}</strong>.`;
+  }
+  if (!over && chess.inCheck()) txt += ' <span class="tag-check">Échec !</span>';
+  // Nulle par répétition : on prévient quand la position est déjà apparue 2 fois
+  if (!over && !chess.isGameOver() && repetitions(chess) === 2)
+    txt += ` <span class="rep-tag">${ico('repeat')} Cette position est déjà apparue 2 fois : si elle revient une 3<sup>e</sup> fois, partie nulle.</span>`;
+  const away = awayInfo();
+  if (away) txt += ` <span class="away-tag">${ico('hourglass')} ${escapeHtml(names[away.color])} a quitté la partie : tu gagnes dans ${away.left} s s’il ne revient pas.</span>`;
+  if (viewPly !== null) txt += ` <a href="#" id="back-live">Revenir à la position actuelle</a>`;
+  el.innerHTML = txt;
+  $('#status-review')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    openReview();
+  });
+  $('#back-live')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    goTo(null);
+  });
+}
+
+/** Adversaire parti (page fermée) pendant une partie entre amis : { color, left (secondes) } ou null. */
+function awayInfo() {
+  if (mode !== 'ami' || over || !myColor || online.status !== 'playing' || !online.away) return null;
+  const opp = myColor === 'w' ? 'b' : 'w';
+  const since = online.away[opp];
+  if (!since) return null;
+  return { color: opp, left: Math.max(0, Math.ceil((AWAY_LIMIT - (serverNow() - since)) / 1000)) };
+}
+
+function renderActions() {
+  const playing = !over;
+  const pm = $('#btn-premove');
+  pm.hidden = !playing || !myColor || (mode !== 'ami' && mode !== 'ia');
+  pm.setAttribute('aria-pressed', String(premoveOn));
+  pm.classList.toggle('on', premoveOn);
+  $('#leave-note').hidden = !(mode === 'ami' && myColor && online.status === 'playing' && playing);
+  $('#btn-draw').hidden = mode !== 'ami' || !playing || !myColor || online.status !== 'playing';
+  $('#btn-resign').hidden = !playing || (mode === 'ami' && (!myColor || online.status !== 'playing'));
+  if (mode === 'ami') {
+    $('#btn-draw').disabled = online.drawOffer === myColor;
+    $('#btn-draw').textContent = online.drawOffer === myColor ? '½ Nulle proposée' : '½ Proposer nulle';
+    const offer = !over && online.drawOffer && online.drawOffer !== myColor && myColor;
+    $('#draw-banner').hidden = !offer;
+    if (offer) $('#draw-text').textContent = `${names[online.drawOffer]} propose la nulle.`;
+  }
+}
+
+$('#btn-premove').addEventListener('click', () => {
+  premoveOn = !premoveOn;
+  setPref('premove', premoveOn ? '1' : '0');
+  if (!premoveOn) premove = null;
+  toast(premoveOn ? `${ico('bolt')} Prémove activé : la pièce lâchée pendant le tour adverse sera jouée dès que c’est ton tour.` : 'Prémove désactivé.', { cls: 'info', duration: 2600 });
+  render();
+});
+$('#btn-flip').addEventListener('click', () => {
+  orientation = orientation === 'w' ? 'b' : 'w';
+  render();
+});
+
+// Abandon : fenêtre du site (pas le confirm() du navigateur). Échap ou clic à côté = Continuer.
+$('#btn-resign').addEventListener('click', () => {
+  if (over) return;
+  const t = chess.turn();
+  $('#resign-text').innerHTML =
+    mode === 'local'
+      ? `${t === 'w' ? 'Les Blancs abandonnent' : 'Les Noirs abandonnent'} : <strong>${t === 'w' ? 'les Noirs gagnent' : 'les Blancs gagnent'}</strong>.`
+      : 'Ça compte comme une <strong>défaite</strong>.';
+  $('#resign-ranked').hidden = !(mode === 'ami' && online.ranked);
+  $('#resign-yes').disabled = false;
+  $('#resign-dialog').showModal();
+});
+$('#resign-no').addEventListener('click', () => $('#resign-dialog').close());
+$('#resign-yes').addEventListener('click', () => {
+  $('#resign-yes').disabled = true;
+  $('#resign-dialog').close();
+  if (over) return;
+  if (mode === 'ami') return socket.emit('resign');
+  const loser = mode === 'local' ? chess.turn() : myColor;
+  finish({ result: loser === 'w' ? '0-1' : '1-0', reason: 'abandon' });
+});
+// Clic à côté de la fenêtre (sur le fond) = la fermer, comme Échap
+for (const id of ['#resign-dialog', '#leave-dialog']) {
+  $(id).addEventListener('click', (e) => {
+    if (e.target !== e.currentTarget) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) e.currentTarget.close();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Quitter la partie (lien du site, bouton Retour, défi accepté ailleurs) = défaite par abandon, après la fenêtre « Quitter »
+// En ligne comme contre l'IA (dès le premier coup). Fermer l'onglet ou recharger : avertissement du navigateur (en ligne).
+// ---------------------------------------------------------------------------
+let leaveTo = null; // lien visé, 'back' (bouton Retour) ou une fonction (défi accepté : compte.js)
+let backTrap = false;
+let quitting = false;
+/** Partie en cours que je joue : la quitter compte comme une défaite. */
+function inGame() {
+  if (quitting) return false;
+  if (mode === 'ami') return !!socket?.live;
+  return mode === 'ia' && !over && !!myColor && history().length > 0;
+}
+function openLeave(to) {
+  leaveTo = to;
+  $('#leave-ranked').hidden = !(mode === 'ami' && online.ranked);
+  $('#leave-go').disabled = false;
+  if (!$('#leave-dialog').open) $('#leave-dialog').showModal();
+}
+// Liens du site
+document.addEventListener(
+  'click',
+  (e) => {
+    const a = e.target.closest?.('a[href]');
+    if (!a || !inGame() || a.target === '_blank' || a.hasAttribute('download') || a.getAttribute('href').startsWith('#')) return;
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return; // ouverture dans un nouvel onglet
+    e.preventDefault();
+    openLeave(a.href);
+  },
+  true,
+);
+// Bouton Retour du navigateur ou du téléphone : une entrée d'historique « piège » est posée pendant la partie
+function armBackTrap() {
+  if (backTrap || !inGame()) return;
+  backTrap = true;
+  window.history.pushState({ roookTrap: true }, '');
+}
+addEventListener('pointerdown', armBackTrap, true); // Chrome saute les entrées posées sans geste de l'utilisateur
+addEventListener('popstate', () => {
+  if (!backTrap) return;
+  backTrap = false;
+  if (!inGame()) return window.history.back(); // partie finie entre-temps : on part vraiment
+  openLeave('back');
+});
+// Défi d'un ami accepté pendant la partie (compte.js) : même fenêtre avant de partir
+window.roqueLeaveGuard = () =>
+  new Promise((resolve) => {
+    if (!inGame()) return resolve(true);
+    openLeave(resolve);
+  });
+// Rester (bouton, Échap ou clic à côté)
+$('#leave-dialog').addEventListener('close', () => {
+  if (quitting) return;
+  if (typeof leaveTo === 'function') leaveTo(false);
+  if (leaveTo === 'back') armBackTrap();
+  leaveTo = null;
+});
+$('#leave-stay').addEventListener('click', () => $('#leave-dialog').close());
+$('#leave-go').addEventListener('click', async () => {
+  $('#leave-go').disabled = true;
+  const to = leaveTo;
+  if (mode === 'ami') await new Promise((ok) => socket.emit('leave', null, ok));
+  else {
+    // Contre l'IA : la partie est enregistrée comme perdue par abandon
+    freezeClock();
+    over = { result: myColor === 'w' ? '0-1' : '1-0', reason: 'abandon' };
+    storeGame();
+  }
+  quitting = true;
+  $('#leave-dialog').close();
+  if (typeof to === 'function') return to(true);
+  if (to !== 'back') return (location.href = to || './');
+  window.history.back();
+  setTimeout(() => (location.href = './'), 600); // pas de page précédente (lien ouvert directement)
+});
+
+// ---------------------------------------------------------------------------
+// Coup joué par l'utilisateur
+// ---------------------------------------------------------------------------
+async function onUserMove(from, to) {
+  // Ce n'était pas mon tour : la pièce revient à sa place, ou devient un prémove si on l'a voulu
+  if (chess.turn() !== myColor && practiceColor()) return practiceDrop(from, to);
+  to = castleDest(chess, from, to); // roi posé sur sa tour = roque
+  let promotion;
+  if (isPromotion(chess, from, to)) {
+    promotion = await askPromotion(chess.turn());
+    if (!promotion) return syncBoard();
+  }
+  let move;
+  try {
+    move = chess.move({ from, to, promotion });
+  } catch {
+    return syncBoard();
+  }
+  fx.move(move, chess, fxOpts());
+  if (mode === 'ami') socket.emit('move', { from, to, promotion });
+  afterMove();
+}
+
+function afterMove() {
+  if (mode === 'ia') noaReact(history()[history().length - 1]);
+  armBackTrap();
+  if (mode !== 'ami') clockAfterMove(chess.turn() === 'w' ? 'b' : 'w');
+  const end = localGameOver(chess);
+  if (end && mode !== 'ami') finish(end);
+  else render();
+  if (!end && mode === 'ia' && chess.turn() !== myColor) aiMove();
+}
+
+// ---------------------------------------------------------------------------
+// Fin de partie
+// ---------------------------------------------------------------------------
+function finish(end) {
+  if ($('#resign-dialog').open) $('#resign-dialog').close(); // la partie s'est finie pendant qu'on hésitait
+  freezeClock();
+  over = end;
+  viewPly = null;
+  render();
+  storeGame();
+  const r = resultText(end.result, end.reason, names);
+  let icon = '½';
+  if (end.result === '*') icon = ico('warning');
+  else if (end.result !== '1/2-1/2') {
+    const winner = end.result === '1-0' ? 'w' : 'b';
+    const iWon = mode === 'local' || winner === myColor;
+    icon = iWon ? ico('trophy') : '♚';
+    if (mode !== 'local' && myColor) r.title = iWon ? 'Victoire !' : 'Défaite';
+  }
+  $('#end-icon').innerHTML = icon;
+  if (mode === 'ia') {
+    // L'adversaire réagit au résultat
+    const noaWon = end.result !== '1/2-1/2' && (end.result === '1-0' ? 'w' : 'b') !== myColor;
+    const face = end.result === '1/2-1/2' ? 'hmm' : noaWon ? 'frime' : 'content';
+    setNoaMood(face, 0);
+    $('#end-icon').innerHTML = `<img class="end-noa" src="${faceUrl(rival.id, face)}" alt="${rival.name}" width="96" height="96">`;
+  }
+  $('#end-title').textContent = r.title;
+  $('#end-sub').textContent = r.sub ? r.sub.charAt(0).toUpperCase() + r.sub.slice(1) + '.' : '';
+  if (mode === 'ia') {
+    const noaWon = end.result !== '1/2-1/2' && (end.result === '1-0' ? 'w' : 'b') !== myColor;
+    $('#end-sub').textContent += ` ${rival.name} : « ${noaWon ? rival.win : end.result === '1/2-1/2' ? rival.draw : rival.lose} »`;
+  }
+  $('#end-review').href = `bilan.html?partie=${encodeURIComponent(gameId)}`;
+  $('#end-rematch').textContent = mode === 'ami' ? (online.ranked ? 'Rejouer en classé' : 'Revanche') : 'Rejouer';
+  $('#end-rematch').hidden = mode === 'ami' && !myColor;
+  $('#end-rematch').disabled = false;
+  showRematchOffer(false);
+  rankedEnd(end);
+  const openEnd = () => !$('#end-dialog').open && $('#end-dialog').showModal();
+  if (end.reason === 'mat') openAfterMateBanner(openEnd);
+  else setTimeout(openEnd, 600);
+}
+
+/**
+ * Mat : la fenêtre de fin attend que l'animation du pack ait montré son bandeau « Échec et mat », puis laisse
+ * 2 s pour le lire. Chaque pack a son rythme (le bandeau arrive entre 0,3 s et 3,6 s), donc on guette le bandeau
+ * plutôt qu'un délai fixe. Sans animation (on revoit un coup de l'historique), la fenêtre s'ouvre tout de suite.
+ */
+function openAfterMateBanner(open) {
+  const READ = 2000;
+  const frame = $('.board-frame');
+  const hasBanner = () => !!frame.querySelector('.fx-mate-banner');
+  const hasFx = () => !!frame.querySelector('.fx-layer > *');
+  let done = false;
+  const go = (ms) => {
+    if (done) return;
+    done = true;
+    obs.disconnect();
+    clearTimeout(noFx);
+    clearTimeout(fallback);
+    setTimeout(open, ms);
+  };
+  const obs = new MutationObserver(() => hasBanner() && go(READ));
+  obs.observe(frame, { childList: true, subtree: true });
+  // aucune animation en cours : rien à attendre
+  const noFx = setTimeout(() => !hasFx() && go(0), 500);
+  // filet de sécurité si le bandeau n'arrive jamais
+  const fallback = setTimeout(() => go(0), 5000);
+  if (hasBanner()) go(READ);
+}
+
+// ---------------------------------------------------------------------------
+// Partie classée : l'Elo gagné ou perdu dans la fenêtre de fin, puis la montée de rang dans la même fenêtre
+// ---------------------------------------------------------------------------
+let rankedShownFor = null;
+function rankedEnd(end) {
+  const dlg = $('#end-dialog');
+  dlg.classList.remove('rankup');
+  $('#end-ranked')?.remove();
+  $('#end-rankup')?.remove();
+  if (!(mode === 'ami' && online.ranked && myColor && account.user)) return;
+  const cat = online.cat;
+  const box = document.createElement('div');
+  box.id = 'end-ranked';
+  box.className = 'rk-end';
+  box.innerHTML = `<div class="rk-end-head"><span class="rk-chip">Partie classée · ${CATS[cat] || ''}</span><span class="muted">Elo</span></div>
+    <p class="rk-end-msg muted">${end.result === '*' ? 'Partie annulée : l’Elo ne change pas.' : 'Calcul de ton nouvel Elo…'}</p>`;
+  $('#end-sub').after(box);
+  if (end.result === '*' || rankedShownFor === onlineId) return;
+  rankedShownFor = onlineId;
+  const game = { ranked: true, cat, elo: online.elo, pl: online.pl, status: 'over', result: end.result, white: online.ids.w, black: online.ids.b, names: online.names };
+  applyResult(onlineId, game, account.user.id).then((res) => {
+    if (!res?.after) {
+      box.querySelector('.rk-end-msg').textContent = 'L’Elo n’a pas pu être mis à jour (connexion ?). Il le sera par ton adversaire, ou à ta prochaine visite.';
+      return;
+    }
+    showEloChange(box, res);
+  });
+}
+
+function showEloChange(box, res) {
+  animateElo(box, res, online.cat, (before, after, entry, d, firstRank) => showRankUp($('#end-dialog'), $('#end-ranked'), before, after, entry, d, firstRank, online.cat));
+}
+
+/** L'adversaire propose la revanche : un encart bien visible et un bouton « Accepter » mis en avant. */
+function showRematchOffer(on, name = '') {
+  const btn = $('#end-rematch');
+  $('#end-offer').hidden = !on;
+  if (on) $('#end-note').hidden = true;
+  if (on) $('#end-offer-text').textContent = `${name || 'Ton adversaire'} te propose une revanche !`;
+  btn.classList.toggle('btn-primary', on);
+  btn.classList.toggle('btn-ghost', !on);
+  btn.classList.toggle('rematch-offer', on);
+  if (on) btn.textContent = '✓ Accepter la revanche';
+}
+
+function storeGame() {
+  if (savedThisGame || history().length === 0) return;
+  savedThisGame = true;
+  const pgnChess = new Chess();
+  pgnChess.setHeader('Event', mode === 'ia' ? `Contre ${rival.name} (niveau ${level.n} · ${level.name})` : mode === 'ami' ? 'Partie entre amis' : 'Partie sur le même écran');
+  pgnChess.setHeader('Date', new Date().toISOString().slice(0, 10).replace(/-/g, '.'));
+  pgnChess.setHeader('White', names.w);
+  pgnChess.setHeader('Black', names.b);
+  pgnChess.setHeader('Result', over.result);
+  const tc = mode === 'ami' ? online.time : cadence;
+  if (tc?.base) pgnChess.setHeader('TimeControl', `${tc.base / 1000}+${tc.inc / 1000}`);
+  for (const m of history()) pgnChess.move(m);
+  const record = {
+    id: gameId,
+    date: Date.now(),
+    mode,
+    white: names.w,
+    black: names.b,
+    me: mode === 'local' ? null : myColor,
+    result: over.result,
+    reason: over.reason,
+    moves: history().map((m) => m.san),
+    pgn: pgnChess.pgn() + ' ' + over.result,
+    level: mode === 'ia' ? level.n : undefined,
+    cadence: mode === 'ami' ? online.time : { base: cadence.base, inc: cadence.inc },
+  };
+  saveGame(record);
+}
+
+function openReview() {
+  storeGame();
+  location.href = `bilan.html?partie=${encodeURIComponent(gameId)}`;
+}
+$('#end-review').addEventListener('click', (e) => {
+  e.preventDefault();
+  openReview();
+});
+$('#end-close').addEventListener('click', () => $('#end-dialog').close());
+$('#end-rematch').addEventListener('click', () => {
+  // Classée : pas de revanche, on relance une recherche classée à la même cadence
+  if (mode === 'ami' && online.ranked) {
+    const cad = `${online.time.base / 60000}+${online.time.inc / 1000}`;
+    location.href = `jouer.html?classee=${encodeURIComponent(cad)}#hasard`;
+    return;
+  }
+  if (mode === 'ami') {
+    socket.emit('rematch');
+    $('#end-rematch').textContent = 'Revanche demandée…';
+    $('#end-rematch').disabled = true;
+    return;
+  }
+  $('#end-dialog').close();
+  restartLocal(mode === 'ia' ? (myColor === 'w' ? 'b' : 'w') : 'w');
+});
+
+function restartLocal(color) {
+  chess = new Chess();
+  over = null;
+  fx.reset();
+  lowWarned.w = lowWarned.b = false;
+  clearTimeout(noaTimer);
+  noaMood = 'neutre'; // Noa reprend son visage normal pour la nouvelle partie
+  viewPly = null;
+  savedThisGame = false;
+  gameId = mode + '-' + Date.now().toString(36);
+  resetLocalClock();
+  if (mode === 'ia') {
+    setupAiColor(color);
+    engine.newGame();
+  }
+  render();
+  if (mode === 'ia' && chess.turn() !== myColor) aiMove();
+}
+
+// ---------------------------------------------------------------------------
+// Mode IA
+// ---------------------------------------------------------------------------
+let engine = null;
+let level = LEVELS[2];
+let aiThinking = false;
+let aiGen = 0; // pour ignorer une réponse de l'IA arrivée trop tard
+
+// --- Humeur de Noa : son visage réagit à ce qui se passe sur l'échiquier ---
+let noaMood = 'neutre';
+let noaTimer = null;
+function setNoaMood(mood, revertAfter = 2400) {
+  clearTimeout(noaTimer);
+  const changed = mood !== noaMood;
+  noaMood = mood;
+  const img = document.querySelector('[data-noa]');
+  if (img && changed) {
+    img.src = faceUrl(rival.id, mood);
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      img.animate([{ transform: 'scale(.6) rotate(-12deg)' }, { transform: 'scale(1.18) rotate(4deg)' }, { transform: 'none' }], { duration: 380, easing: 'ease-out' });
+    }
+  }
+  if (revertAfter) noaTimer = setTimeout(() => !over && setNoaMood('neutre', 0), revertAfter);
+}
+
+function noaReact(m) {
+  if (!m || over) return;
+  const VAL = { p: 1, n: 3, b: 3, r: 5, q: 9 };
+  const byNoa = m.color !== myColor;
+  const won = VAL[m.captured] || 0;
+  if (byNoa) {
+    if (won >= 5) setNoaMood('rire');
+    else if (m.san.includes('+')) setNoaMood('frime');
+    else if (won >= 3) setNoaMood('content');
+  } else {
+    if (won >= 9) setNoaMood('colere');
+    else if (won >= 3) setNoaMood('grimace');
+    else if (m.san.includes('+')) setNoaMood('surpris');
+  }
+}
+
+function setupAiColor(c) {
+  myColor = c;
+  orientation = c;
+  const me = account.user?.username || 'Toi';
+  const ai = rival.name;
+  names = c === 'w' ? { w: me, b: ai } : { w: ai, b: me };
+  pics = c === 'w' ? { w: account.user?.avatar || null, b: null } : { w: null, b: account.user?.avatar || null };
+  badges = { w: null, b: null };
+  if (account.user) badgeOf(account.user.id).then((bd) => { badges = c === 'w' ? { w: bd, b: null } : { w: null, b: bd }; renderPlayers(); });
+}
+
+async function aiMove() {
+  const gen = ++aiGen;
+  aiThinking = true;
+  $('#thinking').hidden = false;
+  render();
+  const started = Date.now();
+  let uci = null;
+  try {
+    const left = liveClock(chess.turn());
+    const budget = clocks.base ? Math.max(100, Math.round(left / 35 + clocks.inc * 0.7)) : undefined;
+    uci = await engine.play(chess.fen(), level, budget);
+  } catch (e) {
+    console.error(e);
+  }
+  // Petite pause pour que le coup ne tombe pas instantanément (sauf quand l'IA manque de temps)
+  const minThink = clocks.base && liveClock(chess.turn()) < 15000 ? 0 : 450;
+  const wait = Math.max(0, minThink - (Date.now() - started));
+  await new Promise((r) => setTimeout(r, wait));
+  if (gen !== aiGen || over) return;
+  aiThinking = false;
+  $('#thinking').hidden = true;
+  if (!uci) return render();
+  const move = chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
+  fx.move(move, chess, fxOpts());
+  afterMove();
+}
+
+// ---------------------------------------------------------------------------
+// Mode en ligne (contre un ami)
+// ---------------------------------------------------------------------------
+let socket = null;
+let online = { status: 'waiting' };
+
+function startOnline() {
+  $('#mode-label').textContent = 'Partie entre amis';
+  $('#chat').hidden = false;
+  if (!account.user) {
+    $('.game-layout').innerHTML = `<div class="card notfound"><h2>Connecte-toi pour suivre cette partie</h2>
+      <p>Les parties entre amis sont réservées aux joueurs inscrits.</p>
+      <a class="btn btn-primary" href="connexion.html?retour=${encodeURIComponent('jeu.html?partie=' + onlineId)}">Se connecter</a></div>`;
+    return;
+  }
+  socket = gameSocket(onlineId, account.user);
+
+  socket.emit('join', { id: onlineId }, (res) => {
+    if (res.error) {
+      $('.game-layout').innerHTML = `<div class="card notfound"><h2>Partie introuvable</h2>
+        <p>Ce lien ne correspond à aucune partie.</p>
+        <a class="btn btn-primary" href="amis.html">Retour à mes amis</a></div>`;
+      return;
+    }
+    myColor = res.color;
+    orientation = myColor || 'w';
+    $('#chat-log').innerHTML = '';
+    res.chat.forEach(addChat);
+    if (!myColor) $('#chat').hidden = true; // les spectateurs regardent sans écrire
+    if (res.random) {
+      // Adversaire au hasard : pas de discussion avec un inconnu
+      $('#chat').hidden = true;
+      $('#mode-label').textContent = res.ranked ? 'Partie classée' : 'Adversaire au hasard';
+    }
+    render();
+  });
+
+  let oppAskedRematch = false;
+  let lastRound = 0;
+  let oppRefused = false;
+  let drawAsked = false;
+  let autoRematch = false;
+  socket.on('state', (s) => {
+    const wasOver = online.status === 'over';
+    const before = history().length;
+    online = s;
+    names = s.names;
+    if (s.ids) loadPics(s.ids);
+    loadRanks();
+    gameId = `${onlineId}-${s.round}`;
+    clocks.base = s.time.base;
+    clocks.w = s.clock.w;
+    clocks.b = s.clock.b;
+    clocks.running = s.clockRunning;
+    clocks.at = Date.now();
+
+    // On reconstruit la partie à partir des coups du serveur (il fait foi).
+    const c = new Chess();
+    for (const m of s.moves) c.move(m);
+    if (c.fen() !== chess.fen() || c.history().length !== chess.history().length) {
+      const isNewOpponentMove = s.moves.length === before + 1;
+      chess = c;
+      if (isNewOpponentMove) {
+        const h = history();
+        fx.move(h[h.length - 1], chess, fxOpts());
+      }
+    }
+    if (viewPly !== null && viewPly > s.moves.length) viewPly = null;
+
+    if (s.status === 'over' && !wasOver) {
+      finish({ result: s.result, reason: s.reason });
+    } else if (s.status !== 'over' && over && (s.round || 0) !== lastRound) {
+      // Revanche acceptée : nouvelle partie (nouvelle manche ; un vieil état « en cours » ne doit pas effacer la fin)
+      over = null;
+      fx.reset();
+      lowWarned.w = lowWarned.b = false;
+      savedThisGame = false;
+      $('#end-dialog').open && $('#end-dialog').close();
+      render();
+    } else {
+      render();
+    }
+    lastRound = s.round || 0;
+    if (s.status === 'over' && myColor) {
+      const opp = myColor === 'w' ? 'b' : 'w';
+      rememberGame(onlineId); // pour recevoir sa revanche même après avoir quitté cette page
+      // L'autre a refusé ma revanche : on le dit, et le bouton se désactive
+      const refused = s.rematch.no === opp && s.rematch[myColor];
+      if (refused && !oppRefused) {
+        notifySound('no');
+        toast(`${escapeHtml(names[opp] || 'Ton adversaire')} a refusé la revanche.`, { cls: 'info', duration: 5000 });
+        $('#end-note').textContent = `${names[opp] || 'Ton adversaire'} a refusé la revanche.`;
+        $('#end-note').hidden = false;
+        $('#end-rematch').textContent = 'Revanche refusée';
+        $('#end-rematch').disabled = true;
+      }
+      oppRefused = refused;
+      const asks = s.rematch[opp] && !s.rematch[myColor] && s.rematch.no !== myColor && !isRematchDeclined(onlineId, s.round || 0);
+      if (asks && !oppAskedRematch) {
+        // Elle vient d'arriver : son, encart, et l'écran de fin rouvert s'il était fermé
+        notifySound('rematch');
+        showRematchOffer(true, names[opp]);
+        if (!$('#end-dialog').open) $('#end-dialog').showModal();
+      }
+      oppAskedRematch = asks;
+      // Arrivé depuis l'invitation « Accepter » : on accepte tout de suite
+      if (params.get('revanche') === '1' && !autoRematch) {
+        autoRematch = true;
+        window.history.replaceState(null, '', location.pathname + '?partie=' + encodeURIComponent(onlineId));
+        socket.emit('rematch');
+        $('#end-rematch').textContent = 'Revanche acceptée…';
+        $('#end-rematch').disabled = true;
+      }
+    } else oppAskedRematch = false;
+    // Nulle proposée par l'adversaire : un petit son (en plus du bandeau)
+    const drawNow = !!(s.status === 'playing' && myColor && s.drawOffer && s.drawOffer !== myColor);
+    if (drawNow && !drawAsked) notifySound('draw');
+    drawAsked = drawNow;
+  });
+
+  socket.on('swap', () => {
+    if (myColor) myColor = myColor === 'w' ? 'b' : 'w';
+    orientation = myColor || 'w';
+    chess = new Chess();
+  });
+
+  socket.on('state', armBackTrap); // partie en cours : le bouton Retour passe par la fenêtre « Quitter »
+  // Compte à rebours quand l'adversaire est parti
+  setInterval(() => awayInfo() && renderStatus(), 1000);
+
+  socket.on('chat', addChat);
+  socket.on('disconnect', () => {
+    $('#status').innerHTML = '<span class="tag-check">Connexion perdue…</span> reconnexion en cours.';
+  });
+
+  $('#btn-draw').addEventListener('click', () => socket.emit('offerDraw'));
+  $('#draw-accept').addEventListener('click', () => socket.emit('offerDraw'));
+  // Refuser la revanche proposée : l'autre reçoit un message
+  $('#end-offer-no').addEventListener('click', () => {
+    markRematchDeclined(onlineId, lastRound);
+    socket.emit('declineRematch');
+    showRematchOffer(false);
+    $('#end-rematch').textContent = 'Revanche';
+    $('#end-rematch').disabled = true;
+    $('#end-note').textContent = 'Tu as refusé la revanche.';
+    $('#end-note').hidden = false;
+  });
+  $('#draw-decline').addEventListener('click', () => socket.emit('declineDraw'));
+
+  $('#chat-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = $('#chat-input').value.trim();
+    if (!v) return;
+    socket.emit('chat', v);
+    $('#chat-input').value = '';
+  });
+}
+
+function addChat(m) {
+  const log = $('#chat-log');
+  const div = document.createElement('div');
+  div.className = 'chat-msg' + (m.color && m.color === myColor ? ' me' : '');
+  div.innerHTML = `<b>${escapeHtml(m.from)}</b> ${escapeHtml(m.text)}`;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+// ---------------------------------------------------------------------------
+// Démarrage
+// ---------------------------------------------------------------------------
+if (mode === 'ami') {
+  startOnline();
+} else if (mode === 'ia') {
+  const n = Math.min(8, Math.max(1, Number(params.get('ia')) || 3));
+  level = LEVELS[n - 1];
+  let c = params.get('couleur');
+  if (c !== 'w' && c !== 'b') c = Math.random() < 0.5 ? 'w' : 'b';
+  $('#mode-label').textContent = `Contre ${rival.name} · niveau ${level.n} · ${cadence.label}`;
+  resetLocalClock();
+  document.title = `Contre ${rival.name} — ROOOK`;
+  engine = new Engine();
+  setupAiColor(c);
+  render();
+  if (chess.turn() !== myColor) aiMove();
+} else {
+  $('#mode-label').textContent = `Sur le même écran · ${cadence.label}`;
+  resetLocalClock();
+  names = { w: 'Blancs', b: 'Noirs' };
+  render();
+}

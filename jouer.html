@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0e0b1c">
+  <title>Jouer — ROOOK</title>
+  <meta name="description" content="Joue aux échecs en ligne avec tes amis, affronte une IA et reçois un bilan de chaque partie.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="img/appli/apple-touch-icon.png?h=c739bfd4ab">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ROOOK">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=f4cd128-mwquidh7">
+<script>
+(function () {
+  var v = 'f4cd128-mwquidh7';
+  // Après une mise à jour, on retire le petit paramètre « maj » de l'adresse
+  try {
+    var here = new URL(location.href);
+    if (here.searchParams.has('maj')) { here.searchParams.delete('maj'); history.replaceState(history.state, '', here.toString()); }
+  } catch (e) {}
+  fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d || d.v === v) return;
+    var key = 'roook-maj-' + d.v;
+    try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch (e) { return; }
+    // Recharge vers une adresse neuve (?maj=…) : le navigateur ne peut pas resservir l'ancienne page de son cache
+    try {
+      var u = new URL(location.href);
+      u.searchParams.set('maj', d.v);
+      location.replace(u.toString());
+    } catch (e) { location.reload(); }
+  }).catch(function () {});
+})();
+</script>
+</head>
+<body class="page-play">
+  <header class="topbar">
+    <a class="logo" href="./"><span class="logo-mark">♜</span> ROOOK</a>
+    <nav class="topnav">
+      <a href="jouer.html">Jouer</a>
+      <a href="apprendre.html">Apprendre</a>
+      <a href="amis.html">Amis</a>
+      <a href="bilan.html">Analyser</a>
+      <a href="inventaire.html">Inventaire</a>
+    </nav>
+  </header>
+
+  <main class="play-page">
+    <div class="page-head">
+      <p class="eyebrow">Jouer</p>
+      <h1>Comment veux-tu jouer ?</h1>
+      <p class="lead">Affronte un joueur au hasard, défie un ami en ligne, entraîne-toi contre Noa, Adriz ou Astrea, ou joue à deux sur le même écran.</p>
+    </div>
+
+  <section class="modes" id="jouer">
+    <div class="mode-grid">
+
+      <article class="mode-card mode-random" id="card-hasard">
+        <div class="mode-icon"><span class="ico" data-ico="dice" aria-hidden="true"></span></div>
+        <h3>Adversaire au hasard</h3>
+        <div id="mm-content" class="mm-content"><p class="muted">Chargement…</p></div>
+      </article>
+      <script>
+        // Connecté (d'après la barre en cache) : la carte prend tout de suite sa place finale (pleine largeur,
+        // mêmes blocs que js/jouer-hasard.js), pour que la page ne se réorganise pas une fois chargée.
+        (function () {
+          try {
+            if (!localStorage.getItem('roque:barre')) return;
+            var pref = function (k, d) { var v = localStorage.getItem('roque:' + k); return v ? JSON.parse(v) : d; };
+            var r = pref('mm-type', 'normale') === 'classee';
+            var cads = [['5+0', 'Blitz', '5 min'], ['10+0', 'Rapide', '10 min'], ['30+0', 'Classique', '30 min'], ['60+0', 'Long', '60 min']];
+            var cur = r ? pref('cadence-classee', '10+0') : pref('cadence-hasard', pref('cadence', '10+0'));
+            var opt = function (on, title, txt, extra) {
+              return '<span class="mm-opt' + (on ? ' on' : '') + '"><span class="mm-opt-box"><span class="mm-opt-top"><strong>' + title + '</strong><span class="mm-dot"></span></span>' + txt + extra + '</span></span>';
+            };
+            var logos = ['fer', 'marees', 'emeraude', 'amethyste', 'or', 'dragon', 'astral'].map(function (k) { return '<img src="img/rangs/' + k + '.svg" alt="" width="26" height="26">'; }).join('');
+            var chips = cads.map(function (c) {
+              return '<span class="mm-cad"><span' + (c[0] === cur ? ' class="on"' : '') + '><small>' + c[1] + '</small><b>' + c[2] + '</b>' + (r ? '<span class="mm-cad-elo mm-skel-line">&nbsp;</span>' : '') + '</span></span>';
+            }).join('');
+            var c = document.getElementById('card-hasard');
+            c.classList.add('mm-wide');
+            document.getElementById('mm-content').innerHTML = '<div class="mm-layout mm-skel' + (r ? ' ranked' : '') + '" aria-busy="true"><div class="mm-main"><div class="mm-types">'
+              + opt(!r, 'Partie normale', '<span class="muted">Pour le plaisir. Pas d’Elo en jeu, adversaire trouvé plus vite.</span>', '<span class="rk-chip">Aucun classement</span>')
+              + opt(r, 'Partie classée', '<span class="mm-opt-txt">Gagne de l’Elo et monte en rang, contre un joueur de ton niveau.</span>', '<span class="mm-opt-logos" aria-hidden="true">' + logos + '</span>')
+              + '</div><div class="mm-form"><p class="mm-cad-label"><b>Cadence</b>' + (r ? ' <span class="muted">· ton Elo dans chacune</span>' : '') + '</p><div class="mm-cads n4">' + chips + '</div>'
+              + '<div class="mm-go"><span class="btn btn-primary btn-lg" aria-disabled="true"><span class="ico" data-ico="' + (r ? 'trophy' : 'dice') + '" aria-hidden="true"></span> ' + (r ? 'Chercher une partie classée' : 'Trouver un adversaire') + '</span><span class="muted mm-count">' + (r ? 'Recherche des joueurs en ligne…' : 'Recherche des joueurs en ligne pour cette cadence…') + '</span></div>'
+              + (r ? '<p class="muted rk-rule">En classé, abandonner ou quitter la partie compte comme une défaite.</p>' : '') + '</div></div>'
+              + (r ? '<div><aside class="mm-rank"><p class="muted">Chargement de ton rang…</p></aside></div>' : '') + '</div>';
+          } catch (e) {}
+        })();
+      </script>
+
+      <article class="mode-card" id="card-ami">
+        <div class="mode-icon"><span class="ico" data-ico="swords" aria-hidden="true"></span></div>
+        <h3>Contre un ami</h3>
+        <div id="ami-content" class="ami-content"><p class="muted">Chargement…</p></div>
+      </article>
+
+      <article class="mode-card" id="card-ia">
+        <div class="noa-card-head">
+          <img class="mode-noa" id="noa-level-face" src="img/noa/neutre.svg?h=a925e0f76e" alt="Noa" width="76" height="76">
+          <div>
+            <h3>Contre <span id="rival-name">Noa</span></h3>
+            <p>Choisis ton adversaire : il s’adapte à ton niveau, du débutant qui rigole au grand maître qui ne pardonne rien.</p>
+          </div>
+        </div>
+        <form id="form-ia" class="mode-form">
+          <fieldset><legend>Ton adversaire</legend>
+            <div class="rival-pick">
+              <label><input type="radio" name="rival" value="noa" checked><span><img src="img/noa/content.svg?h=18d9fab830" alt="" width="44" height="44">Noa</span></label>
+              <label><input type="radio" name="rival" value="adriz"><span><img src="img/adriz/content.svg?h=0770c6dcd1" alt="" width="44" height="44">Adriz</span></label>
+              <label><input type="radio" name="rival" value="astrea"><span><img src="img/astrea/content.svg?h=b33228678f" alt="" width="44" height="44">Astrea</span></label>
+            </div>
+          </fieldset>
+          <label><span>Niveau : <b id="lvl-name"></b> <span class="muted" id="lvl-elo"></span></span>
+            <input type="range" name="niveau" min="1" max="8" value="3" id="lvl">
+          </label>
+          <div class="lvl-scale"><span>Facile</span><span>Imbattable</span></div>
+          <fieldset><legend>Ta couleur</legend>
+            <div class="seg">
+              <label><input type="radio" name="couleur" value="w" checked><span>Blancs</span></label>
+              <label><input type="radio" name="couleur" value="random"><span>Au hasard</span></label>
+              <label><input type="radio" name="couleur" value="b"><span>Noirs</span></label>
+            </div>
+          </fieldset>
+          <label>Temps pour chaque joueur
+            <select name="cadence">
+              <option value="1+0">Bullet · 1 min</option>
+              <option value="3+0">Blitz · 3 min</option>
+              <option value="3+2">Blitz · 3 min + 2 s</option>
+              <option value="5+0">Blitz · 5 min</option>
+              <option value="10+0" selected>Rapide · 10 min</option>
+              <option value="15+10">Rapide · 15 min + 10 s</option>
+              <option value="30+0">Classique · 30 min</option>
+            </select>
+          </label>
+          <button class="btn btn-primary" id="ia-go">Affronter Noa</button>
+        </form>
+      </article>
+
+      <article class="mode-card small">
+        <div class="mode-icon">♔♚</div>
+        <h3>Sur le même écran</h3>
+        <p>Deux joueurs, un seul ordinateur : chacun joue à son tour.</p>
+        <form id="form-local" class="mode-form">
+          <label>Temps pour chaque joueur
+            <select name="cadence">
+              <option value="1+0">Bullet · 1 min</option>
+              <option value="3+0">Blitz · 3 min</option>
+              <option value="3+2">Blitz · 3 min + 2 s</option>
+              <option value="5+0">Blitz · 5 min</option>
+              <option value="10+0" selected>Rapide · 10 min</option>
+              <option value="15+10">Rapide · 15 min + 10 s</option>
+              <option value="30+0">Classique · 30 min</option>
+            </select>
+          </label>
+          <button class="btn btn-ghost">Commencer</button>
+        </form>
+      </article>
+
+    </div>
+  </section>
+
+  <section class="recent" id="recent" hidden>
+    <h2 class="section-title">Tes dernières parties</h2>
+    <ul class="game-list" id="recent-list"></ul>
+  </section>
+
+  </main>
+
+  <script type="module" src="js/jouer.js?v=f4cd128-mwquidh7"></script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0e0b1c">
+  <title>Inventaire — ROOOK</title>
+  <meta name="description" content="Choisis l'apparence de tes parties : plateau, pièces, animations et sons.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="img/appli/apple-touch-icon.png?h=c739bfd4ab">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ROOOK">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="vendor/chessground-assets/chessground.base.css?v=f4cd128-mwquidh7">
+  <link rel="stylesheet" href="css/style.css?v=f4cd128-mwquidh7">
+  <link rel="stylesheet" href="vendor/chessground-assets/chessground.cburnett.css?v=f4cd128-mwquidh7">
+<script>
+(function () {
+  var v = 'f4cd128-mwquidh7';
+  // Après une mise à jour, on retire le petit paramètre « maj » de l'adresse
+  try {
+    var here = new URL(location.href);
+    if (here.searchParams.has('maj')) { here.searchParams.delete('maj'); history.replaceState(history.state, '', here.toString()); }
+  } catch (e) {}
+  fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d || d.v === v) return;
+    var key = 'roook-maj-' + d.v;
+    try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch (e) { return; }
+    // Recharge vers une adresse neuve (?maj=…) : le navigateur ne peut pas resservir l'ancienne page de son cache
+    try {
+      var u = new URL(location.href);
+      u.searchParams.set('maj', d.v);
+      location.replace(u.toString());
+    } catch (e) { location.reload(); }
+  }).catch(function () {});
+})();
+</script>
+</head>
+<body class="page-inventory">
+  <header class="topbar">
+    <a class="logo" href="./"><span class="logo-mark">♜</span> ROOOK</a>
+    <nav class="topnav">
+      <a href="jouer.html">Jouer</a>
+      <a href="apprendre.html">Apprendre</a>
+      <a href="amis.html">Amis</a>
+      <a href="bilan.html">Analyser</a>
+      <a href="inventaire.html">Inventaire</a>
+    </nav>
+  </header>
+
+  <main class="inv-page">
+    <div class="inv-head">
+      <p class="eyebrow">Ton apparence</p>
+      <h1>Inventaire</h1>
+      <p class="inv-where muted" id="inv-where">&nbsp;</p>
+    </div>
+
+    <!-- Ce qui est équipé en ce moment -->
+    <section class="inv-current" id="inv-current">
+      <div class="inv-current-board" id="inv-current-board"></div>
+      <div class="inv-current-info">
+        <p class="inv-label">Équipé en ce moment</p>
+        <h2 id="inv-current-name"></h2>
+        <p class="muted" id="inv-current-desc"></p>
+        <ul class="inv-slots" id="inv-current-slots"></ul>
+      </div>
+    </section>
+
+    <!-- Onglets : packs, puis chaque catégorie -->
+    <nav class="inv-tabs" id="inv-tabs" role="tablist" aria-label="Catégories"></nav>
+    <!-- Onglet Pièces : changer tout le jeu, ou une seule pièce -->
+    <div class="inv-piece-pick" id="inv-piece-pick" role="radiogroup" aria-label="Pièce à changer" hidden></div>
+
+    <!-- Grille des éléments + grand aperçu de l'élément choisi -->
+    <section class="inv-browser">
+      <div class="inv-items" id="inv-items" role="listbox"></div>
+      <aside class="inv-detail" id="inv-detail" aria-live="polite">
+        <div class="inv-detail-board" id="inv-detail-board"></div>
+        <div class="inv-detail-body">
+          <p class="inv-tier" id="inv-d-tier"></p>
+          <h2 id="inv-d-name"></h2>
+          <p class="muted" id="inv-d-desc"></p>
+          <div id="inv-d-extra"></div>
+          <div class="inv-detail-actions" id="inv-d-actions"></div>
+        </div>
+      </aside>
+    </section>
+    <p class="muted inv-note" id="inv-muted" hidden>Le son est coupé sur ce site : réactive-le avec le bouton du son de la page de partie pour entendre les aperçus.</p>
+  </main>
+
+  <script type="module" src="js/inventaire.js?v=f4cd128-mwquidh7"></script>
+</body>
+</html>

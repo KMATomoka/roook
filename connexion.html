@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0e0b1c">
+  <title>Connexion — ROOOK</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="img/appli/apple-touch-icon.png?h=c739bfd4ab">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ROOOK">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=f4cd128-mwquidh7">
+<script>
+(function () {
+  var v = 'f4cd128-mwquidh7';
+  // Après une mise à jour, on retire le petit paramètre « maj » de l'adresse
+  try {
+    var here = new URL(location.href);
+    if (here.searchParams.has('maj')) { here.searchParams.delete('maj'); history.replaceState(history.state, '', here.toString()); }
+  } catch (e) {}
+  fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d || d.v === v) return;
+    var key = 'roook-maj-' + d.v;
+    try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch (e) { return; }
+    // Recharge vers une adresse neuve (?maj=…) : le navigateur ne peut pas resservir l'ancienne page de son cache
+    try {
+      var u = new URL(location.href);
+      u.searchParams.set('maj', d.v);
+      location.replace(u.toString());
+    } catch (e) { location.reload(); }
+  }).catch(function () {});
+})();
+</script>
+</head>
+<body class="page-auth">
+  <header class="topbar">
+    <a class="logo" href="./"><span class="logo-mark">♜</span> ROOOK</a>
+  </header>
+
+  <main class="auth">
+    <div class="card auth-card">
+      <img class="auth-noa" src="img/noa/content.svg?h=18d9fab830" alt="" width="88" height="88">
+      <div class="auth-tabs" role="tablist">
+        <button role="tab" data-tab="connexion" aria-selected="true">Connexion</button>
+        <button role="tab" data-tab="inscription" aria-selected="false">Créer un compte</button>
+      </div>
+
+      <form id="auth-form" novalidate>
+        <label class="field" data-only="inscription">Pseudo
+          <input name="username" autocomplete="username" minlength="3" maxlength="20" placeholder="Ton pseudo de joueur" spellcheck="false">
+          <span class="field-note" id="pseudo-note">3 à 20 caractères : lettres, chiffres, « _ » ou « - ». C’est avec lui que tes amis te trouvent.</span>
+        </label>
+        <label class="field"><span id="email-label">E-mail</span>
+          <input name="email" type="email" autocomplete="email" maxlength="200" placeholder="ton.adresse@exemple.fr" spellcheck="false">
+          <span class="field-note" data-only="inscription">Elle reste privée : elle sert seulement à te connecter et à récupérer ton mot de passe.</span>
+        </label>
+        <label class="field">Mot de passe
+          <input name="password" type="password" autocomplete="current-password" minlength="6" maxlength="100" placeholder="Au moins 6 caractères">
+        </label>
+        <button class="link-btn forgot" type="button" id="forgot" data-only="connexion">Mot de passe oublié ?</button>
+        <p class="error" id="auth-error" hidden></p>
+        <p class="form-msg ok" id="auth-ok" hidden></p>
+        <button class="btn btn-primary btn-lg" id="auth-submit">Se connecter</button>
+      </form>
+    </div>
+  </main>
+
+  <script type="module">
+    import { session, signIn, signUp, resetPassword, pseudoAvailable } from './js/compte.js?v=f4cd128-mwquidh7';
+    const form = document.querySelector('#auth-form');
+    const err = document.querySelector('#auth-error');
+    const ok = document.querySelector('#auth-ok');
+    const note = document.querySelector('#pseudo-note');
+    const params = new URLSearchParams(location.search);
+    // On ne revient que vers une page de ce site (adresse relative, jamais vers un autre site)
+    const wanted = params.get('retour') || '';
+    const back = /^(\.\/|[a-z]+\.html)[^:]*$/i.test(wanted) && !wanted.includes('//') ? wanted : 'amis.html';
+    let busy = false;
+    // Déjà connecté : on file directement
+    session.then(({ user }) => user && !busy && (location.href = back));
+    let mode = params.get('mode') === 'inscription' ? 'inscription' : 'connexion';
+
+    function setMode(m) {
+      mode = m;
+      document.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === m)));
+      document.querySelectorAll('[data-only]').forEach((el) => (el.hidden = el.dataset.only !== m));
+      document.querySelector('#auth-submit').textContent = m === 'connexion' ? 'Se connecter' : 'Créer mon compte';
+      document.querySelector('#email-label').textContent = m === 'connexion' ? 'E-mail' : 'Adresse e-mail';
+      form.email.type = m === 'connexion' ? 'text' : 'email'; // les anciens comptes se connectent encore avec leur pseudo
+      form.email.placeholder = m === 'connexion' ? 'ton.adresse@exemple.fr' : 'ton.adresse@exemple.fr';
+      form.password.autocomplete = m === 'connexion' ? 'current-password' : 'new-password';
+      err.hidden = ok.hidden = true;
+    }
+    document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.tab)));
+    setMode(mode);
+
+    // Disponibilité du pseudo, en direct pendant qu'on tape
+    let checkTimer = null;
+    form.username.addEventListener('input', () => {
+      clearTimeout(checkTimer);
+      const name = form.username.value.trim();
+      note.className = 'field-note';
+      if (!name) return void (note.textContent = '3 à 20 caractères : lettres, chiffres, « _ » ou « - ». C’est avec lui que tes amis te trouvent.');
+      if (!/^[A-Za-z0-9_-]{3,20}$/.test(name)) {
+        note.textContent = '3 à 20 caractères : lettres, chiffres, « _ » ou « - » (pas d’espace ni d’accent).';
+        note.className = 'field-note bad';
+        return;
+      }
+      note.textContent = 'Vérification…';
+      checkTimer = setTimeout(async () => {
+        const free = await pseudoAvailable(name).catch(() => null);
+        if (form.username.value.trim() !== name) return;
+        note.textContent = free === null ? '' : free ? `✓ « ${name} » est libre.` : `✗ « ${name} » est déjà pris.`;
+        note.className = 'field-note ' + (free ? 'good' : 'bad');
+      }, 300);
+    });
+
+    document.querySelector('#forgot').addEventListener('click', async () => {
+      err.hidden = ok.hidden = true;
+      try {
+        await resetPassword(form.email.value);
+        ok.textContent = `Si un compte existe avec l’adresse ${form.email.value.trim()}, un e-mail pour choisir un nouveau mot de passe vient d’être envoyé. Pense à regarder dans les spams.`;
+        ok.hidden = false;
+      } catch (ex) {
+        err.textContent = ex.message;
+        err.hidden = false;
+        form.email.focus();
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      err.hidden = ok.hidden = true;
+      const btn = document.querySelector('#auth-submit');
+      btn.disabled = true;
+      busy = true;
+      try {
+        if (mode === 'inscription') await signUp(form.username.value, form.email.value, form.password.value);
+        else await signIn(form.email.value, form.password.value);
+        location.href = back;
+      } catch (ex) {
+        err.textContent = ex.message;
+        err.hidden = false;
+        btn.disabled = false;
+        busy = false;
+      }
+    });
+  </script>
+</body>
+</html>

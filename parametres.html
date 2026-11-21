@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0e0b1c">
+  <title>Paramètres — ROOOK</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="img/appli/apple-touch-icon.png?h=c739bfd4ab">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ROOOK">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=f4cd128-mwquidh7">
+<script>
+(function () {
+  var v = 'f4cd128-mwquidh7';
+  // Après une mise à jour, on retire le petit paramètre « maj » de l'adresse
+  try {
+    var here = new URL(location.href);
+    if (here.searchParams.has('maj')) { here.searchParams.delete('maj'); history.replaceState(history.state, '', here.toString()); }
+  } catch (e) {}
+  fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d || d.v === v) return;
+    var key = 'roook-maj-' + d.v;
+    try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch (e) { return; }
+    // Recharge vers une adresse neuve (?maj=…) : le navigateur ne peut pas resservir l'ancienne page de son cache
+    try {
+      var u = new URL(location.href);
+      u.searchParams.set('maj', d.v);
+      location.replace(u.toString());
+    } catch (e) { location.reload(); }
+  }).catch(function () {});
+})();
+</script>
+</head>
+<body class="page-settings">
+  <header class="topbar">
+    <a class="logo" href="./"><span class="logo-mark">♜</span> ROOOK</a>
+    <nav class="topnav">
+      <a href="jouer.html">Jouer</a>
+      <a href="apprendre.html">Apprendre</a>
+      <a href="amis.html">Amis</a>
+      <a href="bilan.html">Analyser</a>
+      <a href="inventaire.html">Inventaire</a>
+    </nav>
+  </header>
+
+  <main class="settings-page">
+    <div class="settings-head">
+      <p class="eyebrow">Réglages</p>
+      <h1>Paramètres</h1>
+      <p class="muted">Tout s’applique tout de suite et reste enregistré dans ce navigateur.</p>
+    </div>
+
+    <section class="card settings-card">
+      <h2>Son</h2>
+      <div class="set-row">
+        <div class="set-text"><b>Sons du site</b><small>Coups, prises, échec et mat, pendule, coffres.</small></div>
+        <label class="switch"><input type="checkbox" id="set-sound"><span></span></label>
+      </div>
+      <div class="set-row">
+        <div class="set-text"><b>Volume</b><small id="set-volume-txt">100 %</small></div>
+        <input type="range" id="set-volume" min="0" max="100" step="5" aria-label="Volume">
+      </div>
+      <div class="set-row">
+        <div class="set-text"><b>Musique des coffres</b><small>La musique quand tu ouvres un coffre.</small></div>
+        <label class="switch"><input type="checkbox" id="set-music"><span></span></label>
+      </div>
+      <div class="set-row">
+        <div class="set-text"><b>Essayer</b><small>Joue le son d’une prise avec ton équipement.</small></div>
+        <button class="btn btn-ghost small" type="button" id="set-test">▶ Écouter</button>
+      </div>
+    </section>
+
+    <section class="card settings-card">
+      <h2>Partie</h2>
+      <div class="set-row">
+        <div class="set-text"><b>Montrer les coups possibles</b><small>Les points sur les cases où ta pièce peut aller.</small></div>
+        <label class="switch"><input type="checkbox" id="set-dests"><span></span></label>
+      </div>
+      <div class="set-row">
+        <div class="set-text"><b>Coordonnées sur l’échiquier</b><small>Les lettres et les chiffres sur les bords.</small></div>
+        <label class="switch"><input type="checkbox" id="set-coords"><span></span></label>
+      </div>
+      <div class="set-row">
+        <div class="set-text"><b>Prémove toujours actif</b><small>Pendant le tour adverse, la pièce lâchée est jouée dès que c’est ton tour. Sinon : garde Maj enfoncée.</small></div>
+        <label class="switch"><input type="checkbox" id="set-premove"><span></span></label>
+      </div>
+    </section>
+
+    <section class="card settings-card">
+      <h2>Affichage</h2>
+      <div class="set-row">
+        <div class="set-text"><b>Animations des packs</b><small>Prises et fins de partie animées. Coupées : des versions sobres, plus légères pour un vieux téléphone.</small></div>
+        <label class="switch"><input type="checkbox" id="set-fx"><span></span></label>
+      </div>
+    </section>
+
+    <div class="settings-foot">
+      <button class="btn btn-ghost" type="button" id="set-reset">Remettre les réglages par défaut</button>
+    </div>
+
+    <section class="card settings-card" id="set-account" hidden>
+      <h2>Compte</h2>
+      <div class="set-row">
+        <div class="set-text"><b>Connecté en tant que <span id="set-username"></span></b><small>Tu pourras te reconnecter quand tu veux.</small></div>
+        <button class="btn btn-danger small" type="button" id="set-logout">Se déconnecter</button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="js/parametres.js?v=f4cd128-mwquidh7"></script>
+</body>
+</html>

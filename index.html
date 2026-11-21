@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0e0b1c">
+  <title>ROOOK — Échecs entre amis</title>
+  <meta name="description" content="Joue aux échecs en ligne avec tes amis, affronte une IA et reçois un bilan de chaque partie.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="img/appli/apple-touch-icon.png?h=c739bfd4ab">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ROOOK">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="vendor/chessground-assets/chessground.base.css?v=f4cd128-mwquidh7">
+  <link rel="stylesheet" href="css/style.css?v=f4cd128-mwquidh7">
+  <link rel="stylesheet" href="vendor/chessground-assets/chessground.cburnett.css?v=f4cd128-mwquidh7">
+<script>
+(function () {
+  var v = 'f4cd128-mwquidh7';
+  // Après une mise à jour, on retire le petit paramètre « maj » de l'adresse
+  try {
+    var here = new URL(location.href);
+    if (here.searchParams.has('maj')) { here.searchParams.delete('maj'); history.replaceState(history.state, '', here.toString()); }
+  } catch (e) {}
+  fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d || d.v === v) return;
+    var key = 'roook-maj-' + d.v;
+    try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch (e) { return; }
+    // Recharge vers une adresse neuve (?maj=…) : le navigateur ne peut pas resservir l'ancienne page de son cache
+    try {
+      var u = new URL(location.href);
+      u.searchParams.set('maj', d.v);
+      location.replace(u.toString());
+    } catch (e) { location.reload(); }
+  }).catch(function () {});
+})();
+</script>
+</head>
+<body class="page-home">
+  <header class="topbar">
+    <a class="logo" href="./"><span class="logo-mark">♜</span> ROOOK</a>
+    <nav class="topnav">
+      <a href="jouer.html">Jouer</a>
+      <a href="apprendre.html">Apprendre</a>
+      <a href="amis.html">Amis</a>
+      <a href="bilan.html">Analyser</a>
+      <a href="inventaire.html">Inventaire</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <span class="shooting-star" aria-hidden="true"></span>
+    <div class="hero-text">
+      <p class="eyebrow">Échecs entre amis</p>
+      <h1>Tes amis, un défi,<br><em>une partie.</em></h1>
+      <p class="lead">Crée ton compte, ajoute tes amis et défie-les en un clic. Entraîne-toi contre une IA à ton niveau, puis découvre le bilan de ta partie : tes meilleurs coups, tes erreurs et des conseils pour progresser.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary btn-lg" href="jouer.html#ami">Jouer avec un ami</a>
+        <a class="btn btn-ghost btn-lg" href="jouer.html#ia">Affronter un bot</a>
+      </div>
+      <ul class="hero-points">
+        <li><b>Ton compte, tes amis</b> Ajoute-les par leur pseudo et défie-les.</li>
+        <li><b>Parties à la pendule</b> Bullet, blitz, rapide ou classique.</li>
+        <li><b>Bilan détaillé</b> Chaque coup est noté.</li>
+      </ul>
+    </div>
+    <div class="hero-board">
+      <svg class="planet" viewBox="0 0 120 120" aria-hidden="true">
+        <defs>
+          <radialGradient id="planetBody" cx="0.35" cy="0.3" r="0.8">
+            <stop offset="0" stop-color="#cdbeff"/><stop offset="0.55" stop-color="#8f6bff"/><stop offset="1" stop-color="#3b2780"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="60" cy="64" rx="56" ry="15" fill="none" stroke="#3cf2a3" stroke-width="3" opacity="0.55" transform="rotate(-18 60 64)"/>
+        <circle cx="60" cy="60" r="34" fill="url(#planetBody)"/>
+        <circle cx="48" cy="50" r="6" fill="#3b2780" opacity="0.35"/>
+        <circle cx="70" cy="72" r="4" fill="#3b2780" opacity="0.3"/>
+        <path d="M 4 70 A 56 15 -18 0 0 116 46" fill="none" stroke="#3cf2a3" stroke-width="3" opacity="0.85" transform="rotate(0)"/>
+      </svg>
+      <svg class="moon" viewBox="0 0 40 40" aria-hidden="true">
+        <circle cx="20" cy="20" r="16" fill="#e6e0fa"/><circle cx="14" cy="16" r="3.5" fill="#b9a6ff" opacity="0.6"/><circle cx="25" cy="25" r="2.5" fill="#b9a6ff" opacity="0.6"/>
+      </svg>
+      <div class="board-frame"><div id="hero-board" class="cg-wrap board"></div></div>
+      <p class="hero-caption" id="hero-caption">Morphy contre le duc de Brunswick et le comte Isouard, Paris, 1858</p>
+    </div>
+  </section>
+
+  <section class="explore">
+    <h2 class="section-title">Que veux-tu faire ?</h2>
+    <div class="explore-grid">
+      <a class="explore-card" href="jouer.html">
+        <span class="explore-icon"><span class="ico" data-ico="knight" aria-hidden="true"></span></span>
+        <h3>Jouer</h3>
+        <p>Une partie contre un ami, contre Noa, Adriz ou Astrea, ou sur le même écran, à la pendule.</p>
+        <span class="explore-go">Jouer →</span>
+      </a>
+      <a class="explore-card" href="apprendre.html">
+        <span class="explore-icon"><span class="ico" data-ico="cap" aria-hidden="true"></span></span>
+        <h3>Apprendre</h3>
+        <p>Débutant ? Les leçons pas à pas pour chaque pièce et chaque règle, puis des exercices.</p>
+        <span class="explore-go">Apprendre →</span>
+      </a>
+      <a class="explore-card" href="amis.html">
+        <span class="explore-icon"><span class="ico" data-ico="friends" aria-hidden="true"></span></span>
+        <h3>Mes amis</h3>
+        <p>Retrouve tes amis, vois qui est en ligne et défie-les en un clic.</p>
+        <span class="explore-go">Voir mes amis →</span>
+      </a>
+      <a class="explore-card" href="bilan.html">
+        <span class="explore-icon"><span class="ico" data-ico="chart" aria-hidden="true"></span></span>
+        <h3>Analyser</h3>
+        <p>Le bilan de tes parties par Noa, ou d’une partie collée au format PGN.</p>
+        <span class="explore-go">Analyser →</span>
+      </a>
+      <a class="explore-card" href="profil.html">
+        <span class="explore-icon"><span class="ico" data-ico="trophy" aria-hidden="true"></span></span>
+        <h3>Mon profil</h3>
+        <p>Tes victoires, ton taux de réussite, ta forme et ton rival.</p>
+        <span class="explore-go">Voir mon profil →</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="how">
+    <h2 class="section-title">Le bilan, comment ça marche ?</h2>
+    <div class="how-grid">
+      <div><span class="badge c-best">★</span><h4>Chaque coup est noté</h4><p>Meilleur coup, excellent, bon, imprécision, erreur ou gaffe : Noa compare ton coup au meilleur possible.</p></div>
+      <div><span class="badge c-mistake">?</span><h4>Les erreurs expliquées</h4><p>Noa t’explique chaque faute : la pièce laissée sans protection, la fourchette ratée, le coup qu’il fallait jouer et pourquoi.</p></div>
+      <div><span class="badge c-good">%</span><h4>Ta précision</h4><p>Un score sur 100, ton point fort et ton point faible (ouverture, milieu de partie, finale) et un conseil.</p></div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>ROOOK · moteur <a href="https://stockfishchess.org" target="_blank" rel="noopener">Stockfish</a> · échiquier <a href="https://github.com/lichess-org/chessground" target="_blank" rel="noopener">Chessground</a> · pièces originales ROOOK</p>
+  </footer>
+
+  <script type="module" src="js/accueil.js?v=f4cd128-mwquidh7"></script>
+</body>
+</html>
